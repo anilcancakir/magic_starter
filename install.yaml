@@ -49,8 +49,8 @@ post_install:
     Team model, the User team accessors, the bootstrap team callbacks and the
     team routes) still needs the install. `starter:install --features=...`
     skips a config file that already exists unless you add `--force`, and
-    `--force` also replaces AppServiceProvider and merges the translations:
-    commit or back up your changes first.
+    `--force` also replaces AppServiceProvider and overwrites the translation
+    file: commit or back up your changes first.
 
     To choose the features during the install, pass `--no-bootstrap` to
     `plugin:install` and then run:

@@ -365,7 +365,7 @@ class TestableInstallCommand extends MagicStarterInstallCommand {
 | Mistake | Fix |
 |:--------|:----|
 | Running `dart run magic_starter install` | The package has no executable. Every command is `dart run magic:dowel starter:<command>`. |
-| Running `starter:configure --teams` on a host installed without teams | It only flips `'teams': true` in the config; the `Team` model, the `User` team accessors, the `bootstrap()` team callbacks and the team routes are not written, so the app throws on startup. Re-run `starter:install --features=...,teams --force` after committing your changes, since `--force` also replaces `AppServiceProvider` and merges the translations. |
+| Running `starter:configure --teams` on a host installed without teams | It only flips `'teams': true` in the config; the `Team` model, the `User` team accessors, the `bootstrap()` team callbacks and the team routes are not written, so the app throws on startup. Commit your changes, then re-run `dart run magic:dowel starter:install --features=teams --force`, adding every other feature you want on, since the config is rewritten from that list. `--force` also replaces `AppServiceProvider` and overwrites the translation file. |
 | Expecting `starter:configure` to toggle every feature | Only the flags in the table have one. `registration`, `billing`, `support` and the others are edited in the config file. |
 | Running `starter:install` before the host is scaffolded | It throws when `lib/config/app.dart` is missing. Run `dart run magic:dowel magic:install` first. |
 | Expecting `--features` to leave the prompts on | Passing `--features` skips them, and every key it does not name is written as `false`. |
