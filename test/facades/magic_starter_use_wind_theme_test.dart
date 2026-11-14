@@ -153,23 +153,20 @@ void main() {
       );
     });
 
-    test('resets a field theme set before it, so the host sets it after', () {
+    test('keeps a field theme set before it, and one set after it', () {
       MagicStarter.useFieldTheme(
         const MagicStarterFieldTheme(inputSizeClassName: 'themed-input'),
       );
 
       MagicStarter.useWindTheme(windTheme);
 
-      expect(
-        MagicStarter.fieldTheme.inputSizeClassName,
-        const MagicStarterFieldTheme().inputSizeClassName,
-      );
+      expect(MagicStarter.fieldTheme.inputSizeClassName, 'themed-input');
 
       MagicStarter.useFieldTheme(
-        const MagicStarterFieldTheme(inputSizeClassName: 'themed-input'),
+        const MagicStarterFieldTheme(inputSizeClassName: 'themed-again'),
       );
 
-      expect(MagicStarter.fieldTheme.inputSizeClassName, 'themed-input');
+      expect(MagicStarter.fieldTheme.inputSizeClassName, 'themed-again');
     });
 
     test('copyWith on the derived form theme changes one string only', () {
@@ -513,6 +510,156 @@ void main() {
       MagicStarter.useTheme(theme);
 
       expect(MagicStarter.formTheme.primaryButtonClassName, 'bg-teal-600');
+    });
+
+    // #149: a host that configured a sub-theme in a provider's `boot()` and
+    // called `useWindTheme` in `main()` afterwards lost every one of those
+    // fields without a word, and a content box that no longer fit its screens
+    // rendered them blank.
+    group('call order', () {
+      const hostFocus = 'focus:ring-2 focus:ring-primary';
+      const hostContent = 'flex-1 min-h-0 pb-4';
+
+      void configureHostBefore() {
+        MagicStarter.useLayoutTheme(
+          const MagicStarterLayoutTheme(
+            navigationBreakpoint: 'sm',
+            contentClassName: hostContent,
+            contentScrollPrimary: true,
+          ),
+        );
+        MagicStarter.useNavigationTheme(
+          const MagicStarterNavigationTheme(focusItemClassName: hostFocus),
+        );
+      }
+
+      void configureHostAfter() {
+        MagicStarter.useLayoutTheme(
+          MagicStarter.layoutTheme.copyWith(
+            navigationBreakpoint: 'sm',
+            contentClassName: hostContent,
+            contentScrollPrimary: true,
+          ),
+        );
+        MagicStarter.useNavigationTheme(
+          MagicStarter.navigationTheme.copyWith(focusItemClassName: hostFocus),
+        );
+      }
+
+      /// The layout and navigation fields the test reads, in one comparable
+      /// list, so the two call orders can be held against each other.
+      List<Object?> snapshot() {
+        final layout = MagicStarter.layoutTheme;
+        final navigation = MagicStarter.navigationTheme;
+
+        return [
+          layout.navigationBreakpoint,
+          layout.contentClassName,
+          layout.contentScrollPrimary,
+          layout.sidebarClassName,
+          layout.headerClassName,
+          layout.brandBarClassName,
+          layout.contentBackgroundLightColor,
+          layout.contentBackgroundDarkColor,
+          layout.drawerBackgroundLightColor,
+          layout.drawerBackgroundDarkColor,
+          navigation.focusItemClassName,
+          navigation.brandClassName,
+          navigation.hoverItemClassName,
+        ];
+      }
+
+      test('keeps the host fields set before it', () {
+        configureHostBefore();
+        MagicStarter.useWindTheme(windTheme);
+
+        expect(MagicStarter.layoutTheme.navigationBreakpoint, 'sm');
+        expect(MagicStarter.layoutTheme.contentClassName, hostContent);
+        expect(MagicStarter.layoutTheme.contentScrollPrimary, isTrue);
+        expect(MagicStarter.navigationTheme.focusItemClassName, hostFocus);
+      });
+
+      test('still derives the fields the host left alone', () {
+        configureHostBefore();
+        MagicStarter.useWindTheme(windTheme);
+
+        expect(
+          hasToken(MagicStarter.layoutTheme.sidebarClassName, 'bg-surface'),
+          isTrue,
+        );
+        expect(
+          hasToken(MagicStarter.layoutTheme.headerClassName, 'bg-surface'),
+          isTrue,
+        );
+        expect(
+          hasToken(MagicStarter.navigationTheme.brandClassName, 'text-primary'),
+          isTrue,
+        );
+      });
+
+      test('gives the same theme whichever side of the setters it is', () {
+        configureHostBefore();
+        MagicStarter.useWindTheme(windTheme);
+        final before = snapshot();
+
+        MagicStarter.manager.reset();
+        MagicStarter.useWindTheme(windTheme);
+        configureHostAfter();
+
+        expect(snapshot(), before);
+      });
+
+      test('re-derives what an earlier call derived', () {
+        configureHostBefore();
+        MagicStarter.useWindTheme(windTheme);
+        MagicStarter.useWindTheme(WindThemeData());
+
+        expect(
+          hasToken(MagicStarter.layoutTheme.sidebarClassName, 'bg-surface'),
+          isFalse,
+          reason: 'the second palette did not replace the first',
+        );
+        expect(MagicStarter.layoutTheme.navigationBreakpoint, 'sm');
+        expect(MagicStarter.navigationTheme.focusItemClassName, hostFocus);
+      });
+
+      test('treats a field left on its default as the host not setting it', () {
+        MagicStarter.useLayoutTheme(const MagicStarterLayoutTheme());
+        MagicStarter.useWindTheme(windTheme);
+
+        expect(
+          hasToken(MagicStarter.layoutTheme.sidebarClassName, 'bg-surface'),
+          isTrue,
+        );
+      });
+
+      test('keeps a host button and field theme set before it', () {
+        const button = MagicStarterButtonTheme(shapeClassName: 'rounded-full');
+        const field = MagicStarterFieldTheme(inputSizeClassName: 'py-[11px]');
+        MagicStarter.useButtonTheme(button);
+        MagicStarter.useFieldTheme(field);
+        MagicStarter.useWindTheme(windTheme);
+
+        expect(MagicStarter.buttonTheme.shapeClassName, 'rounded-full');
+        expect(MagicStarter.fieldTheme.inputSizeClassName, 'py-[11px]');
+      });
+
+      test('keeps a host builder set before it', () {
+        Widget brand(BuildContext context) => const SizedBox();
+        MagicStarter.useNavigationTheme(
+          MagicStarterNavigationTheme(brandBuilder: brand),
+        );
+        MagicStarter.useWindTheme(windTheme);
+
+        expect(MagicStarter.navigationTheme.brandBuilder, same(brand));
+      });
+
+      test('leaves useTheme a whole replacement', () {
+        configureHostBefore();
+        MagicStarter.useTheme(const MagicStarterTheme());
+
+        expect(MagicStarter.layoutTheme.navigationBreakpoint, 'lg');
+      });
     });
   });
 }

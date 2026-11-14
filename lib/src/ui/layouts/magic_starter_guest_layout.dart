@@ -21,13 +21,8 @@ class MagicStarterGuestLayout extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: wColor(
+      backgroundColor: MagicStarter.manager.layoutTheme.contentBackgroundColor(
         context,
-        MagicStarter.manager.layoutTheme.contentBackgroundLightColor,
-        shade: MagicStarter.manager.layoutTheme.contentBackgroundLightShade,
-        darkColorName:
-            MagicStarter.manager.layoutTheme.contentBackgroundDarkColor,
-        darkShade: MagicStarter.manager.layoutTheme.contentBackgroundDarkShade,
       ),
       body: Center(
         child: ConstrainedBox(

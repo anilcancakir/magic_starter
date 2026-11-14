@@ -449,7 +449,7 @@ void main() {
       expect(paintedStyle(tester, 'Enter text')?.fontSize, 14);
     });
 
-    testWidgets('useWindTheme after useFieldTheme puts the defaults back', (
+    testWidgets('useWindTheme after useFieldTheme keeps the host standard', (
       tester,
     ) async {
       MagicStarter.useFieldTheme(hostFieldTheme);
@@ -460,7 +460,7 @@ void main() {
         const MSInput(placeholder: 'Enter text'),
       );
 
-      expect(tester.getSize(find.byType(WInput)).height, 40);
+      expect(tester.getSize(find.byType(WInput)).height, 44);
     });
 
     testWidgets('useFieldTheme after useWindTheme keeps the host standard', (

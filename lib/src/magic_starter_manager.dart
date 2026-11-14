@@ -391,6 +391,116 @@ class MagicStarterManager {
     fieldTheme = value.field;
   }
 
+  /// What the last [applyWindTheme] derived, or the stock theme before the
+  /// first call. A field still holding its value here is the palette's, not
+  /// the host's, so the next palette may replace it.
+  MagicStarterTheme _windDerived = const MagicStarterTheme();
+
+  /// Derives the sub-themes from [wind] through [MagicStarterTheme.fromWind]
+  /// and applies them to every field the host has not set, keeping the ones
+  /// it has, so the call order against the `use*Theme` setters does not
+  /// matter for a host-set field.
+  ///
+  /// The rule, per field of every sub-theme: the field is host-set when its
+  /// current value differs both from that sub-theme's default constructor value
+  /// and from what the previous call derived for it; a host-set field is kept,
+  /// any other field takes the derived value. Two consequences follow. A host
+  /// value equal to the stock default reads as unset and is derived over, so
+  /// a host that wants the stock value back on top of a palette sets it after
+  /// this call. And a second call re-derives what the first one derived,
+  /// which is what switching palettes at runtime needs.
+  ///
+  /// [theme] (and [MagicStarter.useTheme]) still replace every sub-theme.
+  void applyWindTheme(WindThemeData wind) {
+    final MagicStarterTheme derived = MagicStarterTheme.fromWind(wind);
+    final MagicStarterTheme current = theme;
+    final MagicStarterTheme previous = _windDerived;
+
+    theme = MagicStarterTheme(
+      navigation: _mergeNavigation(
+        _WindMerge(
+          current.navigation,
+          previous.navigation,
+          derived.navigation,
+          const MagicStarterNavigationTheme(),
+        ),
+      ),
+      modal: _mergeModal(
+        _WindMerge(
+          current.modal,
+          previous.modal,
+          derived.modal,
+          const MagicStarterModalTheme(),
+        ),
+      ),
+      form: _mergeForm(
+        _WindMerge(
+          current.form,
+          previous.form,
+          derived.form,
+          const MagicStarterFormTheme(),
+        ),
+      ),
+      card: _mergeCard(
+        _WindMerge(
+          current.card,
+          previous.card,
+          derived.card,
+          const MagicStarterCardTheme(),
+        ),
+      ),
+      pageHeader: _mergePageHeader(
+        _WindMerge(
+          current.pageHeader,
+          previous.pageHeader,
+          derived.pageHeader,
+          const MagicStarterPageHeaderTheme(),
+        ),
+      ),
+      layout: _mergeLayout(
+        _WindMerge(
+          current.layout,
+          previous.layout,
+          derived.layout,
+          const MagicStarterLayoutTheme(),
+        ),
+      ),
+      auth: _mergeAuth(
+        _WindMerge(
+          current.auth,
+          previous.auth,
+          derived.auth,
+          const MagicStarterAuthTheme(),
+        ),
+      ),
+      dropdown: _mergeDropdown(
+        _WindMerge(
+          current.dropdown,
+          previous.dropdown,
+          derived.dropdown,
+          const MagicStarterDropdownTheme(),
+        ),
+      ),
+      button: _mergeButton(
+        _WindMerge(
+          current.button,
+          previous.button,
+          derived.button,
+          const MagicStarterButtonTheme(),
+        ),
+      ),
+      field: _mergeField(
+        _WindMerge(
+          current.field,
+          previous.field,
+          derived.field,
+          const MagicStarterFieldTheme(),
+        ),
+      ),
+    );
+    _windDerived = derived;
+  }
+
   /// Native language names for common locale codes.
   /// Used to generate human-readable labels from [Lang.supportedLocales].
   static const Map<String, String> _nativeLanguageNames = {
@@ -821,6 +931,7 @@ class MagicStarterManager {
     dropdownTheme = const MagicStarterDropdownTheme();
     buttonTheme = const MagicStarterButtonTheme();
     fieldTheme = const MagicStarterFieldTheme();
+    _windDerived = const MagicStarterTheme();
     _localeOptions = null;
     _pendingLocale = null;
     _applyingLocale = null;
@@ -829,4 +940,206 @@ class MagicStarterManager {
     _viewRegistry.clear();
     registerDefaultViews();
   }
+}
+
+// ---------------------------------------------------------------------------
+// Wind theme merge
+// ---------------------------------------------------------------------------
+
+/// One sub-theme seen by [MagicStarterManager.applyWindTheme]: what is active,
+/// what the previous call derived, what this call derived, and the stock
+/// default.
+class _WindMerge<S> {
+  final S current;
+  final S previous;
+  final S derived;
+  final S stock;
+
+  const _WindMerge(this.current, this.previous, this.derived, this.stock);
+
+  /// The value of [field] after the merge: the active one when the host set
+  /// it (it differs from the stock default and from what the previous call
+  /// derived), the derived one otherwise.
+  T pick<T>(T Function(S theme) field) {
+    final T value = field(current);
+    final bool hostSet = value != field(stock) && value != field(previous);
+
+    return hostSet ? value : field(derived);
+  }
+}
+
+MagicStarterNavigationTheme _mergeNavigation(
+  _WindMerge<MagicStarterNavigationTheme> m,
+) {
+  return MagicStarterNavigationTheme(
+    activeItemClassName: m.pick((t) => t.activeItemClassName),
+    hoverItemClassName: m.pick((t) => t.hoverItemClassName),
+    brandClassName: m.pick((t) => t.brandClassName),
+    brandBuilder: m.pick((t) => t.brandBuilder),
+    compactBrandBuilder: m.pick((t) => t.compactBrandBuilder),
+    bottomNavActiveClassName: m.pick((t) => t.bottomNavActiveClassName),
+    avatarClassName: m.pick((t) => t.avatarClassName),
+    avatarTextClassName: m.pick((t) => t.avatarTextClassName),
+    dropdownAvatarClassName: m.pick((t) => t.dropdownAvatarClassName),
+    dropdownAvatarTextClassName: m.pick((t) => t.dropdownAvatarTextClassName),
+    focusItemClassName: m.pick((t) => t.focusItemClassName),
+    badgeClassName: m.pick((t) => t.badgeClassName),
+  );
+}
+
+MagicStarterModalTheme _mergeModal(_WindMerge<MagicStarterModalTheme> m) {
+  return MagicStarterModalTheme(
+    containerClassName: m.pick((t) => t.containerClassName),
+    headerClassName: m.pick((t) => t.headerClassName),
+    bodyClassName: m.pick((t) => t.bodyClassName),
+    headlessBodyClassName: m.pick((t) => t.headlessBodyClassName),
+    footerClassName: m.pick((t) => t.footerClassName),
+    titleClassName: m.pick((t) => t.titleClassName),
+    descriptionClassName: m.pick((t) => t.descriptionClassName),
+    primaryButtonClassName: m.pick((t) => t.primaryButtonClassName),
+    secondaryButtonClassName: m.pick((t) => t.secondaryButtonClassName),
+    dangerButtonClassName: m.pick((t) => t.dangerButtonClassName),
+    warningButtonClassName: m.pick((t) => t.warningButtonClassName),
+    errorClassName: m.pick((t) => t.errorClassName),
+    inputClassName: m.pick((t) => t.inputClassName),
+    maxWidth: m.pick((t) => t.maxWidth),
+    presentation: m.pick((t) => t.presentation),
+    dialogBreakpoint: m.pick((t) => t.dialogBreakpoint),
+  );
+}
+
+MagicStarterFormTheme _mergeForm(_WindMerge<MagicStarterFormTheme> m) {
+  return MagicStarterFormTheme(
+    inputClassName: m.pick((t) => t.inputClassName),
+    labelClassName: m.pick((t) => t.labelClassName),
+    errorClassName: m.pick((t) => t.errorClassName),
+    placeholderClassName: m.pick((t) => t.placeholderClassName),
+    primaryButtonClassName: m.pick((t) => t.primaryButtonClassName),
+    secondaryButtonClassName: m.pick((t) => t.secondaryButtonClassName),
+    linkClassName: m.pick((t) => t.linkClassName),
+    checkboxLabelClassName: m.pick((t) => t.checkboxLabelClassName),
+  );
+}
+
+MagicStarterCardTheme _mergeCard(_WindMerge<MagicStarterCardTheme> m) {
+  return MagicStarterCardTheme(
+    surfaceClassName: m.pick((t) => t.surfaceClassName),
+    insetClassName: m.pick((t) => t.insetClassName),
+    elevatedClassName: m.pick((t) => t.elevatedClassName),
+    titleClassName: m.pick((t) => t.titleClassName),
+    titleNoPaddingContainerClassName: m.pick(
+      (t) => t.titleNoPaddingContainerClassName,
+    ),
+    borderRadius: m.pick((t) => t.borderRadius),
+    paddingClassName: m.pick((t) => t.paddingClassName),
+  );
+}
+
+MagicStarterPageHeaderTheme _mergePageHeader(
+  _WindMerge<MagicStarterPageHeaderTheme> m,
+) {
+  return MagicStarterPageHeaderTheme(
+    containerClassName: m.pick((t) => t.containerClassName),
+    containerInlineClassName: m.pick((t) => t.containerInlineClassName),
+    titleClassName: m.pick((t) => t.titleClassName),
+    subtitleClassName: m.pick((t) => t.subtitleClassName),
+    actionContainerClassName: m.pick((t) => t.actionContainerClassName),
+    backControlClassName: m.pick((t) => t.backControlClassName),
+    inlineActions: m.pick((t) => t.inlineActions),
+    largeTitle: m.pick((t) => t.largeTitle),
+    largeTitleClassName: m.pick((t) => t.largeTitleClassName),
+    compactBarClassName: m.pick((t) => t.compactBarClassName),
+    compactBarOpaqueClassName: m.pick((t) => t.compactBarOpaqueClassName),
+    compactTitleClassName: m.pick((t) => t.compactTitleClassName),
+    compactBarBlurSigma: m.pick((t) => t.compactBarBlurSigma),
+  );
+}
+
+MagicStarterLayoutTheme _mergeLayout(_WindMerge<MagicStarterLayoutTheme> m) {
+  return MagicStarterLayoutTheme(
+    sidebarClassName: m.pick((t) => t.sidebarClassName),
+    sidebarWidth: m.pick((t) => t.sidebarWidth),
+    navigationBreakpoint: m.pick((t) => t.navigationBreakpoint),
+    sidebarExpandedBreakpoint: m.pick((t) => t.sidebarExpandedBreakpoint),
+    sidebarCompactWidth: m.pick((t) => t.sidebarCompactWidth),
+    sidebarCollapsible: m.pick((t) => t.sidebarCollapsible),
+    sidebarCollapsedByDefault: m.pick((t) => t.sidebarCollapsedByDefault),
+    headerClassName: m.pick((t) => t.headerClassName),
+    headerHeight: m.pick((t) => t.headerHeight),
+    contentBackgroundLightColor: m.pick((t) => t.contentBackgroundLightColor),
+    contentBackgroundLightShade: m.pick((t) => t.contentBackgroundLightShade),
+    contentBackgroundDarkColor: m.pick((t) => t.contentBackgroundDarkColor),
+    contentBackgroundDarkShade: m.pick((t) => t.contentBackgroundDarkShade),
+    drawerBackgroundLightColor: m.pick((t) => t.drawerBackgroundLightColor),
+    drawerBackgroundLightShade: m.pick((t) => t.drawerBackgroundLightShade),
+    drawerBackgroundDarkColor: m.pick((t) => t.drawerBackgroundDarkColor),
+    drawerBackgroundDarkShade: m.pick((t) => t.drawerBackgroundDarkShade),
+    brandBarClassName: m.pick((t) => t.brandBarClassName),
+    bottomNavClassName: m.pick((t) => t.bottomNavClassName),
+    contentClassName: m.pick((t) => t.contentClassName),
+    contentScrollPrimary: m.pick((t) => t.contentScrollPrimary),
+    notificationTriggerClassName: m.pick((t) => t.notificationTriggerClassName),
+    notificationTriggerIconClassName: m.pick(
+      (t) => t.notificationTriggerIconClassName,
+    ),
+    notificationPanelClassName: m.pick((t) => t.notificationPanelClassName),
+    notificationBadgeClassName: m.pick((t) => t.notificationBadgeClassName),
+    notificationBadgeTextClassName: m.pick(
+      (t) => t.notificationBadgeTextClassName,
+    ),
+  );
+}
+
+MagicStarterAuthTheme _mergeAuth(_WindMerge<MagicStarterAuthTheme> m) {
+  return MagicStarterAuthTheme(
+    cardClassName: m.pick((t) => t.cardClassName),
+    titleClassName: m.pick((t) => t.titleClassName),
+    subtitleClassName: m.pick((t) => t.subtitleClassName),
+    errorBannerClassName: m.pick((t) => t.errorBannerClassName),
+    themeToggleClassName: m.pick((t) => t.themeToggleClassName),
+    themeToggleIconClassName: m.pick((t) => t.themeToggleIconClassName),
+    socialDividerClassName: m.pick((t) => t.socialDividerClassName),
+    socialDividerLineClassName: m.pick((t) => t.socialDividerLineClassName),
+    socialDividerTextClassName: m.pick((t) => t.socialDividerTextClassName),
+    guestButtonClassName: m.pick((t) => t.guestButtonClassName),
+    registrationLinkClassName: m.pick((t) => t.registrationLinkClassName),
+    registrationLinkTextClassName: m.pick(
+      (t) => t.registrationLinkTextClassName,
+    ),
+  );
+}
+
+MagicStarterDropdownTheme _mergeDropdown(
+  _WindMerge<MagicStarterDropdownTheme> m,
+) {
+  return MagicStarterDropdownTheme(
+    panelClassName: m.pick((t) => t.panelClassName),
+    dividerClassName: m.pick((t) => t.dividerClassName),
+    itemClassName: m.pick((t) => t.itemClassName),
+    tileClassName: m.pick((t) => t.tileClassName),
+    textClassName: m.pick((t) => t.textClassName),
+    mutedTextClassName: m.pick((t) => t.mutedTextClassName),
+    dangerTextClassName: m.pick((t) => t.dangerTextClassName),
+    dangerTileClassName: m.pick((t) => t.dangerTileClassName),
+  );
+}
+
+MagicStarterButtonTheme _mergeButton(_WindMerge<MagicStarterButtonTheme> m) {
+  return MagicStarterButtonTheme(
+    shapeClassName: m.pick((t) => t.shapeClassName),
+    smClassName: m.pick((t) => t.smClassName),
+    mdClassName: m.pick((t) => t.mdClassName),
+    lgClassName: m.pick((t) => t.lgClassName),
+    secondaryBorderClassName: m.pick((t) => t.secondaryBorderClassName),
+  );
+}
+
+MagicStarterFieldTheme _mergeField(_WindMerge<MagicStarterFieldTheme> m) {
+  return MagicStarterFieldTheme(
+    inputSizeClassName: m.pick((t) => t.inputSizeClassName),
+    selectSizeClassName: m.pick((t) => t.selectSizeClassName),
+    segmentedSmClassName: m.pick((t) => t.segmentedSmClassName),
+    segmentedMdClassName: m.pick((t) => t.segmentedMdClassName),
+    segmentedPaddingClassName: m.pick((t) => t.segmentedPaddingClassName),
+  );
 }

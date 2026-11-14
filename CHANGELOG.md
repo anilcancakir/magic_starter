@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- **Every theme sub-theme has a `copyWith`, and the layout theme resolves its backgrounds.** `MagicStarterNavigationTheme`, `MagicStarterCardTheme`, `MagicStarterPageHeaderTheme`, `MagicStarterLayoutTheme`, `MagicStarterAuthTheme`, `MagicStarterDropdownTheme`, `MagicStarterButtonTheme` and `MagicStarterFieldTheme` join the form and modal themes, so a one-field override keeps the rest: `MagicStarter.useLayoutTheme(MagicStarter.layoutTheme.copyWith(navigationBreakpoint: 'sm'))`. `MagicStarterLayoutTheme.contentBackgroundColor(context)` and `drawerBackgroundColor(context)` resolve the two background pairs for the current brightness and accept a `#hex` in either half; both layouts paint through them. (`lib/src/configuration/magic_starter_theme.dart`, `lib/src/ui/layouts/`)
+
+### Fixed
+
+- **`useWindTheme()` no longer discards sub-theme fields a host set before it, and it now themes the drawer and content backgrounds.** The derived values land only on fields the host has not set: a field is the host's when it differs from its sub-theme's default and from what the previous `useWindTheme()` derived, so the call can come before or after `useLayoutTheme()`, `useNavigationTheme()` and the other setters. This changes one documented behaviour: a button or field theme set before `useWindTheme()` is now kept rather than reset. `useTheme()` still replaces every sub-theme. The drawer and content area backgrounds now follow the theme's `bg-surface` role instead of staying stock grey. (#149; `lib/src/magic_starter_manager.dart`, `lib/src/facades/magic_starter.dart`, `lib/src/configuration/magic_starter_theme.dart`)
+
 ## [1.0.0] - 2026-11-14
 
 ### BREAKING
