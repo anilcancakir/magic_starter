@@ -67,7 +67,7 @@ The login flow has three possible outcomes:
 
 1. **Success**: the controller hands the body to `CompletesSignIn.completeSignIn()`, the one path every token takes (password, social, two-factor challenge, OTP and guest): it extracts `token` and `user` from the nested `data` key, calls `Auth.login()`, shows the `social.deletion_cancelled` toast when `data.deletion_cancelled` is `true` (a sign-in during the grace period of a scheduled account deletion cancels it), sets success state, and calls `navigateHome()`. That is the intended url a bounced deep link recorded, read once through `MagicRouter.pullIntendedUrl()`, and `MagicStarterConfig.homeRoute()` only as the fallback when nothing was recorded or the recorded value is not an in-app path. An intent belongs to the session that asked for it: `MagicStarterServiceProvider` listens to `Auth.stateNotifier` and discards it whenever the state goes to signed-out, so it never reaches the next person on the device. That covers the sign-out a user asks for, the account deletion, and the one the app performs on its own when a token refresh fails, since all three go through the same notifier. No host wiring is needed; the provider boots in every starter app.
 2. **Two-factor required**: the controller detects the challenge flag and navigates to `MagicStarterConfig.twoFactorChallengeRoute()` with the encrypted token as a query parameter. No login occurs yet.
-3. **Failure**: `handleApiError()` sets the error state with a localized fallback message.
+3. **Failure**: `handleApiError()` sets the error state with a localised fallback message.
 
 > [!IMPORTANT]
 > Two-factor detection checks **both** `response['two_factor']` and `response['data']['two_factor']`. Some backends nest the flag differently, and the controller handles both variants.
@@ -411,12 +411,12 @@ The flags are per device, not per account: they survive sign-out and a sign-in a
 The starter supports three identity modes configured via `magic_starter.auth.email` and `magic_starter.auth.phone`:
 
 | `auth.email` | `auth.phone` | Mode | Behaviour |
-|:---:|:---:|---|---|
+|:-------------|:-------------|:-----|:----------|
 | `true` | `false` | Email-only (default) | Only `email` field is sent in the payload |
 | `false` | `true` | Phone-only | Only `phone` field is sent in the payload |
 | `true` | `true` | Both | Every non-empty field is sent |
 
-The private `_applyIdentityToPayload()` helper centralizes this logic across login and registration. In "both" mode, every non-empty identity field is included, so the backend receives whatever the form collected and decides which one identifies the account.
+The private `_applyIdentityToPayload()` helper centralises this logic across login and registration. In "both" mode, every non-empty identity field is included, so the backend receives whatever the form collected and decides which one identifies the account.
 
 ```dart
 // Config for phone-only mode
@@ -446,7 +446,7 @@ Authentication features are controlled by these configuration toggles. All defau
 | `magic_starter.auth.phone` | `phoneIdentity()` | Phone field in login/register (default `false`) |
 
 > [!TIP]
-> Feature-gated routes throw `StateError` if accessed when the corresponding feature is disabled. Always check the config before navigating programmatically.
+> A feature that is disabled registers no route, so navigating to its path hits the router's not-found handling: magic logs `Route not found` and nothing opens. Only `MagicStarter.view.make` throws a `StateError`, for the view key of a disabled feature. Check the config before navigating programmatically.
 
 <a name="controllers"></a>
 ## Controllers
