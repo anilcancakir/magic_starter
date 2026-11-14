@@ -17,6 +17,11 @@ import '../helpers/magic_starter_config_helper.dart';
 /// magic_starter backwards to a release that fits rather than by failing.
 const String magicNotificationsConstraint = '^1.0.0';
 
+/// The `material_ui` constraint `starter:install` writes into the host
+/// application's own `pubspec.yaml`: the floor `magic` 1.0.0 and `wind_kit`
+/// build on.
+const String materialUiConstraint = '^1.11.0';
+
 /// Installs and configures Magic Starter inside a host Magic application.
 ///
 /// ## Layered architecture (hybrid manifest + fluent override)
@@ -339,11 +344,10 @@ class MagicStarterInstallCommand extends DowelInstallCommand {
       importStatement: "import 'config/magic_starter.dart';",
     );
 
-    // 2. Ensure material_ui import (needed for MaterialColor, Color).
-    ConfigEditor.addImportToFile(
-      filePath: mainPath,
-      importStatement: "import 'package:material_ui/material_ui.dart';",
-    );
+    // 2. Ensure material_ui import (needed for MaterialColor, Color), and the
+    //    dependency the import needs.
+    _ensureMaterialUiImport(mainPath);
+    _ensureMaterialUiDependency();
 
     // 3. Inject magicStarterConfig factory into configFactories.
     String content = FileHelper.readFile(mainPath);
@@ -681,10 +685,7 @@ class MagicStarterInstallCommand extends DowelInstallCommand {
     required Map<String, bool> features,
   }) {
     // 1. Add required imports.
-    ConfigEditor.addImportToFile(
-      filePath: targetPath,
-      importStatement: "import 'package:material_ui/material_ui.dart';",
-    );
+    _ensureMaterialUiImport(targetPath);
     ConfigEditor.addImportToFile(
       filePath: targetPath,
       importStatement: "import 'package:magic_starter/magic_starter.dart';",
@@ -1023,6 +1024,105 @@ $teamArgs    );
   /// the transactional write should be skipped to preserve the existing file.
   bool _shouldSkip(String path, {required bool force}) {
     return FileHelper.fileExists(path) && !force;
+  }
+
+  /// Makes [filePath] import `package:material_ui/material_ui.dart` exactly once.
+  ///
+  /// A host written before magic 1.0.0 imports `package:flutter/material.dart`
+  /// instead. Both libraries define `MaterialColor` and `Colors`, so adding the
+  /// second import beside the first makes the generated theme code ambiguous,
+  /// and the Flutter one is deprecated, so it is the one that goes (the
+  /// `dart fix --apply --code=deprecated_member_use` swap, which magic 1.0.0
+  /// asks of every app anyway).
+  ///
+  /// The directive is matched in either quote style and with any prefix or
+  /// combinator (`as m`, `show X`), and its line ending is kept: the URI is
+  /// replaced in place, so what the host wrote around it survives. A plain
+  /// Flutter import beside a plain `material_ui` one is simply dropped. The
+  /// generated code uses `MaterialColor` unprefixed, so a plain `material_ui`
+  /// import is added when none is left.
+  void _ensureMaterialUiImport(String filePath) {
+    const String materialUi = "import 'package:material_ui/material_ui.dart';";
+    final RegExp flutterMaterial = RegExp(
+      r'''^import\s+(['"])package:flutter/material\.dart\1([^;]*);[ \t]*(\r?\n)?''',
+      multiLine: true,
+    );
+    final RegExp plainMaterialUi = RegExp(
+      r'''^import\s+(['"])package:material_ui/material_ui\.dart\1\s*;''',
+      multiLine: true,
+    );
+
+    final String content = FileHelper.readFile(filePath);
+    final bool hadPlainMaterialUi = plainMaterialUi.hasMatch(content);
+    final String swapped = content.replaceAllMapped(flutterMaterial, (
+      Match match,
+    ) {
+      final String directives = match.group(2)!;
+      if (directives.trim().isEmpty && hadPlainMaterialUi) {
+        return '';
+      }
+
+      return "import 'package:material_ui/material_ui.dart'$directives;"
+          '${match.group(3) ?? ''}';
+    });
+    if (swapped != content) {
+      FileHelper.writeFile(filePath, swapped);
+    }
+
+    if (!plainMaterialUi.hasMatch(swapped)) {
+      // Before the first directive, never after the "last line that starts
+      // with import": a directive can span lines (`import '...'` then `as m;`)
+      // and an insert between them would split it.
+      final Match? firstImport = RegExp(
+        r'^import\s',
+        multiLine: true,
+      ).firstMatch(swapped);
+      final int at = firstImport?.start ?? 0;
+      FileHelper.writeFile(
+        filePath,
+        '${swapped.substring(0, at)}$materialUi\n${swapped.substring(at)}',
+      );
+    }
+  }
+
+  /// Whether the host's `pubspec.yaml` declares [name] under `dependencies:`.
+  ///
+  /// A line scan rather than a substring match: a commented entry, a
+  /// `dev_dependencies` or `dependency_overrides` entry, or a package whose
+  /// name merely ends in [name] does not count.
+  bool _declaresDependency(String pubspec, String name) {
+    bool inDependencies = false;
+    for (final String line in pubspec.split(RegExp(r'\r?\n'))) {
+      if (RegExp(r'^\S').hasMatch(line)) {
+        inDependencies = RegExp(r'^dependencies\s*:').hasMatch(line);
+
+        continue;
+      }
+      if (inDependencies && RegExp('^\\s+$name\\s*:').hasMatch(line)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /// Adds `material_ui` to the host's `dependencies`: the imports the install
+  /// writes need it, and a host that was not created by `magic:install` 1.0.0
+  /// may not have it yet.
+  void _ensureMaterialUiDependency() {
+    final String pubspecPath = '$projectRoot/pubspec.yaml';
+    if (!FileHelper.fileExists(pubspecPath)) {
+      return;
+    }
+    if (_declaresDependency(FileHelper.readFile(pubspecPath), 'material_ui')) {
+      return;
+    }
+
+    ConfigEditor.addDependencyToPubspec(
+      pubspecPath: pubspecPath,
+      name: 'material_ui',
+      version: materialUiConstraint,
+    );
   }
 
   void _injectTranslationAssetIntoPubspec() {

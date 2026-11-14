@@ -45,6 +45,31 @@ class MagicStarterConfigureCommand extends DowelCommand {
   @override
   String get description => 'Update Magic Starter configuration';
 
+  /// Registers the feature flags as negatable, so a real argv accepts
+  /// `--no-teams`.
+  ///
+  /// The signature DSL registers every flag with `negatable: false`, which is
+  /// right for `--show` and wrong here: the usage above, and the docs, switch
+  /// a feature off with `--no-<feature>`. [signature] still lists the flags
+  /// for the help text and the programmatic input, so `super.configure` is not
+  /// called: it would register the same names a second time.
+  @override
+  void configure(ArgParser parser) {
+    parser.addFlag(
+      'show',
+      help: 'Display current feature configuration',
+      negatable: false,
+    );
+    for (final String flag in _featureFlags.keys) {
+      parser.addFlag(
+        flag,
+        help:
+            'Enable or disable the ${_featureFlags[flag]} feature '
+            '(--no-$flag turns it off)',
+      );
+    }
+  }
+
   @override
   CommandBoot get boot => CommandBoot.none;
 
