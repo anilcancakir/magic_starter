@@ -378,6 +378,45 @@ void main() {
       );
     });
 
+    test('drops a plain flutter/material import beside a plain material_ui one', () async {
+      setupMagicProjectFiles(tempDir);
+      final File mainFile = File('${tempDir.path}/lib/main.dart');
+      mainFile.writeAsStringSync(
+        "import 'package:flutter/material.dart';\n${mainFile.readAsStringSync()}",
+      );
+
+      await runInstall(command);
+
+      final String content = mainFile.readAsStringSync();
+      expect(content, isNot(contains('package:flutter/material.dart')));
+      expect(
+        "import 'package:material_ui/material_ui.dart';"
+            .allMatches(content)
+            .length,
+        1,
+      );
+    });
+
+    test(
+      'leaves a declared material_ui dependency alone, any indentation',
+      () async {
+        setupMagicProjectFiles(tempDir);
+        final File pubspec = File('${tempDir.path}/pubspec.yaml');
+        pubspec.writeAsStringSync(
+          pubspec.readAsStringSync().replaceFirst(
+            '  magic:\n',
+            '    material_ui: ^1.20.0\n  magic:\n',
+          ),
+        );
+
+        await runInstall(command);
+
+        final String after = pubspec.readAsStringSync();
+        expect(after, contains('material_ui: ^1.20.0'));
+        expect('material_ui:'.allMatches(after).length, 1);
+      },
+    );
+
     test('adds material_ui to the host pubspec', () async {
       setupMagicProjectFiles(tempDir);
 

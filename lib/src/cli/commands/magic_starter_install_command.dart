@@ -1069,9 +1069,17 @@ $teamArgs    );
     }
 
     if (!plainMaterialUi.hasMatch(swapped)) {
-      ConfigEditor.addImportToFile(
-        filePath: filePath,
-        importStatement: materialUi,
+      // Before the first directive, never after the "last line that starts
+      // with import": a directive can span lines (`import '...'` then `as m;`)
+      // and an insert between them would split it.
+      final Match? firstImport = RegExp(
+        r'^import\s',
+        multiLine: true,
+      ).firstMatch(swapped);
+      final int at = firstImport?.start ?? 0;
+      FileHelper.writeFile(
+        filePath,
+        '${swapped.substring(0, at)}$materialUi\n${swapped.substring(at)}',
       );
     }
   }
@@ -1089,7 +1097,7 @@ $teamArgs    );
 
         continue;
       }
-      if (inDependencies && RegExp('^  $name\\s*:').hasMatch(line)) {
+      if (inDependencies && RegExp('^\\s+$name\\s*:').hasMatch(line)) {
         return true;
       }
     }
