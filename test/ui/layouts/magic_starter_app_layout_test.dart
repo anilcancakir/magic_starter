@@ -3,7 +3,8 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:material_ui/material_ui.dart';
-import 'package:flutter/rendering.dart' show RenderRepaintBoundary;
+import 'package:flutter/rendering.dart'
+    show RenderRepaintBoundary, SemanticsAction;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:magic/magic.dart';
 import 'package:magic_notifications/magic_notifications.dart';
@@ -2830,6 +2831,42 @@ void main() {
         handle.dispose();
       });
 
+      // #150 reported the labelled sidebar missing from the tree on a web
+      // build; the sidebar's list is a scroll view and the bottom bar is not.
+      // An item scrolled out of view stays in the tree, named, flagged hidden,
+      // and the list offers the scroll actions that bring it in.
+      testWidgets('names every item of a sidebar that scrolls', (tester) async {
+        final handle = tester.ensureSemantics();
+        useViewport(tester, 1440, 400);
+        MagicStarter.useNavigation(
+          mainItems: [
+            for (var i = 0; i < 30; i++)
+              MagicStarterNavItem(
+                icon: Icons.home,
+                labelKey: 'Item $i',
+                path: '/item-$i',
+              ),
+          ],
+        );
+
+        await pumpShell(tester);
+
+        for (var i = 0; i < 30; i++) {
+          expectNamedButton(tester, 'Item $i');
+        }
+        final last = tester.getSemantics(find.bySemanticsLabel('Item 29'));
+        expect(last.getSemanticsData().flagsCollection.isHidden, isTrue);
+        expect(
+          find.semantics.byAnyAction(const [
+            SemanticsAction.scrollUp,
+            SemanticsAction.scrollDown,
+          ]),
+          findsOneWidget,
+        );
+
+        handle.dispose();
+      });
+
       testWidgets('keeps the count in the name of a rail item', (tester) async {
         final handle = tester.ensureSemantics();
         useViewport(tester, 1440, 900);
@@ -2941,6 +2978,25 @@ void main() {
 
         expect(find.byType(Drawer), findsOneWidget);
       });
+
+      // The drawer's close control is an icon alone, so it had no name.
+      testWidgets('names the drawer close control', (tester) async {
+        final handle = tester.ensureSemantics();
+        useViewport(tester, 414, 900);
+        MagicStarter.useNavigation(mainItems: items, bottomItems: items);
+
+        await pumpShell(tester);
+        await tester.tap(find.byIcon(Icons.menu));
+        await tester.pumpAndSettle();
+
+        expectNamedButton(tester, 'Close menu');
+        expect(
+          find.bySemanticsLabel(RegExp(RegExp.escape('nav.close_menu'))),
+          findsNothing,
+        );
+
+        handle.dispose();
+      });
     });
 
     test('the header labels ship in the install stub', () {
@@ -2952,6 +3008,8 @@ void main() {
       expect(nav['open_menu'], 'Open menu');
       expect(nav['notifications'], 'Notifications');
       expect(nav['account_menu'], 'Account menu');
+      expect(nav['close_menu'], 'Close menu');
+      expect(nav['team_menu'], 'Team menu');
     });
   });
 }

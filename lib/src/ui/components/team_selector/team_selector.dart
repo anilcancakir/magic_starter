@@ -51,34 +51,53 @@ class MSTeamSelector extends StatelessWidget {
         ${dropdownTheme.panelClassName}
         w-58 rounded-xl shadow-xl overflow-hidden
       ''',
-      triggerBuilder: (context, isOpen, isHovering) => WDiv(
-        className:
-            'flex flex-row items-center gap-2 mx-3 p-2 rounded-lg ${MagicStarter.navigationTheme.hoverItemClassName}',
-        children: [
-          WDiv(
-            className: 'w-8 h-8 rounded-lg bg-primary/10 dark:bg-primary/10 flex items-center justify-center',
-            child: WText(
-              (currentTeam?.name ?? '?')[0].toUpperCase(),
-              className: 'text-sm font-bold text-primary',
-            ),
-          ),
-          if (!compact) ...[
-            Expanded(
+      triggerBuilder: (context, isOpen, isHovering) => _nameCompact(
+        currentTeam,
+        WDiv(
+          className:
+              'flex flex-row items-center gap-2 mx-3 p-2 rounded-lg ${MagicStarter.navigationTheme.hoverItemClassName}',
+          children: [
+            WDiv(
+              className: 'w-8 h-8 rounded-lg bg-primary/10 dark:bg-primary/10 flex items-center justify-center',
               child: WText(
-                currentTeam?.name ?? trans('teams.select_team'),
-                className:
-                    'text-sm font-medium ${dropdownTheme.textClassName} truncate',
+                (currentTeam?.name ?? '?')[0].toUpperCase(),
+                className: 'text-sm font-bold text-primary',
               ),
             ),
-            WIcon(
-              isOpen ? _iconCollapse : _iconExpand,
-              className: '${dropdownTheme.mutedTextClassName} text-lg',
-            ),
+            if (!compact) ...[
+              Expanded(
+                child: WText(
+                  currentTeam?.name ?? trans('teams.select_team'),
+                  className:
+                      'text-sm font-medium ${dropdownTheme.textClassName} truncate',
+                ),
+              ),
+              WIcon(
+                isOpen ? _iconCollapse : _iconExpand,
+                className: '${dropdownTheme.mutedTextClassName} text-lg',
+              ),
+            ],
           ],
-        ],
+        ),
       ),
       contentBuilder: (context, close) =>
           _buildTeamList(allTeams, currentTeam, resolver, close),
+    );
+  }
+
+  /// Names the compact trigger, which draws the team's initial and nothing
+  /// else, so the popover's button node had only a letter to announce.
+  ///
+  /// The team's name rides as the node's value; the labelled trigger reads
+  /// its own text and is returned as it is.
+  Widget _nameCompact(MagicStarterTeam? currentTeam, Widget trigger) {
+    if (!compact) return trigger;
+
+    return Semantics(
+      label: Lang.has('nav.team_menu') ? trans('nav.team_menu') : 'Team menu',
+      value: currentTeam?.name,
+      excludeSemantics: true,
+      child: trigger,
     );
   }
 

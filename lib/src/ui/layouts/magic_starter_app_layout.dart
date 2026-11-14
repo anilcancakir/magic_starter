@@ -550,6 +550,7 @@ class _MagicStarterAppLayoutState extends State<MagicStarterAppLayout> {
         if (showClose)
           WAnchor(
             onTap: () => Navigator.pop(context),
+            semanticLabel: _controlName('nav.close_menu', 'Close menu'),
             child: WDiv(
               className: '''
                                 w-8 h-8 rounded-lg flex items-center justify-center
