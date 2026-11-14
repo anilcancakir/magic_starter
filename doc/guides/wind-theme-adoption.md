@@ -1,14 +1,27 @@
-# Wind theme adoption (`MagicStarter.useWindTheme`)
+# wind_kit Theme Adoption
 
-`MagicStarter.useWindTheme(WindThemeData)` aligns every built-in magic_starter
-surface to a Wind semantic palette in a single call. Instead of constructing up
-to ten sub-theme structs by hand, you pass the same `WindThemeData` your app
-already installs at its root and the starter kit derives the eight colour-bearing
-sub-themes (navigation, modal, form, card, page header, layout, auth, dropdown)
-from its semantic alias roles. The ninth and tenth, the button theme and the
-field theme, are shape and size only and are set by hand; see
-[Button](#button) and [Field](#field).
+`MagicStarter.useWindTheme(WindThemeData)` aligns every built-in starter surface to a `wind_kit` semantic palette in a single call.
 
+- [The one-call adoption path](#the-one-call-adoption-path)
+- [How derivation works](#how-derivation-works)
+- [The semantic roles](#the-semantic-roles)
+- [Alias-to-property mapping](#alias-to-property-mapping)
+    - [Navigation](#navigation)
+    - [Modal](#modal)
+    - [Form](#form)
+    - [Card](#card)
+    - [Page header](#page-header)
+    - [Layout](#layout)
+    - [Dropdown](#dropdown)
+    - [Button](#button)
+    - [Field](#field)
+    - [Auth](#auth)
+- [Install the same WindThemeData as the ambient theme](#install-the-same-windthemedata-as-the-ambient-theme)
+- [Related Documentation](#related-documentation)
+
+Instead of constructing the sub-theme structs by hand, you pass the same `WindThemeData` your app already installs at its root and the starter derives the colour-bearing sub-themes (navigation, modal, form, card, page header, layout, auth, dropdown) from its semantic alias roles. The button theme and the field theme are shape and size only and are set by hand; see [Button](#button) and [Field](#field).
+
+<a name="the-one-call-adoption-path"></a>
 ## The one-call adoption path
 
 ```dart
@@ -32,10 +45,11 @@ additive:
   still works and overrides the derived value afterward, so you can adopt the
   whole palette and then fine-tune one surface.
 
+<a name="how-derivation-works"></a>
 ## How derivation works
 
-Every color-bearing className fragment in the sub-theme defaults is rebuilt from
-the 17 semantic roles. Because each alias carries its own `dark:` counterpart
+Every colour-bearing className fragment in the sub-theme defaults is rebuilt from
+the semantic roles. Because each alias carries its own `dark:` counterpart
 (for example `bg-surface` expands to `bg-white dark:bg-gray-950`), a single
 semantic token replaces every hand-written `bg-white dark:bg-gray-800` pair. No
 manual `dark:` palette utility is emitted.
@@ -48,12 +62,13 @@ that role, so a partially-configured theme never produces a silent no-op
 (invisible) surface. Pair `useWindTheme` with a full alias map to re-skin every
 surface.
 
-## The 17 semantic roles
+<a name="the-semantic-roles"></a>
+## The semantic roles
 
-The role tokens match the `MagicStarterTokens.defaultAliases` contract:
+The role tokens match the `MagicStarterTokens.defaultAliases` contract. Generate a full alias map from a `DESIGN.md` with `dart run magic:dowel design:sync`, documented in the [Magic CLI](https://anilcancakir.com/magic/docs/packages/magic-cli).
 
 | Role token | Purpose |
-|------------|---------|
+|:-----------|:--------|
 | `bg-surface` | Page and base backgrounds |
 | `bg-surface-container` | Cards, panels, dialog containers |
 | `bg-surface-container-high` | Input backgrounds, nested panels, hover fills |
@@ -74,25 +89,28 @@ A host that defines `text-destructive` (as an alias, or through a `destructive` 
 
 `MSToast` is the one place that reads `text-on-success` and `text-on-warning`: its success and warning variants paint the message, the action label and the focus ring in them (the error variant reads `text-on-destructive`). The alias contract ships the fills and not these two roles, so a host that defines its own `bg-success` and `bg-warning` defines them beside the fills, and a host whose dark fills are light (a pale green on a dark surface) writes dark text for the dark half. A role the host does not define is not assumed to suit the stock fills: the toast resolves the fill it paints in the current mode and takes the better of white and near-black by WCAG contrast, so the stock green and amber get near-black and a mid-dark green gets white. A role the host defines is used as written, poor contrast included.
 
+<a name="alias-to-property-mapping"></a>
 ## Alias-to-property mapping
 
 Each sub-theme property below is rebuilt from the listed semantic roles. Layout,
 spacing, radius, and dimension tokens are preserved as-is.
 
+<a name="navigation"></a>
 ### Navigation
 
 | Property | Roles used |
-|----------|-----------|
+|:---------|:-----------|
 | `activeItemClassName` | `text-primary` (+ `bg-primary/10`) |
 | `hoverItemClassName` | `bg-surface-container-high` |
 | `brandClassName` | `text-primary` |
 | `bottomNavActiveClassName` | `text-primary` |
 | `avatarTextClassName` | `text-primary` |
 
+<a name="modal"></a>
 ### Modal
 
 | Property | Roles used |
-|----------|-----------|
+|:---------|:----------|
 | `containerClassName` | `bg-surface-container` |
 | `titleClassName` | `text-fg` |
 | `descriptionClassName` | `text-fg-muted` |
@@ -104,10 +122,11 @@ spacing, radius, and dimension tokens are preserved as-is.
 | `errorClassName` | `text-destructive` |
 | `inputClassName` | `bg-surface-container-high`, `border-color-border`, `text-fg` |
 
+<a name="form"></a>
 ### Form
 
 | Property | Roles used |
-|----------|-----------|
+|:---------|:----------|
 | `inputClassName` | `bg-surface-container-high`, `border-color-border`, `text-fg` |
 | `labelClassName` | `text-fg` |
 | `errorClassName` | `text-destructive` |
@@ -117,28 +136,31 @@ spacing, radius, and dimension tokens are preserved as-is.
 | `linkClassName` | `text-primary` |
 | `checkboxLabelClassName` | `text-fg-muted`, `text-fg` |
 
+<a name="card"></a>
 ### Card
 
 | Property | Roles used |
-|----------|-----------|
+|:---------|:----------|
 | `surfaceClassName` | `bg-surface`, `border-color-border` |
 | `insetClassName` | `bg-surface-container`, `border-color-border` |
 | `elevatedClassName` | `bg-surface` (+ `shadow-md`) |
 | `titleClassName` | `text-fg` |
 
+<a name="page-header"></a>
 ### Page header
 
 | Property | Roles used |
-|----------|-----------|
+|:---------|:----------|
 | `containerClassName` / `containerInlineClassName` | `border-color-border` |
 | `titleClassName` | `text-fg` |
 | `subtitleClassName` | `text-fg-muted` |
 | `backControlClassName` | `text-fg-muted`, `text-fg` |
 
+<a name="layout"></a>
 ### Layout
 
 | Property | Roles used |
-|----------|-----------|
+|:---------|:----------|
 | `sidebarClassName` | `bg-surface`, `border-color-border` |
 | `headerClassName` | `bg-surface`, `border-color-border` |
 | `brandBarClassName` | `border-color-border-subtle` |
@@ -147,6 +169,7 @@ Numeric dimensions (`sidebarWidth`, `headerHeight`) and the `wColor()`
 content/drawer background color-key fields keep their defaults; they are not
 expressed as semantic className tokens.
 
+<a name="dropdown"></a>
 ### Dropdown
 
 The panels of `MSTeamSelector` and `MSUserProfileDropdown`. This is its own
@@ -155,7 +178,7 @@ sub-theme, not more fields on `navigation`, because a host that sets
 whole and would hand any field it omitted back to the stock grey.
 
 | Property | Roles used |
-|----------|-----------|
+|:---------|:----------|
 | `panelClassName` | `bg-surface-container`, `border-color-border` |
 | `dividerClassName` | `border-color-border` |
 | `itemClassName` | `bg-surface-container-high` (hover) |
@@ -175,6 +198,7 @@ Keep a border in `panelClassName`, even an invisible one
 bordered box inside the border, while a borderless one gets a `ClipRRect` around
 the decorated container, which cuts the box shadow off.
 
+<a name="button"></a>
 ### Button
 
 Nothing is derived. `MSButton`'s recipe already writes the semantic aliases
@@ -185,11 +209,11 @@ each size, and the secondary border. `useWindTheme()` and `useTheme()` reset it
 to its defaults, so set it after them.
 
 | Property | Default |
-|----------|---------|
+|:---------|:--------|
 | `shapeClassName` | `rounded-lg` |
-| `smClassName` | `px-3 py-1.5 text-sm` (32 px) |
-| `mdClassName` | `px-4 py-2 text-sm` (36 px) |
-| `lgClassName` | `px-5 py-3 text-base` (47 px) |
+| `smClassName` | `px-3 py-1.5 text-sm` |
+| `mdClassName` | `px-4 py-2 text-sm` |
+| `lgClassName` | `px-5 py-3 text-base` |
 | `secondaryBorderClassName` | `border border-color-border` |
 
 One 44 px capsule for every intent and size:
@@ -232,8 +256,8 @@ Three things to know:
   `useFormTheme()` or `useAuthTheme()` call whose button strings name a shape, a
   padding or a label size keeps it, because the string wins. Leave those out,
   and change one string through `copyWith` rather than a new
-  `MagicStarterFormTheme`, which would hand the other seven fields back to their
-  defaults:
+  `MagicStarterFormTheme`, which would hand every other field back to its
+  default:
   `MagicStarter.useFormTheme(MagicStarter.formTheme.copyWith(primaryButtonClassName: ...))`.
   The second is the dialogs, and the invite button of
   the team settings page: they draw raw `WButton`s on the strings of
@@ -243,6 +267,7 @@ Below `lg` every `MSButton` sits in a 44 x 44 hit area. A size the theme makes 4
 px tall or more is not widened by it, so there is no extra layout and no extra
 reach.
 
+<a name="field"></a>
 ### Field
 
 Nothing is derived either. The recipes of `MSInput`, `MSSelect`, `MSCombobox`
@@ -253,11 +278,11 @@ recipe used to spell out. `useWindTheme()` and `useTheme()` reset it to its
 defaults, so set it after them.
 
 | Property | Control | Default |
-|----------|---------|---------|
+|:---------|:--------|:--------|
 | `inputSizeClassName` | `MSInput`: text, placeholder and typed value | `py-3 lg:py-2.5 text-sm leading-5` (44 px, 40 px from `lg`) |
 | `selectSizeClassName` | trigger of `MSSelect`, `MSCombobox` and the timezone select | `py-[9px] min-h-11 lg:min-h-0` (44 px, 40 px from `lg`) |
 | `segmentedSmClassName` | `MSSegmentedControl` `sm` pill | `px-2 py-1 text-sm` (28 px) |
-| `segmentedMdClassName` | `MSSegmentedControl` `md` pill | `px-3 py-1.5 text-sm` (32 px) |
+| `segmentedMdClassName` | `MSSegmentedControl` `md` pill | `px-3 py-1.5 text-sm` |
 | `segmentedPaddingClassName` | `MSSegmentedControl` root | `p-1` |
 
 One 44 px standard with 17 on 22 type for every control:
@@ -313,7 +338,7 @@ an input paints its border inside its padding and a select trigger adds it. With
 17 on 22 type:
 
 | `inputClassName` size run | `WFormInput` | `WFormSelect` |
-|---------------------------|--------------|---------------|
+|:--------------------------|:-------------|:--------------|
 | `py-[11px] text-[17px] leading-[22px]` | 44 | 46 |
 | `py-2.5 text-[17px] leading-[22px]` | 42 | 44 |
 | `py-[10px] min-h-11 text-[17px] leading-[22px]` | 44 | 44 |
@@ -332,10 +357,11 @@ text size only: once a larger text setting lifts the line past the minimum
 height, the select trigger is 2 px taller than the input, because its border adds
 to the padding where the input's sits inside it.
 
+<a name="auth"></a>
 ### Auth
 
 | Property | Roles used |
-|----------|-----------|
+|:---------|:----------|
 | `cardClassName` | `bg-surface-container`, `border-color-border` |
 | `titleClassName` | `text-fg` |
 | `subtitleClassName` | `text-fg-muted` |
@@ -347,7 +373,8 @@ to the padding where the input's sits inside it.
 | `registrationLinkClassName` | `text-fg-muted` |
 | `registrationLinkTextClassName` | `text-primary` |
 
-## Note: install the same WindThemeData as the ambient theme
+<a name="install-the-same-windthemedata-as-the-ambient-theme"></a>
+## Install the same WindThemeData as the ambient theme
 
 `useWindTheme` derives className strings that reference semantic alias tokens
 (`bg-surface`, `text-fg`, `bg-primary`, ...). Those tokens only resolve to your
@@ -358,3 +385,11 @@ For any role the passed theme does not define, the derivation falls back to the
 shipped default palette pair (so an omitted role never produces an invisible
 surface), but a defined role that is missing from the ambient `WindTheme` will
 render its bare token unresolved.
+
+<a name="related-documentation"></a>
+## Related Documentation
+
+- [Manager](../architecture/manager.md): `useTheme()`, the sub-theme setters and their defaults.
+- [Components](../basics/components.md): the semantic token layer the `MS` components write.
+- [Views and Layouts](../basics/views-and-layouts.md): Wind UI conventions in the starter's views.
+- [Magic CLI](https://anilcancakir.com/magic/docs/packages/magic-cli): `design:sync`, which generates an alias map.

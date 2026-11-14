@@ -1,5 +1,7 @@
 # Session Scope
 
+How a controller that caches one user's (or one team's) data is reset when the signed-in identity changes, using magic's `SessionScoped` contract and the identity key this package declares.
+
 - [Introduction](#introduction)
 - [The Leak](#the-leak)
 - [The Contract](#the-contract)
@@ -9,17 +11,15 @@
 - [Why Logout Does Not Reset](#why-logout-does-not-reset)
 - [Error Isolation](#error-isolation)
 - [Testing](#testing)
-- [Related](#related)
+- [Gotchas](#gotchas)
+- [Related Documentation](#related-documentation)
 
 <a name="introduction"></a>
 ## Introduction
 
-Any controller that caches data belonging to one signed-in user (or to one of that user's teams) has to be told when that user changes. Magic core ships the two pieces for this: the `SessionScoped` contract, which a controller (or a repository) implements to declare "my rows belong to exactly one session", and `SessionScope`, which watches `Auth.stateNotifier` and resets every scoped holder whenever the authenticated identity changes.
+Any controller that caches data belonging to one signed-in user, or to one of that user's teams, has to be told when that user changes. Magic core ships the two pieces: the `SessionScoped` contract, which a controller (or a repository) implements to declare "my rows belong to exactly one session", and `SessionScope`, which watches `Auth.stateNotifier` and resets every scoped holder whenever the authenticated identity changes.
 
-Magic Starter's part is the identity: `MagicStarterServiceProvider` sets `SessionScope.identity` to `<userId>:<teamId>` in `register()`, so a team switch by the same user counts as a change. Attaching stays your app's call (see [Wiring the Sync](#wiring-the-sync)).
-
-> [!NOTE]
-> Earlier releases shipped `SessionScopedController` and `SessionScopeSync` in this package. Both are gone: implement magic's `SessionScoped` and call `SessionScope.attach()` instead. There is no alias.
+This package's part is the identity: `MagicStarterServiceProvider` sets `SessionScope.identity` to `<userId>:<teamId>` in `register()`, so a team switch by the same user counts as a change. Attaching stays your app's call (see [Wiring the Sync](#wiring-the-sync)).
 
 > [!IMPORTANT]
 > This is a privacy guard, not a freshness nicety. Without it, a logout followed by a login as a different user leaves the previous user's rows on screen. On a team-scoped product that is a cross-tenant data exposure.
@@ -27,23 +27,14 @@ Magic Starter's part is the identity: `MagicStarterServiceProvider` sets `Sessio
 <a name="the-leak"></a>
 ## The Leak
 
-Magic resolves controllers as **Type-keyed singletons**: `Magic.findOrPut(ProjectController.new)` returns the same instance for the whole process lifetime. The initial fetch usually lives in `onInit()`, and `MagicStatefulViewState.initState` only calls it while the controller has not been initialized yet:
-
-```dart
-// magic/lib/src/ui/magic_view.dart
-if (!_controller.initialized) {
-  _controller.onInit();
-}
-```
-
-So `onInit()` runs **once per instance lifetime**, not once per mount. Follow the consequence through:
+Magic resolves controllers as type-keyed singletons: `Magic.findOrPut(ProjectController.new)` returns the same instance for the whole process lifetime. The initial fetch usually lives in `onInit()`, and `MagicStatefulViewState` only calls it while the controller has not been initialised yet, so `onInit()` runs once per instance lifetime, not once per mount. Follow the consequence through:
 
 1. User A signs in, opens the projects screen. `ProjectController.onInit()` fetches A's projects.
 2. A signs out. The controller instance survives: nothing disposes it, and its rows are still in memory.
-3. User B signs in on the same device and opens the projects screen. The controller is already initialized, so `onInit()` does not run and no fetch happens.
+3. User B signs in on the same device and opens the projects screen. The controller is already initialised, so `onInit()` does not run and no fetch happens.
 4. B is looking at A's projects until the app is restarted.
 
-The same thing happens without a logout at all: a **team switch** changes which rows the API would return, while every cached controller keeps the old team's data.
+The same happens without a logout: a team switch changes which rows the API returns, while every cached controller keeps the old team's data.
 
 <a name="the-contract"></a>
 ## The Contract
@@ -84,16 +75,14 @@ class ProjectController extends MagicController
 <a name="clear-before-you-refetch"></a>
 ## Clear Before You Refetch
 
-This is the single most misunderstood part of the design, so it is worth being explicit: **`resetForSession()` is destructive on purpose, and the clear must land before the refetch is attempted.**
+`resetForSession()` is destructive on purpose, and the clear must land before the refetch is attempted.
 
-An ordinary `reload()` is deliberately *non*-destructive. When a refresh fails, keeping the last-known-good rows is the right call: a five-second network blip should not blank a dashboard the user is reading. Almost every controller in a Magic app is written that way.
-
-Across an identity change that behaviour is exactly wrong. The rows on screen belong to the *previous* session, so "keep what we have when the refetch fails" means "keep showing user A's data to user B". The failure mode inverts:
+An ordinary `reload()` is deliberately non-destructive: when a refresh fails, keeping the last-known-good rows is right, because a five-second network blip should not blank a dashboard the user is reading. Across an identity change that behaviour is exactly wrong, since the rows on screen belong to the previous session:
 
 | | Ordinary `reload()` | `resetForSession()` |
-|---|---|---|
-| Refetch succeeds | new rows | new rows |
-| Refetch fails | previous rows stay (correct: same user, stale data) | **must** be empty (previous rows belong to another session) |
+|:--|:--------------------|:--------------------|
+| Refetch succeeds | New rows | New rows |
+| Refetch fails | Previous rows stay (same user, stale data) | Must be empty (the previous rows belong to another session) |
 
 So the order inside `resetForSession()` is load-bearing:
 
@@ -112,7 +101,7 @@ Future<void> resetForSession() async {
 <a name="wiring-the-sync"></a>
 ## Wiring the Sync
 
-magic's `SessionScope` is the driver. Attach it once, from your app's service provider `boot()`, AFTER `MagicStarterServiceProvider` has booted (it declares the identity) and as the last `Auth.stateNotifier` listener you add. The starter never attaches it for you:
+Attach `SessionScope` once, from your app's service provider `boot()`, after `MagicStarterServiceProvider` has booted and as the last `Auth.stateNotifier` listener you add. The starter never attaches it for you:
 
 ```dart
 import 'package:magic/magic.dart';
@@ -124,7 +113,7 @@ class AppServiceProvider extends ServiceProvider {
   @override
   Future<void> boot() async {
     MagicStarter.useUserModel((data) => User.fromMap(data));
-    MagicStarter.useTeamResolver(/* ... */);
+    // MagicStarter.useTeamResolver(...) goes here, see Teams.
 
     // Register last: notification polling, realtime subscriptions and locale
     // should already point at the new session before its data is refetched.
@@ -133,20 +122,15 @@ class AppServiceProvider extends ServiceProvider {
 }
 ```
 
-`attach()` subscribes to `Auth.stateNotifier` and records the identity the app boots with. It does not reset anything at boot: no view has resolved a controller yet, so there is nothing cached to clear, and recording the boot identity means the first *real* change is the first one that resets.
-
-The members you use from an app:
+`attach()` subscribes to `Auth.stateNotifier` and records the identity the app boots with. It resets nothing at boot: no view has resolved a controller yet, so there is nothing cached to clear, and the first real change is the first one that resets.
 
 | Member | Purpose |
-|--------|---------|
+|:-------|:--------|
 | `SessionScope.attach()` | Subscribe to auth state changes. Idempotent; a second call while attached is a no-op. |
 | `SessionScope.detach()` | Unsubscribe and forget the recorded identity. Mainly for tests. |
 | `SessionScope.isAttached` | Whether a subscription is active. |
 | `SessionScope.register(holder)` / `unregister(holder)` | Add or remove a non-controller holder. |
-| `SessionScope.identity` | The identity resolver. Magic Starter sets it in `register()`; see below. |
-
-> [!NOTE]
-> The state is static rather than per-instance because everything it coordinates is already process-wide: `Auth.stateNotifier` is one notifier per guard and `Magic.controllers` is one static registry. Two instances would both listen to that single notifier and reset every controller twice per identity change.
+| `SessionScope.identity` | The identity resolver. This package sets it in `register()`; see below. |
 
 <a name="the-identity-key"></a>
 ## The Identity Key
@@ -157,48 +141,44 @@ The sync compares a string key, not object identity. Magic's default is the user
 <userId>:<teamId>
 ```
 
-| Leg | Source | Null when |
-|-----|--------|-----------|
-| `userId` | `Auth.id()` | never while `Auth.check()` is true |
-| `teamId` | `MagicStarter.currentTeamId()` (the resolver's current team id, as a string) | teams are disabled, or no team resolver is registered |
+| Leg | Source | Reads `null` when |
+|:----|:-------|:------------------|
+| `userId` | `Auth.id()` | Never while `Auth.check()` is true |
+| `teamId` | `MagicStarter.currentTeamId()`, the team resolver's current team id as a string | Teams are disabled, or no team resolver is registered |
 
-Two legs, because a team-scoped API scopes its endpoints to the current team and not just to the user: switching teams changes every response body while `Auth.id()` stays put. Reading the team through the starter's own [team resolver](https://magic.fluttersdk.com/packages/starter/basics/teams) is what keeps this package independent of your `User` model.
+Two legs, because a team-scoped API scopes its endpoints to the current team and not just to the user: switching teams changes every response body while `Auth.id()` stays put. Reading the team through the starter's own [team resolver](./teams.md#team-resolver) keeps this package independent of your `User` model.
 
-The whole key is null when, and only when, nobody is signed in (`Auth.check()` is the discriminator). Two rules follow from that:
+The whole key is `null` when, and only when, nobody is signed in (`Auth.check()` is the discriminator). Two rules follow:
 
-- **An unchanged key is a no-op.** `Auth.stateNotifier` also bumps on a plain session restore. Without this check, every incidental bump would stampede a fresh wave of refetches, visible as flicker and wasted requests.
-- **Only a change to a non-null key resets.** See below.
+- An unchanged key is a no-op. `Auth.stateNotifier` also bumps on a plain session restore, and without this check every incidental bump would stampede a fresh wave of refetches.
+- Only a change to a non-null key resets.
 
-Team switching triggers the sync for free: `MagicStarter.switchTeam()` goes through `MagicStarterTeamController.switchTeam()`, which applies the fresh user the switch answer carries (falling back to `Auth.restore()` only when the answer carries none) and bumps `Auth.stateNotifier` either way. If you implement your own switch path, do the same: apply the answer's user directly rather than always calling `Auth.restore()`, which would re-apply the CACHED user, still on the previous team, and leave the identity flip to a background sync that may never land.
+Team switching triggers the sync for free: `MagicStarter.switchTeam()` goes through `MagicStarterTeamController.switchTeam()`, which applies the fresh user the switch answer carries (falling back to `Auth.restore()` only when the answer carries none) and bumps `Auth.stateNotifier` either way. If you implement your own switch path, apply the answer's user directly rather than always calling `Auth.restore()`, which re-applies the cached user, still on the previous team.
 
 An app that needs a different key (an organisation leg, say) sets `SessionScope.identity` in its own provider's `boot()`, after this one.
 
 <a name="why-logout-does-not-reset"></a>
 ## Why Logout Does Not Reset
 
-On logout the key goes from `1:10` to `null`, and nothing is reset. That is deliberate.
+On logout the key goes from `1:10` to `null`, and nothing is reset. There is no identity to refetch for: a reset on logout would clear every controller and then fire a wave of requests from the login screen, where the token is already gone, so they could only come back `401`.
 
-There is no identity to refetch for. A reset on logout would clear every controller and then fire a wave of requests from the login screen, where the token is already gone, so they can only come back `401`. That is noise at best, and at worst a forced-logout loop for any app that reacts to a `401`.
-
-The stale rows are not a problem in the meantime: they sit unreachable in memory behind the auth guard, and the next login resets them **before** any authenticated view renders, because `Auth.login` bumps `Auth.stateNotifier` before the post-login navigation runs.
-
-The key is still *recorded* on logout (as null). That is what makes signing back in as the *same* user count as a change (`null` to `1:10`) and refetch anyway.
+The stale rows sit unreachable in memory behind the auth guard, and the next login resets them before any authenticated view renders, because `Auth.login` bumps `Auth.stateNotifier` before it returns to the code that navigates. The key is still recorded on logout (as `null`), which is what makes signing back in as the same user count as a change (`null` to `1:10`) and refetch.
 
 <a name="error-isolation"></a>
 ## Error Isolation
 
-Each `resetForSession()` is fired independently: `Auth.stateNotifier` listeners are synchronous, so the sync does not await them, and each future carries its own error guard. One controller throwing does not stop the others from resetting, and the failure is logged rather than swallowed:
+Each `resetForSession()` is fired independently: `Auth.stateNotifier` listeners are synchronous, so the sync does not await them, and each future carries its own error guard. One controller throwing does not stop the others, and the failure is logged rather than swallowed:
 
 ```
 [SessionScope] session reset failed: <error>
 ```
 
-Implementations should still handle their own failures the way any other reload does (`setError()`, a fallback message). A throw that escapes leaves that one controller cleared and unrefetched, which is safe but shows an empty screen with no explanation.
+Handle your own failures the way any other reload does (`setError()`, a fallback message). A throw that escapes leaves that one controller cleared and unrefetched: safe, but an empty screen with no explanation.
 
 <a name="testing"></a>
 ## Testing
 
-`SessionScope` holds process-wide statics that neither `MagicApp.reset()` nor `Magic.flush()` clears, so call `detach()` in both `setUp` and `tearDown` to keep tests order-independent. `detach()` keeps the identity resolver, so a test that boots the starter provider restores the one it found:
+`SessionScope` holds process-wide statics that neither `MagicApp.reset()` nor `Magic.flush()` clears, so call `detach()` in both `setUp` and `tearDown`. `detach()` keeps the identity resolver, so a test that boots the starter provider restores the one it found:
 
 ```dart
 setUp(() {
@@ -224,12 +204,23 @@ test('drops the previous tenant rows when another user logs in', () async {
 });
 ```
 
-`detach()` unsubscribes from the exact notifier instance it subscribed to. That matters in tests: `Auth.stateNotifier` resolves through the IoC container, so rebinding the guard hands back a different notifier and unsubscribing through the facade would leave the old listener alive.
+`detach()` unsubscribes from the exact notifier instance it subscribed to. That matters in tests: `Auth.stateNotifier` resolves through the container, so rebinding the guard hands back a different notifier.
 
-<a name="related"></a>
-## Related
+<a name="gotchas"></a>
+## Gotchas
 
-- [State Management](https://magic.fluttersdk.com/packages/starter/guides/state-management): `MagicController`, `MagicStateMixin`, and the singleton accessor pattern this contract sits on
-- [Teams](https://magic.fluttersdk.com/packages/starter/basics/teams): the team resolver that supplies the second leg of the identity key
-- [Authentication](https://magic.fluttersdk.com/packages/starter/basics/authentication): `Auth.stateNotifier`, login, logout, and session restore
-- [Service Providers](https://magic.fluttersdk.com/packages/starter/architecture/service-provider): where `attach()` belongs in the boot sequence
+| Mistake | Fix |
+|:--------|:----|
+| Expecting the starter to attach the sync | It only declares the identity in `register()`. Call `SessionScope.attach()` yourself, last in your provider's `boot()`. |
+| Writing `resetForSession()` as `await reload()` | Clear the rows and publish the cleared state first, then refetch. A failed refetch must leave an empty screen. |
+| Switching teams through your own path with `Auth.restore()` | Apply the switch answer's user directly, as `MagicStarterTeamController.switchTeam()` does, or the identity flips late. |
+| Caching rows in a repository | A non-controller holder is not found automatically: implement `SessionScoped` and call `SessionScope.register(holder)`. |
+| Leaving `SessionScope` attached between tests | Call `SessionScope.detach()` in `setUp` and `tearDown`. |
+
+<a name="related-documentation"></a>
+## Related Documentation
+
+- [State Management](../guides/state-management.md): `MagicController`, `MagicStateMixin` and the singleton accessor pattern this contract sits on.
+- [Teams](./teams.md): the team resolver that supplies the second leg of the identity key.
+- [Authentication](./authentication.md): `Auth.stateNotifier`, login, logout and session restore.
+- [Service Provider](../architecture/service-provider.md): where `attach()` belongs in the boot sequence.

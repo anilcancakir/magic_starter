@@ -1,326 +1,241 @@
-# Profile Management
+# Profile
 
-- [Introduction](#introduction)
+The settings hub and the sub-pages behind it, where a signed-in user edits their profile, security and preferences through `MagicStarterProfileController`.
+
+- [Basic Usage](#basic-usage)
+- [Quick Reference](#quick-reference)
 - [Profile Photo](#profile-photo)
-- [Email & Password](#email--password)
-    - [Updating Profile Information](#updating-profile-information)
-    - [Changing Password](#changing-password)
+- [Profile Information](#profile-information)
+- [Changing a Password](#changing-a-password)
 - [Email Verification](#email-verification)
-- [Session Management](#session-management)
-- [Timezone Selection](#timezone-selection)
-- [Extended Profile](#extended-profile)
+- [Sessions](#sessions)
+- [Timezone and Language](#timezone-and-language)
 - [Newsletter](#newsletter)
 - [Delete Account](#delete-account)
-- [Two-Factor Management](#two-factor-management)
+- [Two-Factor](#two-factor)
 - [Gate Abilities](#gate-abilities)
-- [Controller](#controller)
-- [View](#view)
+- [Overriding a Page](#overriding-a-page)
+- [Gotchas](#gotchas)
+- [Related Documentation](#related-documentation)
 
-<a name="introduction"></a>
-## Introduction
+<a name="basic-usage"></a>
+## Basic Usage
 
-The profile module provides a unified settings page where authenticated users manage their account information, security settings, and preferences. Every section is independently feature-gated — the host app enables only what it needs.
+Register the routes from your route provider, beside the other starter routes:
 
-`MagicStarterProfileController` is the central controller. It uses the `withoutNotifying()` pattern to prevent full-page rebuilds during form-level submissions, and section-level `ValueNotifier` fields for fine-grained reactivity.
+```dart
+registerMagicStarterAuthRoutes();
+registerMagicStarterProfileRoutes();
+```
 
-> [!NOTE]
-> Profile routes are registered under `MagicStarterConfig.profilePrefix()` (default `/settings`). All profile routes require the `EnsureAuthenticated` middleware and render inside `AppLayout`.
+The hub opens at `MagicStarterConfig.settingsHubRoute()`, which is `magic_starter.routes.profile_prefix` (default `/settings`). Every sub-page is pushed (`.stacked()`) so the back gesture returns to the hub, and the whole group sits behind the `auth` middleware alias inside the `layout.app` shell.
+
+The pages call the controller for you. A page of your own calls it the same way:
+
+```dart
+final controller = MagicStarterProfileController.instance;
+
+final saved = await controller.withoutNotifying(
+  () => controller.doUpdateProfile(name: 'Alice', email: 'alice@example.com'),
+);
+```
+
+Every `do*` method answers `bool` (a few two-factor reads answer a map or a list, or `null` on failure), refuses to start while another write is in flight, and keeps its refusal on the controller for the view to show.
+
+<a name="quick-reference"></a>
+## Quick Reference
+
+| Page | Route | View key | Shown when |
+|:-----|:------|:---------|:-----------|
+| Hub | `settingsHubRoute()` | `settings.hub` | Always |
+| Profile | `profileRoute()` | `profile.profile` | Always |
+| Appearance | `settingsAppearanceRoute()` | `settings.appearance` | Always |
+| Password | `settingsPasswordRoute()` | `settings.security.password` | Gate `starter.update-password` |
+| Language | `settingsLanguageRoute()` | `settings.language` | `extended_profile` |
+| Timezone | `settingsTimezoneRoute()` | `settings.timezone` | `timezones` |
+| Newsletter | `settingsNewsletterRoute()` | `settings.newsletter` | `newsletter` and Gate `starter.manage-newsletter` |
+| What's new | `settingsChangelogRoute()` | `settings.changelog` | `releases` (see [Releases](./releases.md)) |
+| Two-factor | `settingsTwoFactorRoute()` | `settings.security.two_factor` | `two_factor` and Gate `starter.manage-two-factor` |
+| Sessions | `settingsSessionsRoute()` | `settings.security.sessions` | `sessions` |
+| Connected accounts | `settingsConnectedAccountsRoute()` | `settings.security.connected_accounts` | `social_login` and a bridge from `MagicStarter.useSocialAuth` (see [Connected Accounts](./connected-accounts.md)) |
+
+All the route helpers hang off `MagicStarterConfig` and follow `profile_prefix`. A disabled feature registers neither its route nor its default view.
 
 <a name="profile-photo"></a>
 ## Profile Photo
 
-Gated by `MagicStarterConfig.hasProfilePhotoFeatures()` (`magic_starter.features.profile_photos`).
-
-Upload a profile photo via `Http.upload()`:
+Gated by `magic_starter.features.profile_photos` and the Gate `starter.update-profile-photo`. The Profile page shows the section.
 
 ```dart
-final success = await MagicStarterProfileController.instance.doUpdateProfilePhoto(
+final uploaded = await MagicStarterProfileController.instance.doUpdateProfilePhoto(
   file: magicFile,
 );
+final removed = await MagicStarterProfileController.instance.doDeleteProfilePhoto();
 ```
 
-The controller sends a multipart `POST` to `/user/profile-photo` with the file under the `photo` key. On success, it calls `Auth.restore()` to refresh the user model (which includes the new `profile_photo_url`).
+Upload is a multipart `POST /user/profile-photo` with the file under the `photo` key; removal is `DELETE /user/profile-photo`. Both call `Auth.restore()` on success, so `profile_photo_url` on the user model is fresh. `magic-starter-laravel` serves these routes only with its `profilePhotos` feature on.
 
-Delete the current photo:
+<a name="profile-information"></a>
+## Profile Information
 
-```dart
-final success = await MagicStarterProfileController.instance.doDeleteProfilePhoto();
-```
-
-This sends `DELETE /user/profile-photo` and restores the auth state afterward.
-
-> [!TIP]
-> Both photo operations call `Auth.restore()` on success so the UI immediately reflects the change without a manual refresh.
-
-<a name="email--password"></a>
-## Email & Password
-
-<a name="updating-profile-information"></a>
-### Updating Profile Information
-
-`doUpdateProfile()` sends `PUT /user/profile` with the updated fields. Only non-empty optional fields are included in the payload:
+`doUpdateProfile()` sends `PUT /user/profile`. `name` and `email` are required arguments; `phone`, `timezone` and `language` are sent only when non-empty, and `language` travels as the `locale` key:
 
 ```dart
 final success = await controller.withoutNotifying(
   () => controller.doUpdateProfile(
-    name: form['name'],
-    email: form['email'],
-    phone: form['phone'],
-    timezone: form['timezone'],
-    language: form['language'],
+    name: form.get('name'),
+    email: form.get('email'),
+    phone: form.get('phone'),
+    language: form.get('language'),
   ),
 );
 ```
 
-The `withoutNotifying()` wrapper suppresses full-page `notifyListeners()` calls while the form-level `MagicFormData.process()` drives the submit button's loading state. This prevents the entire settings page from rebuilding during a single section's save.
+`withoutNotifying()` suppresses `notifyListeners()` for the duration of the action, so a form that already shows its own loading state through `MagicFormData.process()` does not rebuild the whole page.
 
-On success, `Auth.restore()` refreshes the user model and a toast confirmation is shown. When `language` is present, the controller hands it to `MagicStarterManager.applyLocale()`, which switches the app to it after the current frame.
+On success the controller calls `Auth.restore()`, shows a toast and, when `language` is present, hands it to `MagicStarterManager.applyLocale()`, which switches the app's locale after the current frame. `MagicStarterServiceProvider` also applies a signed-in user's saved `locale` on every sign-in and restore, gated by `magic_starter.localization.apply_user_locale` (default `true`); see [Locale Application](../architecture/manager.md#locale-application). Both go through `applyLocale()`, so one save issues one `Lang.setLocale()` call.
 
-> [!NOTE]
-> `MagicStarterServiceProvider` separately applies a signed-in user's saved `locale` attribute on every sign-in and `Auth.restore()`, gated by `magic_starter.localization.apply_user_locale` (default `true`); see [Locale Application](../architecture/manager.md#locale-application). The two mechanisms share `applyLocale()`'s pending target rather than racing: a profile save's own `Auth.restore()` wakes the provider's listener too, and whichever of the two reaches `applyLocale()` first for a given locale is the one that switches, so one save still issues exactly one `Lang.setLocale()` call.
+The Profile page carries name and email (email behind the Gate `starter.update-email`) and, with `extended_profile`, a phone field behind `starter.update-phone`.
 
-<a name="changing-password"></a>
-### Changing Password
-
-`doUpdatePassword()` sends `PUT /user/password` with `current_password`, `password`, and `password_confirmation`:
+<a name="changing-a-password"></a>
+## Changing a Password
 
 ```dart
 final success = await controller.doUpdatePassword(
-  currentPassword: form['current_password'],
-  password: form['password'],
-  passwordConfirmation: form['password_confirmation'],
+  currentPassword: form.get('current_password'),
+  password: form.get('password'),
+  passwordConfirmation: form.get('password_confirmation'),
 );
 ```
 
-> [!IMPORTANT]
-> Password changes require the current password for verification. The confirmation dialog in the view uses inline error handling via `setState()` — it never auto-closes on error.
+This sends `PUT /user/password` with `current_password`, `password` and `password_confirmation`. It does not call `Auth.restore()`: the user model does not change.
 
-An account created through a provider has no password to change (`has_password` is `false`): the backend answers `PUT /user/password` with 422 `password_not_set`. The password page renders a **Set password** form for it instead; see [Set a Password](set-password.md).
+An account created through a provider has no password (`has_password` is `false`): the backend answers `PUT /user/password` with 422 `password_not_set`, and the page shows the **Set password** form instead. See [Set a Password](./set-password.md).
 
 <a name="email-verification"></a>
 ## Email Verification
 
-Gated by `MagicStarterConfig.hasEmailVerificationFeatures()` (`magic_starter.features.email_verification`).
-
-Send or resend a verification email:
+Gated by `magic_starter.features.email_verification` and the Gate `starter.verify-email`. The Profile page shows a banner with a resend button while the email is unverified, and a verified badge afterwards.
 
 ```dart
 await MagicStarterProfileController.instance.sendEmailVerification();
+final verified = MagicStarterProfileController.instance.isEmailVerified;
 ```
 
-This calls `POST /email/verification-notification`. On success, a toast message confirms the email was sent.
+`sendEmailVerification()` posts to `/email/verification-notification` and toasts on success. `isEmailVerified` reads `email_verified_at` from `Auth.user()` and is `true` only for a non-empty string. The mailed link is handled by the backend and the app's verify-email view; call `Auth.restore()` to pull the new status.
 
-Check the current verification status:
+<a name="sessions"></a>
+## Sessions
+
+Gated by `magic_starter.features.sessions`. The Sessions page lists the account's tokens (device, IP address, location and a "current device" badge) from `GET /sessions`:
 
 ```dart
-final isVerified = controller.isEmailVerified;
+final sessions = await controller.getSessions();
 ```
 
-The getter reads `email_verified_at` from the authenticated user model — it returns `true` only when the field is a non-null, non-empty string.
-
-> [!NOTE]
-> The verification link is handled by the backend. When the user clicks the link in their email, the backend marks the account as verified. Call `Auth.restore()` to pull the updated status.
-
-<a name="session-management"></a>
-## Session Management
-
-Gated by `MagicStarterConfig.hasSessionsFeatures()` (`magic_starter.features.sessions`).
-
-View active sessions:
+`getSessions()` answers `null` when the feature is off or the read fails. Revoking is gated by the Gate `starter.logout-sessions` and needs a step-up `proof`:
 
 ```dart
-final sessions = await MagicStarterProfileController.instance.getSessions();
+final revoked = await controller.doRevokeSession(tokenId: session['id'].toString(), proof: proof);
+final others = await controller.doRevokeOtherSessions(proof: proof);
 ```
 
-Returns a list of session maps from `GET /sessions`, each containing device info, IP address, and last activity timestamp.
+Both go out as `POST` with `{'_method': 'DELETE', ...proof}` to `/sessions/{id}` and `/sessions/other`; the backend route is `DELETE`. `proof` is `{'password': ...}`, `{'code': ...}`, `{'confirmation_token': ...}` or `{}` for a guest; [Confirming Identity](./identity-confirmation.md) covers how the right one is produced for the signed-in account.
 
-Revoke a specific session:
+<a name="timezone-and-language"></a>
+## Timezone and Language
 
-```dart
-final success = await controller.doRevokeSession(
-  tokenId: session['id'],
-  proof: proof,
-);
-```
+Each is its own sub-page and saves through `doUpdateProfile()`, carrying the user's current `name` and `email` so the save does not blank them.
 
-Revoke all other sessions except the current one:
+The Timezone page (`timezones` feature) uses `MagicStarterTimezoneSelect`, a searchable dropdown over `GET /timezones?search=&per_page=&page=`. It debounces the search, pages through the endpoint on scroll and keeps the current value in the list. Entries without an `identifier` and a `label` are dropped. The backend serves the route only with its own `timezones` feature on.
 
-```dart
-final success = await controller.doRevokeOtherSessions(
-  proof: proof,
-);
-```
-
-Both revocation methods use Laravel method spoofing (`{'_method': 'DELETE'}` in an `Http.post()` call) and require a step-up `proof` for sudo-mode confirmation: `{'password': ...}`, `{'code': ...}`, `{'confirmation_token': ...}`, or `{}` for a guest. [Confirming Identity](identity-confirmation.md) covers how the right one is produced for the signed-in account.
-
-> [!TIP]
-> Session revocation is destructive. Always confirm the user's identity (`confirmIdentity`) before calling these methods.
-
-<a name="timezone-selection"></a>
-## Timezone Selection
-
-Gated by `MagicStarterConfig.hasTimezoneFeatures()` (`magic_starter.features.timezones`). Also visible when `MagicStarterConfig.hasExtendedProfileFeatures()` is enabled — the config helper `hasTimezoneOrExtendedProfileFeatures()` checks both.
-
-Timezone data is fetched via a **debounced async API search**, not from local data:
-
-```dart
-final response = await Http.get('/timezones', query: {'search': query});
-```
-
-The timezone select widget debounces user input before firing the API request. Results are displayed as a searchable dropdown. The selected timezone identifier is included in the profile update payload.
-
-> [!IMPORTANT]
-> The API returns timezone entries with an `identifier` field. Entries with null values are filtered out on the client side. This is a known backend behavior — the null-safety checks are critical.
-
-<a name="extended-profile"></a>
-## Extended Profile
-
-Gated by `MagicStarterConfig.hasExtendedProfileFeatures()` (`magic_starter.features.extended_profile`).
-
-When enabled, the profile form includes additional fields:
-
-- **Phone** — optional phone number
-- **Timezone** — async search via `/timezones` API
-- **Language** — locale selection from `MagicStarter.localeOptions`
-
-These fields are conditionally included in the `doUpdateProfile()` payload — only non-empty values are sent:
-
-```dart
-final data = <String, dynamic>{
-  'name': name,
-  'email': email,
-  if (phone != null && phone.isNotEmpty) 'phone': phone,
-  if (timezone != null && timezone.isNotEmpty) 'timezone': timezone,
-  if (language != null && language.isNotEmpty) 'language': language,
-};
-```
+The Language page (`extended_profile` feature) selects from `MagicStarter.localeOptions`. Without an override the list is the app's supported locales (`Lang.supportedLocales`) with native language names; register your own with `MagicStarter.useLocaleOptions({'en': 'English', 'tr': 'Türkçe'})`.
 
 <a name="newsletter"></a>
 ## Newsletter
 
-Gated by `MagicStarterConfig.hasNewsletterFeatures()` (`magic_starter.features.newsletter`).
-
-`MagicStarterNewsletterController` manages subscription state independently from the profile controller:
+Gated by `magic_starter.features.newsletter` and the Gate `starter.manage-newsletter`. `MagicStarterNewsletterController` keeps the subscription apart from the profile controller:
 
 ```dart
-// Fetch current subscription status
 await MagicStarterNewsletterController.instance.getNewsletterStatus();
-
-// Update subscription
-await MagicStarterNewsletterController.instance.updateNewsletterSubscription(
-  subscribe: true,
-);
+await MagicStarterNewsletterController.instance.updateNewsletterSubscription(subscribe: true);
 ```
 
-The controller calls `GET /user/newsletter` and `PUT /user/newsletter` respectively. It follows the standard `MagicStateMixin` pattern — check `controller.isSuccess` or `controller.hasErrors` after each call.
-
-> [!TIP]
-> Customize the newsletter label shown in the UI via `MagicStarter.useNewsletterLabel('Subscribe to our updates')`.
+These call `GET /user/newsletter` and `PUT /user/newsletter`. Set the label with `MagicStarter.useNewsletterLabel('Subscribe to our updates')`.
 
 <a name="delete-account"></a>
 ## Delete Account
 
-Account deletion requires a step-up proof and uses Laravel method spoofing:
+Account deletion lives on the Sessions page. It asks first whether the account goes after the grace period or now, then confirms identity, then calls the controller:
 
 ```dart
-// confirmIdentity is the starter's own helper (see Confirming Identity).
 final proof = await confirmIdentity(context);
 if (proof == null) return; // the user cancelled
 
 final success = await MagicStarterProfileController.instance.doDeleteAccount(
   proof: proof,
-  immediately: false, // true deletes now instead of after the grace period
+  immediately: false, // true purges now instead of after the grace period
 );
 ```
 
-The starter's delete screens (the Security sessions page and the long-form profile settings view) first ask which one the user wants: "Delete after the grace period (cancel by signing in)" or "Delete now, permanently", the second styled as the modal theme's danger button. Dismissing the choice deletes nothing; either answer then goes through the identity confirmation above.
+The controller sends `POST /user` with `{'_method': 'DELETE', ...proof}` and, for the second choice, `'immediately': true`. The backend answers `202`: by default it schedules the deletion, revokes every token and purges after a grace period, and a sign-in within it cancels the deletion (the next sign-in shows an "Account deletion cancelled" toast; the user carries `deletion_scheduled_at`). With `immediately` it purges at once. Either way the controller toasts the server's sentence, calls `Auth.logout()` and navigates to the login page.
 
-`proof` is `{'password': ...}` for an account with a password, `{'code': ...}` or `{'confirmation_token': ...}` for one without, and `{}` for a guest; see [Confirming Identity](identity-confirmation.md).
+A refusal keeps the user signed in and shows its own sentence, read by `code`: `owns_shared_teams`, `team_has_active_subscription`, `subscription_active`, `step_up_required`, or a wrong password. A subscription refusal can carry one action that clears it: the store's subscription screen for a store plan, or the page at `magic_starter.account.deletion_url` for a card plan (without that key the sentence stands alone).
 
-The controller sends `POST /user` with `{'_method': 'DELETE', ...proof}`, plus `'immediately': true` only for the second choice. By default the backend **schedules** the deletion and answers `202` with `data.deletion_scheduled_at` and a sentence that says how to cancel: every token is revoked at once, the account is purged after a grace period (30 days by default), and signing in again within it cancels the deletion. On success the controller shows that sentence as a toast, calls `Auth.logout()` and navigates to the login page. The next sign-in during the grace period shows the "Account deletion cancelled" toast. The user resource carries `deletion_scheduled_at` (`MagicStarterAuthUser.deletionScheduledAt`).
+<a name="two-factor"></a>
+## Two-Factor
 
-With `immediately: true` the backend applies the same refusals and step-up, then purges the account now rather than after the grace period, and answers `202` with `data.immediate: true`. The controller handles it the same way: the server's sentence as a toast, `Auth.logout()`, the login page. There is nothing to cancel by signing in afterwards.
-
-A refusal keeps the user signed in and shows its own sentence: `owns_shared_teams`, `team_has_active_subscription` and `subscription_active` (cancel the subscription first), `step_up_required` (the proof was missing or spent), and a wrong password.
-
-> [!IMPORTANT]
-> Either way the user is signed out immediately; the scheduled deletion is the one that can still be cancelled. Always confirm identity first. The dialog handles inline errors via `setState()` and never auto-closes on API failure.
-
-<a name="two-factor-management"></a>
-## Two-Factor Management
-
-Two-factor enable, disable, confirm, and recovery code management are handled by `MagicStarterProfileController`. See the [Authentication - Two-Factor Authentication](authentication.md#two-factor-authentication) section for full details.
-
-Key profile-side getters:
-
-```dart
-// Check if 2FA is currently enabled
-final enabled = controller.isTwoFactorEnabled;
-```
+Enabling, confirming, disabling and recovery codes run through the same controller (`doEnableTwoFactor`, `doConfirmTwoFactor`, `doDisableTwoFactor`, `getRecoveryCodes`, `doRegenerateRecoveryCodes`), on the Two-factor page. `controller.isTwoFactorEnabled` reads `two_factor_enabled` from the user. See [Authentication](./authentication.md#two-factor-authentication).
 
 <a name="gate-abilities"></a>
 ## Gate Abilities
 
-The service provider auto-registers 9 `starter.*` Gate abilities that control section visibility in the profile view. These abilities let the host app fine-tune which sections a specific user can see, beyond the global feature flags:
+`MagicStarterServiceProvider` defines these abilities, all denying a guest. Feature flags decide whether a feature exists; the abilities decide whether this user sees it. Re-define one with `Gate.define` after the provider boots to change the rule.
 
 | Ability | Controls |
-|---------|----------|
-| `starter.update-profile-photo` | Profile photo upload/remove section |
-| `starter.update-email` | Email field in profile information |
-| `starter.update-phone` | Phone and country code in extended profile |
-| `starter.update-password` | Password change section |
-| `starter.verify-email` | Email verification banner |
-| `starter.manage-two-factor` | Two-factor authentication section |
-| `starter.manage-newsletter` | Newsletter preferences section |
-| `starter.logout-sessions` | Logout/revoke buttons in browser sessions |
-| `starter.delete-account` | Account deletion section |
+|:--------|:---------|
+| `starter.update-profile-photo` | The photo section |
+| `starter.update-email` | The email field |
+| `starter.update-phone` | The phone field |
+| `starter.update-password` | The Password row and page |
+| `starter.verify-email` | The verification banner |
+| `starter.manage-two-factor` | The Two-factor row |
+| `starter.manage-newsletter` | The Newsletter row |
+| `starter.logout-sessions` | The revoke buttons on Sessions |
+| `starter.delete-account` | The delete section; a guest is denied and sees an upgrade prompt instead |
 
-Feature flags control whether the feature exists; Gate abilities control whether a specific user can access it.
+<a name="overriding-a-page"></a>
+## Overriding a Page
 
-<a name="controller"></a>
-## Controller
-
-`MagicStarterProfileController` is accessed via the singleton:
+Replace any page through the view registry, and add content around the hub and the Profile page with their `header` and `footer` slots:
 
 ```dart
-final controller = MagicStarterProfileController.instance;
+MagicStarter.view.register('settings.security.password', () => const MyPasswordView());
+MagicStarter.view.slot('settings.hub', 'footer', (context) => const MyAboutSection());
 ```
 
-Key patterns:
+`MagicStarterSettingsAccountGroup`, `MagicStarterSettingsSecurityGroup` and `MagicStarterSettingsPreferencesGroup` are the hub's sections, each with its own gating; a host that registers its own `settings.hub` composes them instead of copying the rows.
 
-- **`withoutNotifying()`** — wraps async actions to suppress `notifyListeners()` during form-level loading. The `_suppressNotifications` flag is set to `true` before the action and restored in a `finally` block.
-- **Return type** — all mutation methods return `bool` (or `Map?` for 2FA enable) so the calling view can branch without reading controller state.
-- **`Auth.restore()`** — called after every successful mutation that changes the user model (profile update, photo change, password change).
+<a name="gotchas"></a>
+## Gotchas
 
-<a name="view"></a>
-## View
+| Mistake | Fix |
+|:--------|:----|
+| Expecting a single long profile page under `profile.settings` | The default is the hub and its sub-pages. `profile.settings` is a publishable view that no default registers, and `MagicStarterProfileController.profile()` throws a `StateError` until you register it. |
+| Calling `doUpdateProfile` with only a timezone or a language | `name` and `email` are required. Carry them from `Auth.user()`, as the Timezone and Language pages do. |
+| Passing `password:` to `doRevokeSession`, `doRevokeOtherSessions` or `doDeleteAccount` | They take `proof:`. Produce it with `confirmIdentity`. |
+| Turning on `extended_profile` and expecting a Timezone row | The row needs the `timezones` flag. `extended_profile` adds the Language row and the phone field. |
+| Reading `language` in the backend's profile payload | The client sends it as `locale`. |
+| Showing the photo section with `profile_photos` off on the backend | `magic-starter-laravel` registers the photo routes only with its own feature on; turn on both sides. |
 
-The profile settings view is registered under the key `profile.settings` and rendered inside `AppLayout`:
+<a name="related-documentation"></a>
+## Related Documentation
 
-```dart
-MagicStarter.view.make('profile.settings');
-```
-
-The view uses multiple techniques for fine-grained reactivity:
-
-- **`ValueListenableBuilder`** — for controller `ValueNotifier` fields (e.g., session list, 2FA state).
-- **Section-level `ValueNotifier<bool>`** — local loading indicators (`_photoLoading`, `_emailVerificationLoading`) for independent section spinners.
-- **Multiple `MagicFormData` instances** — each section (profile info, password, extended) has its own form. Field names must not collide across forms.
-- **Feature-gated spreads** — sections are conditionally rendered at build time:
-
-```dart
-if (MagicStarterConfig.hasProfilePhotoFeatures()) ...[
-  _buildPhotoSection(),
-],
-if (MagicStarterConfig.hasSessionsFeatures()) ...[
-  _buildSessionsSection(),
-],
-```
-
----
-
-**Related links:**
-
-- [Authentication](https://magic.fluttersdk.com/packages/starter/authentication)
-- [Configuration](https://magic.fluttersdk.com/packages/starter/configuration)
-- [Teams](https://magic.fluttersdk.com/packages/starter/teams)
+- [Authentication](./authentication.md): sign-in, two-factor and guest sessions.
+- [Confirming Identity](./identity-confirmation.md): the `proof` the gated methods take.
+- [Set a Password](./set-password.md): the first password of a social-only account.
+- [Connected Accounts](./connected-accounts.md): linking and unlinking providers.
+- [Teams](./teams.md): team creation and switching.
+- [Releases](./releases.md): the What's new page.
+- [Views and Layouts](./views-and-layouts.md): the view registry and the app shell.
+- [Configuration](../getting-started/configuration.md): the feature flags and route keys.

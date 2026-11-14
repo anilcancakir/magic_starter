@@ -1,11 +1,21 @@
 # Views and Layouts
 
+How a page-level view binds to its controller, how the app and guest shells wrap it, and how a host replaces any screen or shell through the view registry.
+
 - [Introduction](#introduction)
+- [Quick Reference](#quick-reference)
 - [MagicStatefulView](#magicstatefulview)
 - [View Lifecycle](#view-lifecycle)
 - [State Rendering](#state-rendering)
 - [Form Handling](#form-handling)
 - [AppLayout](#applayout)
+    - [Where the sidebar starts, and where it grows labels](#where-the-sidebar-starts-and-where-it-grows-labels)
+    - [Letting the viewer collapse the sidebar](#letting-the-viewer-collapse-the-sidebar)
+    - [A focus ring for a keyboard or a remote](#a-focus-ring-for-a-keyboard-or-a-remote)
+    - [A live count on a destination](#a-live-count-on-a-destination)
+    - [The box the route child is handed](#the-box-the-route-child-is-handed)
+    - [Hiding the bottom nav on a page](#hiding-the-bottom-nav-on-a-page)
+    - [An immersive route](#an-immersive-route)
 - [GuestLayout](#guestlayout)
 - [Page Chrome](#page-chrome)
 - [Wind UI System](#wind-ui-system)
@@ -16,13 +26,53 @@
 - [Feature-Gated Rendering](#feature-gated-rendering)
 - [Zero Business Logic](#zero-business-logic)
 - [Reusable Widgets](#reusable-widgets)
+- [Gotchas](#gotchas)
+- [Related Documentation](#related-documentation)
 
 <a name="introduction"></a>
 ## Introduction
 
-Magic Starter's view layer follows a strict separation of concerns: views handle rendering, controllers handle state and business logic. Every page-level view extends `MagicStatefulView<ControllerType>`, which binds the view to its controller singleton and provides lifecycle hooks. Two layout shells — `AppLayout` for authenticated pages and `GuestLayout` for auth pages — wrap all views. The entire UI is built with Wind UI components exclusively, with no direct Material widget usage beyond `Icons.*` references.
+The view layer separates rendering from state: views render, controllers hold state and business logic. Every page-level view extends `MagicStatefulView<ControllerType>`, which binds the view to its controller singleton and provides lifecycle hooks. Two layout shells wrap the views: `MagicStarterAppLayout` for authenticated pages and `MagicStarterGuestLayout` for auth pages. The views are built with Wind widgets (`WDiv`, `WText`, `WButton` and the rest); `Icons` is the only Material import.
 
-All views and layouts are registered in a string-keyed registry, making every screen overridable by the host application.
+All views and layouts are registered by string key in a registry, so every screen is overridable by the host app.
+
+<a name="quick-reference"></a>
+## Quick Reference
+
+Replace a view or a layout by registering a builder under its key, in your own provider's `boot()`:
+
+```dart
+MagicStarter.view.register('auth.login', () => const MyLoginView());
+MagicStarter.view.registerLayout('layout.app', (child) => MyAppShell(child: child));
+```
+
+| View keys | Registered when |
+|:----------|:----------------|
+| `auth.login`, `auth.register`, `auth.forgot_password`, `auth.reset_password` | Always |
+| `auth.verify_email` | `email_verification` |
+| `auth.two_factor_challenge` | `two_factor` |
+| `auth.otp_verify` | `phone_otp` |
+| `auth.handoff` | `handoff` |
+| `settings.hub`, `profile.profile`, `settings.appearance`, `settings.security.password` | Always |
+| `settings.language` | `extended_profile` |
+| `settings.timezone` | `timezones` |
+| `settings.newsletter` | `newsletter` |
+| `settings.changelog` | `releases` |
+| `settings.security.two_factor` | `two_factor` |
+| `settings.security.sessions` | `sessions` |
+| `settings.security.connected_accounts` | `social_login` |
+| `teams.create`, `teams.settings`, `teams.invitation_accept` | `teams` |
+| `teams.billing` | `billing` |
+| `support.index`, `support.create`, `support.thread` | `support` |
+| `support.feedback` | `support` and `support_feedback` |
+| `support.chat`, `support.chat_panel` | `support` and `support_chat` |
+
+| Layout keys | Layout |
+|:------------|:-------|
+| `layout.app` | The authenticated shell with sidebar and navigation |
+| `layout.guest` | The centred shell for auth pages |
+
+`profile.settings` is a long single-page profile view the package can publish (`starter:publish`) but no default registers. `notifications.list` and `notifications.preferences` are not on `MagicStarter.view` either: those screens belong to `magic_notifications` and live on its own `Notify.view`; see [Notifications](./notifications.md).
 
 <a name="magicstatefulview"></a>
 ## MagicStatefulView
@@ -30,17 +80,15 @@ All views and layouts are registered in a string-keyed registry, making every sc
 Page-level views extend `MagicStatefulView<ControllerType>` with a state class that extends `MagicStatefulViewState`:
 
 ```dart
-class MagicStarterLoginView
-    extends MagicStatefulView<MagicStarterAuthController> {
-  const MagicStarterLoginView({super.key});
+class ProjectsView extends MagicStatefulView<ProjectController> {
+  const ProjectsView({super.key});
 
   @override
-  State<MagicStarterLoginView> createState() => _MagicStarterLoginViewState();
+  State<ProjectsView> createState() => _ProjectsViewState();
 }
 
-class _MagicStarterLoginViewState extends MagicStatefulViewState<
-    MagicStarterAuthController, MagicStarterLoginView> {
-
+class _ProjectsViewState
+    extends MagicStatefulViewState<ProjectController, ProjectsView> {
   @override
   void onInit() {
     controller.clearErrors();
@@ -50,99 +98,58 @@ class _MagicStarterLoginViewState extends MagicStatefulViewState<
   @override
   Widget build(BuildContext context) {
     return controller.renderState(
-      (_) => _buildForm(),
-      onEmpty: _buildForm(),
-      onError: (message) => _buildForm(errorMessage: message),
+      (_) => _buildList(),
+      onEmpty: _buildList(),
+      onError: (message) => _buildList(errorMessage: message),
     );
   }
 }
 ```
 
-The `MagicStatefulViewState` base class provides access to the controller singleton via `controller` and lifecycle hooks via `onInit()` and `onClose()`.
-
-> [!NOTE]
-> Views are NOT widgets like `MSUserProfileDropdown` — those extend `StatelessWidget` or `StatefulWidget` directly. Only full-page views that need a controller binding use `MagicStatefulView`.
+The base class gives you the controller singleton as `controller`, plus the `onInit()` and `onClose()` hooks. Only full-page views that need a controller binding use it; components such as `MSUserProfileDropdown` extend `StatelessWidget` or `StatefulWidget` directly.
 
 <a name="view-lifecycle"></a>
 ## View Lifecycle
 
-Two lifecycle hooks are available in `MagicStatefulViewState`:
-
-**`onInit()`** — Called once when the state is initialized. Use it to clear errors, set initial state, or trigger data fetches:
-
-```dart
-@override
-void onInit() {
-  controller.clearErrors();
-  controller.setEmpty();
-}
-```
-
-**`onClose()`** — Called when the state is disposed. Use it to clean up form data or local notifiers:
+`onInit()` runs once when the state is initialised: clear errors, set the initial state or trigger a fetch. `onClose()` runs when the state is disposed: dispose form data and local notifiers.
 
 ```dart
 @override
 void onClose() => form.dispose();
 ```
 
-> [!TIP]
-> For views with multiple forms (like the profile settings page), dispose all `MagicFormData` instances in `onClose()`. Field names must not collide across forms in the same view.
+A view with several forms disposes every `MagicFormData` in `onClose()`, and field names must not collide across forms in the same view. A view that runs while its route is being built should not notify: the profile and team controllers expose `resetQuietly()` for that.
 
 <a name="state-rendering"></a>
 ## State Rendering
 
-Views delegate state-based rendering to `controller.renderState()`, which selects the appropriate builder based on the controller's current `MagicStateMixin` state:
-
-```dart
-@override
-Widget build(BuildContext context) {
-  return controller.renderState(
-    (_) => _buildForm(),
-    onEmpty: _buildForm(),
-    onError: (message) => _buildForm(errorMessage: message),
-  );
-}
-```
-
-The first positional argument handles the success state (receives the state value). Named parameters:
+`controller.renderState()` picks a builder from the controller's `MagicStateMixin` state. The first positional argument builds the success state (it receives the state value):
 
 | Parameter | When | Typical use |
-|-----------|------|-------------|
-| `onEmpty` | No data loaded yet | Show empty form or placeholder |
-| `onError` | Controller called `setError()` | Show form with error banner |
+|:----------|:-----|:------------|
+| `onLoading` | A request is in flight | A skeleton |
+| `onEmpty` | No data loaded yet | The empty form or a placeholder |
+| `onError` | The controller called `setError()` | The form with an error banner |
 
-Extract loading state at the top of your build method for conditional UI:
+Read `controller.isLoading` at the top of a build method to disable a submit button:
 
 ```dart
-Widget _buildForm({String? errorMessage}) {
-  final isLoading = controller.isLoading;
-
-  return WDiv(
-    className: 'flex flex-col gap-4 p-6',
-    children: [
-      if (errorMessage != null)
-        WText(errorMessage, className: 'text-sm text-red-500'),
-      // ... form fields
-      WButton(
-        onTap: isLoading ? null : _submit,
-        className: 'w-full py-3 rounded-lg bg-primary text-white',
-        child: WText(isLoading ? trans('common.loading') : trans('auth.login')),
-      ),
-    ],
-  );
-}
+WButton(
+  onTap: controller.isLoading ? null : _submit,
+  className: 'w-full py-3 rounded-lg bg-primary text-white',
+  child: WText(controller.isLoading ? trans('common.loading') : trans('auth.login')),
+)
 ```
 
 <a name="form-handling"></a>
 ## Form Handling
 
-Forms are declared as `MagicFormData` instances with empty string defaults for text fields and typed defaults for non-string fields:
+Forms are `MagicFormData` instances with empty-string defaults for text fields and typed defaults for the rest:
 
 ```dart
 late final form = MagicFormData(
   {
     'email': '',
-    'phone': '',
     'password': '',
     'remember_me': false,
   },
@@ -150,32 +157,23 @@ late final form = MagicFormData(
 );
 ```
 
-Access values with type-safe extraction:
-
-```dart
-// String fields
-final email = form.get('email');
-
-// Non-string fields — use value<T>()
-final rememberMe = form.value<bool>('remember_me');
-```
-
-Form fields render with `WFormInput`:
+Read a text field with `form.get('email')` and a typed one with `form.value<bool>('remember_me')`. Render fields with `WFormInput`, bound to the form's field controller:
 
 ```dart
 WFormInput(
-  form: form,
-  name: 'email',
-  label: trans('auth.email'),
-  keyboardType: TextInputType.emailAddress,
+  label: trans('attributes.email'),
+  controller: form['email'],
+  type: InputType.email,
+  validator: rules([Required(), Email()], field: 'email'),
 )
 ```
 
-Validate and submit:
+Validate, then hand the values to the controller:
 
 ```dart
 Future<void> _submit() async {
   if (!form.validate()) return;
+
   await controller.doLogin(
     email: form.get('email'),
     password: form.get('password'),
@@ -184,35 +182,24 @@ Future<void> _submit() async {
 }
 ```
 
-> [!NOTE]
-> Route values needed before calling the controller (like password reset tokens) should be extracted in the view's `didChangeDependencies`, through `MagicRouter.instance.queryParameterOf(context, 'token')` or `pathParameterOf(context, ...)`, which answer for the page the view sits in.
+Read route values a controller call needs (a reset token, say) in the view's `didChangeDependencies` through `MagicRouter.instance.queryParameterOf(context, 'token')` or `pathParameterOf(context, ...)`, which answer for the page the view sits in.
 
 <a name="applayout"></a>
 ## AppLayout
 
-`MagicStarterAppLayout` is the authenticated shell used for all protected pages. It provides a responsive layout with:
+`MagicStarterAppLayout` is the authenticated shell: a sidebar with brand, team selector, navigation and user menu on a wide screen, and a header, drawer and bottom navigation on a narrow one. `MagicStarterServiceProvider` registers it under `layout.app`.
 
-- **Desktop:** Sidebar with brand, team selector, navigation items, and user menu
-- **Mobile:** Hamburger menu with drawer, header bar, and bottom navigation
+It starts notification polling when it mounts (with notifications on, through `Notify.startPolling()`), mounts the update and campaign banners when their features are on, and rebuilds on `Auth.stateNotifier` and on the static `MagicStarterAppLayout.refreshNotifier`, which auth changes bump for you. Do not poke the notifier by hand.
 
-```dart
-MagicStarter.view.registerLayout(
-  'layout.app',
-  (child) => MagicStarterAppLayout(child: child),
-);
-```
-
-The layout automatically starts notification polling when mounted (if notifications are enabled) and rebuilds on auth state changes via `MagicStarterAppLayout.refreshNotifier` and `Auth.stateNotifier`.
-
-Key customization points:
+Customise it before the layout first paints, ideally in `AppServiceProvider.boot()`:
 
 ```dart
-// Custom header — replaces the default mobile header
+// Replace the mobile header.
 MagicStarter.useHeader((context, isDesktop) {
   return MyCustomHeader(showMenuButton: !isDesktop);
 });
 
-// Custom navigation items
+// Navigation destinations.
 MagicStarter.useNavigation(
   mainItems: [
     MagicStarterNavItem(
@@ -221,19 +208,12 @@ MagicStarter.useNavigation(
       path: '/',
     ),
   ],
-  systemItems: [...],
-  bottomItems: [...],
 );
 
-// Sidebar footer — custom widget between nav items and user menu
-MagicStarter.useSidebarFooter((context) {
-  return MyVersionBadge();
-});
+// A widget between the navigation items and the user menu.
+MagicStarter.useSidebarFooter((context) => MyVersionBadge());
 
-// Custom logo/brand — replaces default app name text
-// MagicStarter.useNavigationTheme(brandBuilder: ...) handles this
-
-// Custom navigation colors and brand
+// Colours and brand.
 MagicStarter.useNavigationTheme(
   MagicStarterNavigationTheme(
     activeItemClassName:
@@ -245,24 +225,21 @@ MagicStarter.useNavigationTheme(
 );
 ```
 
-> [!TIP]
-> `MagicStarterAppLayout.refreshNotifier` is a static `ValueNotifier<int>` that triggers layout rebuilds. It is bumped automatically by auth state changes. Do not poke it manually unless you have a specific reason to force a layout rebuild.
+`useNavigation` also takes `systemItems`, `bottomItems` and `profileMenuItems`. See [Manager](../architecture/manager.md) for the themes.
 
 ### Where the sidebar starts, and where it grows labels
 
-Three fields on `MagicStarterLayoutTheme` decide the shell's shape. The first two are breakpoints, named as keys of the Wind theme's `screens` map (`sm md lg xl 2xl` by default) rather than as pixel counts; the third is a width in logical pixels:
+Three fields on `MagicStarterLayoutTheme` decide the shell's shape. The first two are breakpoints, named as keys of the Wind theme's `screens` map (`sm`, `md`, `lg`, `xl`, `2xl` by default) rather than as pixel counts; the third is a width in logical pixels:
 
 | Field | Default | What it decides |
-|-------|---------|-----------------|
-| `navigationBreakpoint` | `'lg'` | Breakpoint from which the sidebar replaces the drawer and the bottom bar |
-| `sidebarExpandedBreakpoint` | `'lg'` | Breakpoint from which the sidebar carries labels beside its icons |
-| `sidebarCompactWidth` | `80` | Width in logical pixels of the sidebar while it is compact |
+|:------|:--------|:----------------|
+| `navigationBreakpoint` | `'lg'` | The breakpoint from which the sidebar replaces the drawer and the bottom bar |
+| `sidebarExpandedBreakpoint` | `'lg'` | The breakpoint from which the sidebar carries labels beside its icons |
+| `sidebarCompactWidth` | `80` | The width of the sidebar while it is compact |
 
-Between the two breakpoints the sidebar renders compact: `sidebarCompactWidth` wide, icons only, and every text label dropped, because a label at that width would be clipped rather than shortened. That is the app name in the brand bar, the nav item labels, the system section's name, and the user's name and email, which falls back to the same avatar trigger the mobile header mounts. What a host supplies itself, `brandBuilder` and `sidebarFooterBuilder`, is not reshaped: only the host knows whether its own widget fits an icon column. The rail's brand bar does centre the brand on the icon line, by appending `justify-around` to `brandBarClassName`, which with one child centres it while leaving Wind to bound a brand wider than the rail. A host whose wordmark does not fit sets `MagicStarterNavigationTheme.compactBrandBuilder` to a glyph, and the compact rail shows that instead.
+Between the two breakpoints the sidebar renders compact: icons only, with every text label dropped (the app name, the item labels, the system section's name, and the user's name and email, which falls back to the avatar trigger the mobile header mounts). What a host supplies itself, `brandBuilder` and `sidebarFooterBuilder`, is not reshaped, since only the host knows whether its own widget fits an icon column. A host whose wordmark does not fit sets `MagicStarterNavigationTheme.compactBrandBuilder` to a glyph, and the compact rail shows that instead.
 
-A name the Wind theme does not carry throws a `StateError` naming the field and listing the valid keys. `wScreenIs` answers false for an unknown key, so a typo would otherwise pin the shell to its narrow form at every width with nothing to read.
-
-The shipped defaults leave the two breakpoints equal, so the compact form never fires until a host lowers one of them:
+A name the Wind theme does not carry throws a `StateError` naming the field and listing the valid keys, because `wScreenIs` answers false for an unknown key and a typo would otherwise pin the shell to its narrow form with nothing to read. The defaults leave the two breakpoints equal, so the compact form never fires until a host lowers one of them:
 
 ```dart
 // An icon rail from 640 px, labels from 1024 px.
@@ -274,22 +251,18 @@ MagicStarter.useLayoutTheme(
 );
 ```
 
-Take care lowering `sidebarCompactWidth`. Its floor is the compact team selector rather than the nav icon: `MSTeamSelector`'s compact trigger is `mx-3 p-2` around a `w-8` avatar, which is 72 logical pixels, and `sidebarClassName`'s own `border-r` takes one more out of the box. 72 was measured overflowing by exactly 1 pixel, which is why the default is 80.
+Keep `sidebarCompactWidth` at 80 or more: the compact team selector (`mx-3 p-2` around a `w-8` avatar) plus the sidebar's `border-r` overflows a narrower rail.
 
 ### Letting the viewer collapse the sidebar
 
-Two more fields hand the compact form to the viewer on a window wide enough for labels:
-
 | Field | Default | What it decides |
-|-------|---------|-----------------|
+|:------|:--------|:----------------|
 | `sidebarCollapsible` | `false` | Whether a toggle above the user menu collapses the labelled sidebar to its compact form and back |
 | `sidebarCollapsedByDefault` | `false` | Whether a collapsible sidebar starts compact before the viewer has chosen |
 
-The toggle appears only at or above `sidebarExpandedBreakpoint`. Below it the sidebar is compact because the window cannot spare `sidebarWidth`, so a toggle there would promise an expansion the shell will not make. `sidebarCollapsedByDefault` is ignored unless the sidebar is collapsible: a default the viewer cannot undo would be a rail they are stuck with, and `sidebarExpandedBreakpoint` already expresses that.
+The toggle appears only at or above `sidebarExpandedBreakpoint`; below it the sidebar is compact because the window cannot spare `sidebarWidth`. `sidebarCollapsedByDefault` is ignored unless the sidebar is collapsible. The viewer's choice is remembered through Magic's `Cache` under `magic_starter.sidebar_collapsed`, written with a ten year TTL because the cache has no `forever` and its own default would hand the viewer the default back the next morning. A host that binds no cache keeps the choice in memory for the life of the shell, and a remembered choice wins over `sidebarCollapsedByDefault`.
 
-The viewer's choice is remembered through Magic's `Cache` under `magic_starter.sidebar_collapsed`, written with a ten year TTL because the cache has no `forever` and its own default of an hour would hand the viewer the default back the next morning. A host that binds no cache keeps the choice in memory for the life of the shell. A remembered choice wins over `sidebarCollapsedByDefault`; changing the default moves only the viewers who never touched the toggle.
-
-The toggle reads `nav.collapse_sidebar` and `nav.expand_sidebar`, and names itself with the second through `semanticLabel` while it is icon-only. Both keys ship in the install stub; a host installed before 0.0.34 adds them to its own language files.
+The toggle reads `nav.collapse_sidebar` and `nav.expand_sidebar`, both in the install stub; a host with its own language files adds them.
 
 ```dart
 // Icons only until the viewer asks for labels, with a glyph for the rail.
@@ -310,7 +283,7 @@ MagicStarter.useNavigationTheme(
 
 ### A focus ring for a keyboard or a remote
 
-`MagicStarterNavigationTheme.focusItemClassName` is applied to every navigation item the shell draws: the sidebar and drawer items beside their active and hover classNames, and the bottom bar's items too, so a small window is lit the same way a wide one is. Each token carries the `focus:` prefix; the item already sits inside a `WAnchor`, so Wind lights them the moment it holds primary focus. It defaults to `''`, which is the shipped shell's no-ring behaviour, and an app driven by arrow keys or a television remote wants it set:
+`MagicStarterNavigationTheme.focusItemClassName` is applied to every navigation item the shell draws (sidebar, drawer and bottom bar). Each token carries the `focus:` prefix; Wind lights them when the item's `WAnchor` holds primary focus. It defaults to `''`, which is no ring, and an app driven by arrow keys or a television remote wants it set:
 
 ```dart
 MagicStarter.useNavigationTheme(
@@ -322,7 +295,7 @@ MagicStarter.useNavigationTheme(
 
 ### A live count on a destination
 
-A `MagicStarterNavItem` takes a `badgeCount`, a `ValueListenable<int?>`. The shell listens to it, so the host moves the number by updating the notifier and never rebuilds the navigation config: the badge appears, changes and goes away on its own.
+A `MagicStarterNavItem` takes a `badgeCount`, a `ValueListenable<int?>`. The shell listens to it, so the host moves the number by updating the notifier and never rebuilds the navigation config:
 
 ```dart
 // Owned by whatever loads the number: a controller, a repository, a stream.
@@ -344,9 +317,9 @@ unticked.value = 4; // the badge reads 4
 unticked.value = 0; // and is gone
 ```
 
-The badge is hidden while the value is `null` or not above zero, and reads `99+` above 99. The sidebar and the drawer draw it at the trailing edge of the row, the compact rail and the bottom bar on the corner of the icon; it takes no room from the item, so nothing moves when it shows. On the compact rail the pill overhangs the icon by 16 px, so a `sidebarCompactWidth` under 52 would cut it at the edge of the rail; the default is 80. The profile menu ignores it.
+The badge is hidden while the value is `null` or not above zero, and reads `99+` above 99. The sidebar and the drawer draw it at the trailing edge of the row, the compact rail and the bottom bar on the corner of the icon; the profile menu ignores it. On the compact rail the pill overhangs the icon by 16 px, so a `sidebarCompactWidth` under 52 would cut it.
 
-A badge is not colour alone. The number is drawn, and a screen reader gets a sentence in place of it, added to the item's own label: `badgeLabelKey` names a catalogue line with both plural forms and a `:count` placeholder, read with the real count even above 99. It defaults to `nav.badge_count`, which the install stub ships (`"One item|:count items"`); name your own key when the number counts something specific:
+A badge is not colour alone. A screen reader gets a sentence in place of the number, added to the item's own label: `badgeLabelKey` names a catalogue line with both plural forms and a `:count` placeholder, read with the real count even above 99. It defaults to `nav.badge_count`, which the install stub ships (`"One item|:count items"`); name your own key when the number counts something specific:
 
 ```json
 {
@@ -356,9 +329,7 @@ A badge is not colour alone. The number is drawn, and a screen reader gets a sen
 }
 ```
 
-An item holding a notifier is not `const`, so the list that carries it is `final`; items without a badge stay `const`.
-
-The look is the neutral `MSBadge`. Recolour it through the navigation theme, whose tokens are appended to the badge's own, with a `dark:` peer on every colour (a semantic alias such as `bg-primary` already carries one):
+An item holding a notifier is not `const`, so the list that carries it is `final`. Recolour the badge through the navigation theme, with a `dark:` peer on every colour (a semantic alias such as `bg-primary` already carries one):
 
 ```dart
 MagicStarter.useNavigationTheme(
@@ -373,13 +344,11 @@ MagicStarter.useNavigationTheme(
 The shell wraps the route child in one `WDiv`, and two fields on `MagicStarterLayoutTheme` own it:
 
 | Field | Default | What it decides |
-|-------|---------|-----------------|
+|:------|:--------|:----------------|
 | `contentClassName` | `'flex-1 min-h-0'` | The content area's own className |
 | `contentScrollPrimary` | `false` | Whether that area attaches to the ambient `PrimaryScrollController` |
 
-The default is a box of bounded height that does not scroll, so **each routed page scrolls itself**. Every view this package ships already does, through `MSPageScaffold` (which brings its own `SingleChildScrollView(primary: false)`) or, for the invitation card, its own scroll view. A fill-shaped screen, an `h-full` column whose body takes the slack and scrolls inside itself (a television guide, a media catalogue), lays out under it as well.
-
-A page of your own that is taller than the window needs its own vertical scroll: put it through `MSPageScaffold`, or wrap it:
+The default is a box of bounded height that does not scroll, so each routed page scrolls itself. Every view this package ships already does, through `MSPageScaffold` (which brings its own `SingleChildScrollView(primary: false)`) or, for the invitation card, its own scroll view. A page of your own that is taller than the window needs its own vertical scroll: put it through `MSPageScaffold`, or wrap it:
 
 ```dart
 MagicRoute.page(
@@ -390,9 +359,9 @@ MagicRoute.page(
 ```
 
 > [!WARNING]
-> The default used to be `'flex-1 overflow-y-auto'` with `contentScrollPrimary: true`, and you can still set that pair. Know what it costs before you do. In a go_router shell the route child is the nested Navigator, so a scrolling content box scrolls the Navigator and lays its Overlay out under an unbounded height. A page left under a `.stacked()` route is then never laid out again, and its second rebuild while hidden (a controller notify, a resize, a locale switch) fails `_debugRelayoutBoundaryAlreadyMarkedNeedsLayout` in debug and leaves the tree inconsistent from there. The same setting also gives a fill-shaped screen an unbounded height, which it cannot lay out. See [#160](https://github.com/fluttersdk/magic_starter/issues/160) and [flutter/flutter#193247](https://github.com/flutter/flutter/issues/193247).
+> Setting `contentClassName` to `'flex-1 overflow-y-auto'` with `contentScrollPrimary: true` makes the shell scroll, and it has a cost. In a go_router shell the route child is the nested Navigator, so a scrolling content box scrolls the Navigator and lays its Overlay out under an unbounded height. A page left under a `.stacked()` route is then never laid out again, and its second rebuild while hidden fails `_debugRelayoutBoundaryAlreadyMarkedNeedsLayout` in debug. The same setting also gives a fill-shaped screen (an `h-full` column that scrolls inside itself) an unbounded height, which it cannot lay out. See [flutter/flutter#193247](https://github.com/flutter/flutter/issues/193247).
 
-Set the two fields together. Wind reads `scrollPrimary` only where it builds a scroll view, so beside a non-scrolling className it claims nothing and is inert; it matters the moment the className scrolls. Two `primary: true` scrollables in one tree contend for the single controller.
+Set the two fields together: Wind reads `scrollPrimary` only where it builds a scroll view, so beside a non-scrolling className it is inert. Two `primary: true` scrollables in one tree contend for the single controller.
 
 ### Hiding the bottom nav on a page
 
@@ -407,7 +376,7 @@ MagicRoute.page(
 
 The phone's bottom bar collapses in step with that page's transition and returns as it leaves, an iOS back swipe included. The page stays in the same shell as the rest of the app, so nothing is rebuilt on the way in. A page registers once magic's route middleware has mounted it, so the bar starts collapsing a frame or two into the transition.
 
-A host layout that draws its own bottom nav joins in with two widgets: `MagicStarterBottomNavScope` at the layout's root, and its nav inside `MagicStarterBottomNavSlot`:
+A host layout that draws its own bottom nav joins in with `MagicStarterBottomNavScope` at the layout's root and its nav inside `MagicStarterBottomNavSlot`:
 
 ```dart
 class MyAppShell extends StatelessWidget {
@@ -429,11 +398,11 @@ class MyAppShell extends StatelessWidget {
 }
 ```
 
-The slot's height is the nav's times how much of it is showing, so the content above grows into the room the bar gives up. Read that fraction with `MagicStarterBottomNavScope.visibilityOf(context)` when the layout needs it, for instance to hand the collapsed bar's share of the bottom inset back to its content, as `MagicStarterAppLayout` does. Place the scope inside the layout, never around it: magic tells shells apart by the layout widget's runtime type.
+The slot's height is the nav's times how much of it is showing, so the content above grows into the room the bar gives up. Read that fraction with `MagicStarterBottomNavScope.visibilityOf(context)` (`0` to `1`). Place the scope inside the layout, never around it: magic tells shells apart by the layout widget's runtime type.
 
 ### An immersive route
 
-`MagicStarterHideChrome` drops all of the chrome, so a player, a viewfinder or a map paints the whole window:
+`MagicStarterHideChrome` drops all of the chrome (sidebar, drawer, header and bottom bar, plus the safe-area inset), so a player, a viewfinder or a map paints the whole window:
 
 ```dart
 MagicRoute.group(
@@ -441,37 +410,27 @@ MagicRoute.group(
     child: MagicStarter.view.makeLayout('layout.app', child: child),
   ),
   layoutId: 'app.immersive',
-  routes: () { ... },
+  routes: () {
+    MagicRoute.page('/player', () => const PlayerView());
+  },
 );
 ```
 
-No sidebar, no drawer, no header and no bottom bar. The route also gets the window with no safe-area inset, since a surface that sizes itself wants the whole of it.
-
-The group needs an id of its own, and a separate id is a separate shell: entering the route builds this layout and leaving it builds the app shell again, so the layout's state (the sidebar's collapsed choice, notification polling, the auth listeners) is rebuilt on each crossing. That is intended for an immersive route, which has no chrome to carry across. A page that only wants the bottom bar gone belongs in the app shell under `MagicStarterHideBottomNav`.
+The group needs an id of its own, and a separate id is a separate shell: entering the route builds this layout and leaving it builds the app shell again, so the layout's state (the sidebar's collapsed choice, notification polling, the auth listeners) is rebuilt on each crossing. That suits an immersive route. A page that only wants the bottom bar gone belongs in the app shell under `MagicStarterHideBottomNav`.
 
 <a name="guestlayout"></a>
 ## GuestLayout
 
-`MagicStarterGuestLayout` is a minimal centered wrapper for authentication pages (login, register, forgot password, reset password). It constrains content to 480px max width and provides scrolling:
+`MagicStarterGuestLayout` is a minimal centred wrapper for authentication pages (login, register, forgot password, reset password). It constrains content to 480 px and provides scrolling. It is registered under `layout.guest`, uses `wColor()` for theme-aware backgrounds, and pads the content with `p-4 lg:p-8`.
 
-```dart
-MagicStarter.view.registerLayout(
-  'layout.guest',
-  (child) => MagicStarterGuestLayout(child: child),
-);
-```
-
-The layout uses `wColor()` for theme-aware background colors and wraps content in `WDiv(className: 'p-4 lg:p-8')` for responsive padding.
-
-> [!NOTE]
-> Guest routes use `RouteTransition.none` — there is no animation between auth screens (login to register, etc.). This is intentional for a seamless form-flow experience.
+Guest routes use `RouteTransition.none`, so there is no animation between auth screens.
 
 <a name="page-chrome"></a>
 ## Page Chrome
 
-The layout shell owns the sidebar, the header, and the scroll region. What is left is page chrome: how wide the content column is, how far it sits from the edges, and where the page title goes. Two components own that, and every authenticated page goes through one of them.
+The layout shell owns the sidebar, the header and the content box. What is left is page chrome: how wide the content column is, how far it sits from the edges, and where the title goes. `MSPageScaffold` and `MSPageContainer` own that, and every authenticated page goes through one of them.
 
-`MSPageScaffold` is the full treatment. Give it a title and a list of sections, and it renders the page surface, its own vertical scroll, the shared content geometry, a unified `MSPageHeader`, and a `gap-6` column for the sections:
+`MSPageScaffold` is the full treatment. Give it a title and a list of sections, and it renders the page surface, its own vertical scroll, the shared content geometry, an `MSPageHeader` and a `gap-6` column for the sections:
 
 ```dart
 MSPageScaffold(
@@ -488,20 +447,15 @@ A sub-page adds a back affordance, and a top-level page can put an action next t
 
 ```dart
 MSPageScaffold(
-  title: trans('notifications.title'),
-  actions: [markAllAsReadButton],
-  children: [MSCard(noPadding: true, child: notificationList)],
-)
-
-MSPageScaffold(
   title: trans('profile.settings'),
   backLabel: trans('magic_starter.nav.settings'),
   backFallback: MagicStarterConfig.settingsHubRoute(),
+  actions: [saveButton],
   children: [profileForm],
 )
 ```
 
-`MSPageContainer` is the geometry alone: width cap, edge margins, vertical rhythm, and a horizontal safe-area guard. Reach for it when the page brings its own header or scrolls its own way, which is the usual shape in a host app:
+`MSPageContainer` is the geometry alone: width cap, edge margins, vertical rhythm and a horizontal safe-area guard. Reach for it when the page brings its own header or scrolls its own way, which is the usual shape in a host app:
 
 ```dart
 MSPageContainer(
@@ -512,163 +466,89 @@ MSPageContainer(
 )
 ```
 
-Neither component decides the numbers. They read `MagicStarter.manager.pageContainerClassName`, which the host sets once (see [Page Geometry](https://magic.fluttersdk.com/packages/starter/architecture/manager#page-geometry)). That is what makes a starter account page and a host domain page line up inside the same shell.
+Neither component decides the numbers. They read `MagicStarter.manager.pageContainerClassName`, which the host sets once (see [Page Geometry](../architecture/manager.md#page-geometry)), so a starter account page and a host domain page line up inside the same shell. See [Components](./components.md) for `MSCard`, `MSPageHeader` and the rest.
 
 > [!WARNING]
-> Do not open a page with its own `WDiv(className: 'p-4 lg:p-6 flex flex-col gap-6')`. It looks harmless and it is how the settings, team, and notification pages ended up at three different widths in the same app: one capped at `max-w-7xl`, one at `max-w-6xl`, and one at nothing at all. A page that needs to tune one axis passes `className` to `MSPageContainer` instead.
+> Do not open a page with its own `WDiv(className: 'p-4 lg:p-6 flex flex-col gap-6')`. It is how pages end up at different widths in the same app. A page that needs to tune one axis passes `className` to `MSPageContainer` instead.
 
 <a name="wind-ui-system"></a>
 ## Wind UI System
 
-All Magic Starter views use Wind UI components exclusively. The framework provides Tailwind-like utility classes through a `className` property:
-
-| Component | Purpose | Example |
-|-----------|---------|---------|
-| `WDiv` | Container/layout | `WDiv(className: 'flex flex-col gap-4 p-6')` |
-| `WText` | Typography | `WText('Title', className: 'text-lg font-bold text-gray-900')` |
-| `WFormInput` | Form field | `WFormInput(form: form, name: 'email')` |
-| `WButton` | Interactive button | `WButton(onTap: submit, className: 'bg-primary text-white')` |
-| `WIcon` | Icon display | `WIcon(Icons.mail_outline, className: 'text-xl text-gray-500')` |
-| `WAnchor` | Tap target | `WAnchor(onTap: () => ..., child: ...)` |
-| `WSpacer` | Spacing | `WSpacer(className: 'h-4')` |
-| `WPopover` | Overlay dropdown | `WPopover(triggerBuilder: ..., contentBuilder: ...)` |
-
-For long class lists, use triple-quoted strings:
+The views use Wind widgets and Tailwind-style `className` strings: `WDiv` for containers, `WText` for text, `WButton`, `WAnchor`, `WIcon`, `WFormInput`, `WPopover` and so on. For long class lists, use a triple-quoted string:
 
 ```dart
 WDiv(
   className: '''
-    rounded-2xl bg-white dark:bg-gray-800
-    border border-gray-200 dark:border-gray-700
+    rounded-2xl bg-surface
+    border border-color-border
     shadow-sm p-6
   ''',
-  child: ...,
+  child: content,
 )
 ```
 
-> [!NOTE]
-> Never use Material widgets (`Container`, `Text`, `ElevatedButton`, etc.) in Magic Starter views. The only exception is `Icons.*` for icon data references and `MSSwitch.adaptive` where Wind UI does not yet provide a toggle.
+Use Wind widgets in views, not `Container`, `Text` or `ElevatedButton`. `Icons.*` is the one Material reference, for icon data.
 
 <a name="dark-mode"></a>
 ## Dark Mode
 
-Always pair light and dark mode classes. Wind UI supports the `dark:` prefix for dark mode variants:
+Wind supports the `dark:` prefix. A raw colour token needs its `dark:` peer in the same `className`; a semantic alias such as `bg-primary`, `bg-surface` or `text-fg-muted` already carries one:
 
 ```dart
-WText(
-  'Hello',
-  className: 'text-gray-900 dark:text-white',
-)
-
-WDiv(
-  className: '''
-    bg-white dark:bg-gray-800
-    border border-gray-200 dark:border-gray-700
-  ''',
-)
+WText('Hello', className: 'text-gray-900 dark:text-white')
+WText('Hello', className: 'text-fg-muted')
 ```
 
-Common pairings used throughout Magic Starter:
-
-| Light | Dark |
-|-------|------|
-| `bg-white` | `dark:bg-gray-800` |
-| `bg-gray-50` | `dark:bg-gray-900` |
-| `text-gray-900` | `dark:text-white` |
-| `text-gray-500` | `dark:text-gray-400` |
-| `text-gray-400` | `dark:text-gray-500` |
-| `border-gray-200` | `dark:border-gray-700` |
-| `border-gray-100` | `dark:border-gray-700` |
-| `hover:bg-gray-100` | `dark:hover:bg-gray-800` |
-
-> [!TIP]
-> Theme toggling is available in the user profile dropdown menu via `context.windTheme.toggleTheme()`. Check the current mode with `context.windIsDark`.
+The profile dropdown toggles the theme with `context.windTheme.toggleTheme()`, and `context.windIsDark` reads the current mode.
 
 <a name="view-registry"></a>
 ## View Registry
 
-All views are registered by string key in `MagicStarterViewRegistry`. The host application can override any screen by re-registering under the same key:
+All views are registered by string key in `MagicStarterViewRegistry`. The host overrides a screen by registering under the same key; the key table is in the [Quick Reference](#quick-reference):
 
 ```dart
-// Register a view
-MagicStarter.view.register(
-  'auth.login',
-  () => const MagicStarterLoginView(),
-);
-
-// Override with custom view
+// Override with a custom view.
 MagicStarter.view.register(
   'auth.login',
   () => const MyCustomLoginView(),
 );
 
-// Build a view by key
+// Build a view by key.
 final widget = MagicStarter.view.make('auth.login');
+
+// Inject content into a view that exposes a slot.
+MagicStarter.view.slot('settings.hub', 'footer', (context) => const MyAboutSection());
 ```
 
-Built-in view keys:
-
-| Key | View |
-|-----|------|
-| `auth.login` | Login page |
-| `auth.register` | Registration page |
-| `auth.forgot_password` | Forgot password page |
-| `auth.reset_password` | Reset password page |
-| `auth.verify_email` | Email verification page (the mailed link) |
-| `auth.otp_verify` | OTP verification page |
-| `auth.two_factor_challenge` | Two-factor challenge page |
-| `profile.settings` | Profile settings page |
-| `teams.create` | Team creation page |
-| `teams.settings` | Team settings page |
-| `teams.invitation_accept` | Team invitation acceptance page |
-
-> [!NOTE]
-> `MagicStarter.view.make(key)` throws `StateError` when the key is not registered. Always ensure views are registered before routes reference them.
-
-> [!NOTE]
-> `notifications.list` and `notifications.preferences` are NOT registered on `MagicStarter.view`. Those two screens belong to `magic_notifications` and are registered on its own `Notify.view` (same shape: `register` / `has` / `make` / `slot` / `buildSlot` / `clear`); see [Notifications](notifications.md).
+`make(key)` throws a `StateError` when the key is not registered, so register views before routes reference them. The registry also answers `has(key)` and `clear()`, and `buildSlot()` is what a view calls to render a slot. Register slots before the view is built.
 
 <a name="layout-registry"></a>
 ## Layout Registry
 
-Layouts follow the same registry pattern with a `child` parameter for wrapping content:
+Layouts follow the same pattern with a `child` parameter for wrapping content:
 
 ```dart
-// Register a layout
-MagicStarter.view.registerLayout(
-  'layout.app',
-  (child) => MagicStarterAppLayout(child: child),
-);
-
-// Override with custom layout
+// Override with a custom layout.
 MagicStarter.view.registerLayout(
   'layout.app',
   (child) => MyCustomAppLayout(child: child),
 );
 
-// Build a layout wrapping content
+// Build a layout around content.
 final widget = MagicStarter.view.makeLayout(
   'layout.guest',
   child: loginView,
 );
 ```
 
-Built-in layout keys:
-
-| Key | Layout |
-|-----|--------|
-| `layout.app` | Authenticated layout with sidebar/nav |
-| `layout.guest` | Centered guest layout for auth pages |
-
-> [!TIP]
-> To test views in isolation, register a minimal layout: `MagicStarter.view.registerLayout('layout.guest', (child) => child);`
+`makeLayout` hands the builder a `child` already wrapped in a route-keyed `KeyedSubtree`, so a replaced layout keeps the remount behaviour the default layouts carry. To test a view in isolation, register a minimal layout: `MagicStarter.view.registerLayout('layout.guest', (child) => child);`.
 
 <a name="overriding-the-app-shell"></a>
 ## Overriding the App Shell
 
-All account, profile, team, and settings routes render through the `layout.app` key. Out of the box, `MagicStarterServiceProvider` registers `MagicStarterAppLayout` under that key, so a fresh install already renders those routes in a working shell (sidebar/nav on desktop, drawer + bottom nav on mobile) with no extra setup.
+Every account, profile, team and settings route renders through the `layout.app` key. `MagicStarterServiceProvider` registers `MagicStarterAppLayout` under it, so a fresh install already renders in a working shell.
 
-An app that already has its own navigation chrome (its own sidebar, its own bottom nav) does not want starter routes rendering inside a second, different shell on top of its own. That is the case this seam exists for: re-register `layout.app` with your own shell and every starter route (login-gated pages, profile settings, team management, notifications) renders inside it instead:
+An app that already has its own navigation chrome does not want starter routes rendering inside a second, different shell on top of its own. Re-register `layout.app` with your own shell and every starter route renders inside it:
 
 ```dart
 MagicStarter.view.registerLayout(
@@ -677,11 +557,9 @@ MagicStarter.view.registerLayout(
 );
 ```
 
-Call this from your own `AppServiceProvider`'s `boot()` method, alongside other startup customization such as `MagicStarter.useNavigation()` or `MagicStarter.useHeader()`.
+Call this from your own `AppServiceProvider`'s `boot()`, alongside `MagicStarter.useNavigation()` or `MagicStarter.useHeader()`. `registerLayout()` always overwrites what is registered under the key, and the default is registered synchronously the first time the `magic_starter` singleton resolves, before your code runs, so your override wins whether you call it first or last in boot.
 
-`registerLayout()` always overwrites whatever is currently registered under the key: the default registration in `MagicStarterManager` is conditional (`if (!hasLayout(key))`), but `registerLayout()` itself is not. Since the default is registered synchronously the first time the `magic_starter` singleton is resolved (before your own code runs), your override always lands after it and always wins, whether you call `registerLayout()` early or late in your app's boot sequence. There is no ordering to get wrong.
-
-Your own authenticated routes join the same shell. Magic merges route groups into ONE go_router `ShellRoute` only when they carry the same `layoutId`, so give your group `MagicStarterLayoutIds.app` (and build its layout through `makeLayout` if you like):
+Your own authenticated routes join the same shell. Magic merges route groups into one go_router `ShellRoute` only when they carry the same `layoutId`, so give your group `MagicStarterLayoutIds.app`:
 
 ```dart
 MagicRoute.group(
@@ -694,15 +572,12 @@ MagicRoute.group(
 );
 ```
 
-A group with another id, or none, becomes a second shell, and every crossing between it and the starter's profile, team, notification or support pages rebuilds and re-animates the whole layout.
-
-> [!NOTE]
-> Do not add a second layout key for this. `layout.app` is the only authenticated-shell key the starter resolves; overriding it in place is the supported pattern, not adding a new one alongside it.
+A group with another id, or none, becomes a second shell, and every crossing between it and the starter's profile, team, notification or support pages rebuilds and re-animates the whole layout. `layout.app` is the only authenticated-shell key the starter resolves: override it in place, do not add a second key.
 
 <a name="feature-gated-rendering"></a>
 ## Feature-Gated Rendering
 
-Use conditional spreads to show or hide UI sections based on feature flags at build time:
+Use conditional spreads to show or hide UI based on feature flags at build time:
 
 ```dart
 WDiv(
@@ -710,16 +585,11 @@ WDiv(
   children: [
     _buildEmailField(),
     _buildPasswordField(),
-    if (MagicStarterConfig.hasRegistrationFeatures()) ...[
-      WSpacer(className: 'h-2'),
+    if (MagicStarterConfig.hasRegistrationFeatures())
       WAnchor(
-        onTap: () => MagicRoute.to(MagicStarterConfig.registerPath()),
-        child: WText(
-          trans('auth.register_link'),
-          className: 'text-sm text-primary',
-        ),
+        onTap: () => MagicRoute.to('${MagicStarterConfig.authPrefix()}/register'),
+        child: WText(trans('auth.register_link'), className: 'text-sm text-primary'),
       ),
-    ],
     if (MagicStarterConfig.hasSocialLoginFeatures() &&
         MagicStarter.socialAuth != null) ...[
       const MSSocialDivider(),
@@ -734,129 +604,42 @@ WDiv(
 )
 ```
 
-> [!NOTE]
-> Feature checks in views are read-only queries against the config. The view never toggles features — that is the domain of the CLI configure command or direct config edits.
+Feature checks in views are read-only queries against the config. A view never toggles a feature; that is `starter:configure` or a config edit.
 
 <a name="zero-business-logic"></a>
 ## Zero Business Logic
 
-Views must contain zero business logic. All rules:
+A view contains no business logic:
 
-- **No async operations** in views — `_submit()` calls a controller method and returns
-- **No state decisions** — the controller decides what happens after a form submit (navigation, error handling)
-- **No HTTP calls** — all API communication lives in controllers via `Http.post()`, `Http.get()`, etc.
-- **No direct navigation** — controllers use `NavigatesRoutes` mixin; views never call `context.go()`
-- **Local UI state only** — password visibility toggles (`_obscurePassword`), phone/email toggle in "both" mode, section-level loading spinners via local `ValueNotifier<bool>` fields
+- No async work: `_submit()` calls a controller method and returns.
+- No state decisions: the controller decides what happens after a submit (navigation, error handling).
+- No HTTP calls: all API communication lives in controllers through `Http.post()`, `Http.get()` and the rest.
+- No direct navigation: controllers use the `NavigatesRoutes` mixin, and views never call `context.go()`.
+- Local UI state only: a password visibility toggle, a phone/email switch, a section spinner in a local `ValueNotifier<bool>`.
 
 ```dart
-// CORRECT: view delegates to controller
+// Correct: the view delegates to the controller.
 Future<void> _submit() async {
   if (!form.validate()) return;
+
   await controller.doLogin(
     email: form.get('email'),
     password: form.get('password'),
   );
 }
 
-// WRONG: view makes API call
+// Wrong: the view makes the API call.
 Future<void> _submit() async {
-  final response = await Http.post('/auth/login', data: {...}); // Never do this
+  final response = await Http.post('/auth/login', data: payload);
 }
 ```
-
----
-
-**Related Links:**
-
-- [Controllers](https://magic.fluttersdk.com/packages/starter/basics/controllers)
-- [Notifications](https://magic.fluttersdk.com/packages/starter/basics/notifications)
-- [Routes](https://magic.fluttersdk.com/packages/starter/basics/routes)
-- [Configuration](https://magic.fluttersdk.com/packages/starter/getting-started/configuration)
-- [Wind UI](https://magic.fluttersdk.com/packages/wind)
-
----
 
 <a name="reusable-widgets"></a>
 ## Reusable Widgets
 
-Magic Starter exports standalone UI widgets that consumer apps can import and use directly without duplicating them locally. None of these widgets depend on internal controllers — they accept plain callbacks.
+These widgets take plain callbacks and no internal controller, so a host app uses them directly. All are exported from `package:magic_starter/magic_starter.dart`. The `MS` components (`MSCard`, `MSPageHeader`, `MSAvatar` and the rest) are covered in [Components](./components.md).
 
-All widgets are exported from `package:magic_starter/magic_starter.dart`.
-
-### MSPageHeader
-
-Full-width page header with responsive `sm:flex-row` layout and a `border-b` separator. All parameters beyond `title` are optional:
-
-```dart
-MSPageHeader(
-  title: trans('projects.title'),
-  subtitle: trans('projects.manage_subtitle'),  // optional
-  leading: const BackButton(),                  // optional
-  actions: [                                    // optional
-    WButton(onTap: _onCreate, child: WText(trans('projects.new'))),
-  ],
-)
-```
-
-Detail view with status badge and always-inline layout:
-
-```dart
-MSPageHeader(
-  title: 'Task Details',
-  leading: Icon(Icons.arrow_back),
-  titleSuffix: StatusBadge(status: 'done'),
-  inlineActions: true,
-  actions: [WButton(onTap: () {}, child: WText('Edit'))],
-)
-```
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `title` | `String` | ✅ | Main heading text |
-| `subtitle` | `String?` | — | Secondary line below the title |
-| `leading` | `Widget?` | — | Widget placed before the title (e.g. back button) |
-| `actions` | `List<Widget>?` | — | Row of trailing action widgets (e.g. buttons) |
-| `titleSuffix` | `Widget?` | — | Optional widget rendered inline after the title (e.g. status badge). Stays on the same row as the title text. |
-| `subtitleSuffix` | `Widget?` | - | Optional widget on the subtitle line, right after the subtitle (e.g. a pill beside a URL). Wraps under the subtitle when the line cannot hold both; renders nothing without a `subtitle`. |
-| `inlineActions` | `bool` | — | When `true`, forces single-row layout on all screen sizes (no mobile stacking). Useful for detail views where actions must stay inline with the title. |
-
-### MSCard
-
-Card wrapper with an optional `title` slot, `noPadding` mode for full-bleed content, and three visual variants:
-
-| Variant | Background | Border | Shadow |
-|---------|-----------|--------|--------|
-| `CardVariant.surface` _(default)_ | `bg-white dark:bg-gray-800` | ✅ `border-gray-200` | — |
-| `CardVariant.inset` | `bg-gray-50 dark:bg-gray-900` | ✅ `border-gray-200` | — |
-| `CardVariant.elevated` | `bg-white dark:bg-gray-800` | — | ✅ `shadow-md` |
-
-```dart
-// Default padded surface card with title
-MSCard(
-  title: 'Team Members',
-  child: memberList,
-)
-
-// Full-bleed elevated card (e.g. data table)
-MSCard(
-  variant: CardVariant.elevated,
-  noPadding: true,
-  child: dataTable,
-)
-
-// Inset danger-zone card
-MSCard(
-  variant: CardVariant.inset,
-  title: 'Danger Zone',
-  child: deleteButton,
-)
-```
-
-When `noPadding` is `true` and a `title` is provided, the title automatically receives `px-6 pt-6 pb-3` spacing so it aligns with full-bleed row content that uses `px-6`.
-
-### MagicStarterConfirmDialog
-
-Generic confirmation dialog with variant-driven styling. Uses `MagicStarterDialogShell` internally for sticky header/footer layout. All classNames are read from `MagicStarter.manager.modalTheme` at build time.
+`MagicStarterConfirmDialog` is a confirmation dialog with variant-driven styling, an alias of `MSConfirmDialog`. It returns `true` when confirmed and `false` when cancelled or dismissed, and shows a loading state while `onConfirm` runs:
 
 ```dart
 final confirmed = await MagicStarterConfirmDialog.show(
@@ -873,63 +656,30 @@ final confirmed = await MagicStarterConfirmDialog.show(
 if (confirmed) _refreshMembers();
 ```
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `title` | `String` | **required** | Dialog title text |
-| `description` | `String?` | `null` | Optional description below the title |
-| `confirmLabel` | `String?` | `trans('common.confirm')` | Confirm button label |
-| `cancelLabel` | `String?` | `trans('common.cancel')` | Cancel button label |
-| `variant` | `ConfirmDialogVariant` | `.primary` | Button styling variant |
-| `onConfirm` | `Future<void> Function()?` | `null` | Async action on confirm — dialog shows loading state |
+`ConfirmDialogVariant` is `primary`, `danger` or `warning`; the button classNames come from `MagicStarter.manager.modalTheme`.
 
-**Variants:**
-
-| Variant | Use case | Confirm button style |
-|---------|----------|---------------------|
-| `ConfirmDialogVariant.primary` | Neutral confirmations | `theme.primaryButtonClassName` |
-| `ConfirmDialogVariant.danger` | Destructive actions (delete, remove, revoke) | `theme.dangerButtonClassName` |
-| `ConfirmDialogVariant.warning` | Caution actions (leave, archive) | `theme.warningButtonClassName` |
-
-Returns `true` when confirmed, `false` when cancelled or dismissed.
-
-### MagicStarterPasswordConfirmDialog
-
-Standalone password-confirmation dialog. Pass an `onConfirm` callback that returns `null` on success or an error string to display inline. The dialog stays open on error; it closes automatically on success and returns `true`.
+`MagicStarterPasswordConfirmDialog` is a password gate. Its `onConfirm` returns `null` on success or an error string to show inline; the dialog stays open on an error and closes with `true` on success. Without an `onConfirm` it closes with `true` as soon as the user confirms. For a gate that picks the right proof for the account, use `confirmIdentity` (see [Confirming Identity](./identity-confirmation.md)).
 
 ```dart
 final confirmed = await MagicStarterPasswordConfirmDialog.show(
   context,
   title: trans('projects.delete_title'),
-  description: trans('projects.delete_description'),
   onConfirm: (password) async {
     // Return null to confirm, or an error string on failure.
     return await ProjectService.delete(id, password: password);
   },
 );
-
-if (confirmed) _removeProject();
 ```
 
-Use with no `onConfirm` if you only need a confirmation gate (e.g. before a local-only destructive action):
+`MagicStarterTwoFactorModal` is the two-factor setup wizard: the QR code and a code input, then the recovery codes. It resolves `true` once `onConfirm` accepts a code:
 
 ```dart
-final confirmed = await MagicStarterPasswordConfirmDialog.show(context);
-```
-
-> [!NOTE]
-> Without an `onConfirm` callback, the dialog closes with `true` as soon as the user taps Confirm (no async validation is performed).
-
-### MagicStarterTwoFactorModal
-
-Multi-step 2FA wizard modal. Step 1 displays the QR code and OTP input; Step 2 displays recovery codes with a copy button. The modal advances to Step 2 only when `onConfirm` returns `true`.
-
-```dart
-final success = await MagicStarterTwoFactorModal.show(
+final enabled = await MagicStarterTwoFactorModal.show(
   context,
   setupData: {
-    'secret': '...',
-    'qr_svg': '...',         // raw SVG string
-    'recovery_codes': [...], // list of strings
+    'secret': 'JBSWY3DPEHPK3PXP',     // shown for manual entry
+    'qr_svg': qrSvg,                  // raw SVG string
+    'recovery_codes': recoveryCodes,  // list of strings
   },
   onConfirm: (code) async {
     return await TwoFactorService.confirmSetup(code);
@@ -937,29 +687,40 @@ final success = await MagicStarterTwoFactorModal.show(
 );
 ```
 
-| `setupData` key | Type | Description |
-|-----------------|------|-------------|
-| `secret` | `String` | Manual entry key shown below the QR code |
-| `qr_svg` | `String` | Raw SVG markup rendered via `WSvg` with `preserve-colors` |
-| `recovery_codes` | `List<dynamic>` | Backup codes displayed on Step 2 |
+The other widgets a host can place:
 
-The modal can also be used for standalone re-authentication (e.g. before a sensitive action) by supplying minimal `setupData` with only the fields the flow needs.
+| Widget | What it is |
+|:-------|:-----------|
+| `MagicStarterAuthFormCard` | A centred card (480 px) for auth-adjacent screens such as an invitation or onboarding, with a title, a subtitle, an optional error banner and a theme toggle |
+| `MagicStarterTimezoneSelect` | A searchable timezone dropdown over `GET /timezones`; see [Profile](./profile.md#timezone-and-language) |
+| `MSTeamSelector` | The current-team switcher; needs a registered team resolver (see [Teams](./teams.md#msteamselector)) |
+| `MSUserProfileDropdown` | The avatar menu with user info, profile links, the theme toggle and logout; accepts a custom `triggerBuilder` |
+| `MSSocialDivider` | The "Or continue with" divider for auth forms |
+| `MagicStarterHideBottomNav`, `MagicStarterBottomNavScope`, `MagicStarterBottomNavSlot` | Collapse the phone's bottom navigation per page; see [Hiding the bottom nav on a page](#hiding-the-bottom-nav-on-a-page) |
+| `MagicStarterHideChrome` | Hides the whole shell chrome for an immersive route; see [An immersive route](#an-immersive-route) |
+| `MagicStarterLayoutIds` | The `layoutId` values of the starter's route groups; `MagicStarterLayoutIds.app` is the one a host's own group must share |
 
-### Other Exported Widgets
+The notification bell is not here: it moved to `magic_notifications` as `NotificationDropdown`; see [Notifications](./notifications.md).
 
-| Widget | Description |
-|--------|-------------|
-| `MagicStarterAuthFormCard` | Centered card wrapper (max 480 px) for auth-adjacent screens — invite accept, onboarding, etc. Accepts `title`, `subtitle`, optional `errorMessage`, and a theme-toggle button. |
-| `MagicStarterTimezoneSelect` | Searchable timezone dropdown backed by `GET /timezones?search=...`. Debounces search at 300 ms and always includes the pre-selected value in options. Pages through the endpoint on scroll and resets its cursor when the menu reopens, since the reopen restores the unfiltered list; a response whose list the reopen already replaced is dropped rather than written. |
-| `MSTeamSelector` | Current-team switcher dropdown. Requires `MagicStarter.teamResolver` to be registered. `compact` mode hides the team name label. |
-| `MSAvatar` | A photo with a fallback, clipped to whatever shape `className` asks for. Owns no size, shape or colour, because those differ per surface; the fallback is a WIDGET so a host keeps its own initials rule. Falls back on an empty url and on a load error. |
-| `MSUserProfileDropdown` | Circular avatar menu showing signed-in user info, profile links, theme toggle, and logout. Supports a custom `triggerBuilder`. |
-| `MSSocialDivider` | Horizontal "Or continue with" divider for auth forms. No parameters — pure presentation. |
-| `MagicStarterHideBottomNav` | Wraps a page and collapses the phone's bottom navigation in step with that page's route transition. Does nothing without a `MagicStarterBottomNavScope` above it. See [Hiding the bottom nav on a page](#hiding-the-bottom-nav-on-a-page). |
-| `MagicStarterBottomNavScope` | A layout's root, so the bar and the routed page share it. `visibilityOf(context)` reads how much of the bar is showing, `0` to `1`. |
-| `MagicStarterBottomNavSlot` | Wraps a layout's bottom nav; its height follows the scope's visibility. |
-| `MagicStarterLayoutIds` | The `layoutId` values of the starter's route groups; `MagicStarterLayoutIds.app` is the authenticated shell a host's own group must share. See [Overriding the App Shell](#overriding-the-app-shell). |
-| `MagicStarterHideChrome` | `InheritedWidget` that signals `MagicStarterAppLayout` to hide the whole shell chrome: sidebar, drawer, header and bottom bar, plus the safe-area inset and the shell's scroll container. Wrap a route group's layout with it, read with `MagicStarterHideChrome.of(context)`. See [An immersive route](#applayout). |
+<a name="gotchas"></a>
+## Gotchas
 
-> [!NOTE]
-> The bell-icon dropdown is not in this table. It moved to `magic_notifications` as `NotificationDropdown`; see [Notifications](notifications.md).
+| Mistake | Fix |
+|:--------|:----|
+| Registering a layout under a new key for your shell | `layout.app` is the only authenticated-shell key the starter resolves. Re-register it. |
+| Giving your own authenticated group another `layoutId` | Use `MagicStarterLayoutIds.app`, or crossing into a starter page rebuilds the whole layout. |
+| A page taller than the window that does not scroll | The content box does not scroll by default. Use `MSPageScaffold` or wrap the page in a `SingleChildScrollView(primary: false)`. |
+| Calling `MagicStarter.view.make(key)` for a key nothing registered | It throws a `StateError`. `profile.settings` is not registered by default, and a key behind a feature flag exists only with the flag on. |
+| A breakpoint name the Wind theme does not carry in `MagicStarterLayoutTheme` | It throws a `StateError` listing the valid keys. Use `sm`, `md`, `lg`, `xl`, `2xl` or your own `screens` keys. |
+| Calling `useNavigationTheme()` or `useModalTheme()` after the first paint | Call them in `AppServiceProvider.boot()`, before the layout or a dialog first renders. |
+
+<a name="related-documentation"></a>
+## Related Documentation
+
+- [Components](./components.md): the `MS` design-system components.
+- [Notifications](./notifications.md): the notification screens on `Notify.view`.
+- [Profile](./profile.md): the settings hub and its sub-pages.
+- [Teams](./teams.md): the team selector and team views.
+- [Manager](../architecture/manager.md): the themes, locale options and page geometry.
+- [View Registry](../architecture/view-registry.md): how the registry is built.
+- [Configuration](../getting-started/configuration.md): the feature flags that decide which views register.

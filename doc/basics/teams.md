@@ -1,39 +1,62 @@
 # Teams
 
-- [Introduction](#introduction)
+Create teams, switch between them, invite members and manage team settings through `MagicStarterTeamController`, with a team resolver that bridges your own team model to the starter.
+
+- [Basic Usage](#basic-usage)
 - [Team Resolver](#team-resolver)
 - [Creating Teams](#creating-teams)
 - [Team Switching](#team-switching)
-    - [The Billable Subject](#billable-subject)
+- [Billing](#billing)
+    - [The Billable Subject](#the-billable-subject)
     - [Price Format](#price-format)
     - [Free Trials](#free-trials)
     - [Changing a Web Plan](#changing-a-web-plan)
     - [Campaigns](#campaigns)
-- [Invitation](#invitation)
+- [Invitations](#invitations)
     - [Sending Invitations](#sending-invitations)
     - [Accepting Invitations](#accepting-invitations)
-    - [Canceling Invitations](#canceling-invitations)
+    - [Cancelling Invitations](#cancelling-invitations)
 - [Team Settings](#team-settings)
-    - [Updating Team Name](#updating-team-name)
+    - [Updating the Team Name](#updating-the-team-name)
     - [Managing Members](#managing-members)
-- [Feature Gate](#feature-gate)
 - [Controller](#controller)
-- [Views](#views)
-- [Widget: MSTeamSelector](#widget-msteamselector)
-- [Model: MagicStarterTeam](#model-magicstarterteam)
+- [Overriding a View](#overriding-a-view)
+- [MSTeamSelector](#msteamselector)
+- [MagicStarterTeam](#magicstarterteam)
+- [Gotchas](#gotchas)
+- [Related Documentation](#related-documentation)
 
-<a name="introduction"></a>
-## Introduction
+<a name="basic-usage"></a>
+## Basic Usage
 
-The teams module provides multi-tenancy support for Magic Starter applications. Users can create teams, invite members by email with role assignments, switch between teams, and manage team settings. The entire module is gated behind a single feature flag and relies on a **team resolver** pattern that bridges the host app's team model with the starter plugin's lightweight DTO.
+Turn the feature on in `lib/config/magic_starter.dart`, register the routes from your route provider and register a team resolver (see [Team Resolver](#team-resolver)):
 
-> [!NOTE]
-> All team routes are registered under `MagicStarterConfig.teamsPrefix()` (default `/teams`). Team routes require the `EnsureAuthenticated` middleware and render inside `AppLayout`.
+```dart
+'features': {
+  'teams': true,
+},
+```
+
+```dart
+registerMagicStarterAuthRoutes();
+registerMagicStarterTeamRoutes();
+```
+
+With `teams` off, `registerMagicStarterTeamRoutes()` is a no-op and the default team views are not registered. The routes sit under `MagicStarterConfig.teamsPrefix()` (`magic_starter.routes.teams_prefix`, default `/teams`), behind the `auth` middleware alias, inside the `layout.app` shell.
+
+| Registry key | View | Route |
+|:-------------|:-----|:------|
+| `teams.create` | `MagicStarterTeamCreateView` | `MagicStarterConfig.teamCreateRoute()` (`/teams/create`) |
+| `teams.settings` | `MagicStarterTeamSettingsView` | `MagicStarterConfig.teamSettingsRoute()` (`/teams/settings`) |
+| `teams.invitation_accept` | `MagicStarterTeamInvitationAcceptView` | `/invitations/:token/accept` |
+| `teams.billing` | `MagicStarterBillingView` | Registered by the `billing` feature alone, with no route of its own: your route provider points `MagicStarterConfig.billingRoute()` (`/teams/billing`) at `MagicStarter.view.make('teams.billing')` |
+
+Create and settings are pushed (`.stacked()`), so the back gesture returns to the team switcher. Invitation acceptance is an arrival from an email link, so it is not stacked. The backend side is `magic-starter-laravel`'s `teams` feature; turn on both.
 
 <a name="team-resolver"></a>
 ## Team Resolver
 
-The team resolver is the bridge between your application's team model and the starter plugin. Register it during app boot via `MagicStarter.useTeamResolver()`:
+The team resolver is the bridge between your application's team model and the starter. Register it during app boot with `MagicStarter.useTeamResolver()`:
 
 ```dart
 MagicStarter.useTeamResolver(
@@ -45,42 +68,29 @@ MagicStarter.useTeamResolver(
 );
 ```
 
-The resolver provides three callbacks:
+| Callback | Return type | Purpose |
+|:---------|:------------|:--------|
+| `currentTeam` | `MagicStarterTeam?` | The user's active team |
+| `allTeams` | `List<MagicStarterTeam>` | Every team the user belongs to |
+| `onSwitch` | `Future<void>` | Called when the user picks a different team |
 
-| Callback | Return Type | Purpose |
-|----------|------------|---------|
-| `currentTeam` | `MagicStarterTeam?` | Returns the user's currently active team |
-| `allTeams` | `List<MagicStarterTeam>` | Returns all teams the user belongs to |
-| `onSwitch` | `Future<void>` | Called when the user selects a different team |
-
-The starter plugin reads these callbacks to populate the team selector dropdown, display the active team name, and handle team switching. Your app's Team model should provide a `toMagicStarterTeam()` conversion method.
-
-> [!IMPORTANT]
-> The team resolver must be registered before any team-related UI is rendered. Call `MagicStarter.useTeamResolver()` in your service provider's `boot()` method.
+The starter reads these callbacks to fill the team selector, show the active team name and handle switching. Register the resolver in your service provider's `boot()`, before any team UI renders. `MagicStarter.bootstrap()` takes the same three callbacks and throws a `StateError` when `teams` is on and none are passed (an `ArgumentError` when only some are).
 
 <a name="creating-teams"></a>
 ## Creating Teams
 
-Create a new team via `MagicStarterTeamController.instance.doCreate()`:
-
 ```dart
 final success = await MagicStarterTeamController.instance.doCreate(
-  name: form['name'],
+  name: form.get('name'),
 );
 ```
 
-The controller sends `POST /teams` with the team name. On success:
-
-1. The returned team `id` is stored in `currentTeamId.value`.
-2. `Auth.restore()` is called to refresh the user model (which now includes the new team).
-3. A toast confirmation is shown.
-
-The create team view is registered under `teams.create` and accessible at `MagicStarterConfig.teamCreateRoute()` (default `/teams/create`).
+The controller sends `POST /teams` with the team name. With the new team's `id` it then sends `PUT /user/current-team`, stores the id in `currentTeamId.value` and applies the user that answer carries (falling back to `Auth.restore()`), so the sidebar names the new team. A toast confirms the creation.
 
 <a name="team-switching"></a>
 ## Team Switching
 
-Switch the active team via `MagicStarter.switchTeam()`, which answers whether the backend accepted it:
+Switch the active team with `MagicStarter.switchTeam()`, which answers whether the backend accepted it:
 
 ```dart
 if (!await MagicStarter.switchTeam(teamId)) return;
@@ -88,23 +98,25 @@ if (!await MagicStarter.switchTeam(teamId)) return;
 MagicRoute.to('/projects/$projectId');
 ```
 
-It goes through `MagicStarterTeamController.instance.switchTeam()`, which sends `PUT /user/current-team` with the target `team_id` and, on success, updates `currentTeamId.value` and applies the signed-in user the switch answers with, so the session is on the new team before the future completes. An answer without that user (an empty `data`, a team record) falls back to `Auth.restore()`. In an app that never calls `SessionScope.attach()`, the switch also resets every `SessionScoped` controller registered with `Magic` (team settings, billing, your own team screens). A refused switch answers `false` and leaves the session on the team it was on, so a caller that navigates after a switch (a deep link into another team's page) must check the answer first.
+It goes through `MagicStarterTeamController.instance.switchTeam()`, which sends `PUT /user/current-team` with the target `team_id` and, on success, updates `currentTeamId.value` and applies the signed-in user the switch answers with, so the session is on the new team before the future completes. An answer without that user (an empty `data`, a team record) falls back to `Auth.restore()`. In an app that never calls `SessionScope.attach()`, the switch also resets every `SessionScoped` controller registered with `Magic` (see [Session Scope](./session-scope.md)). A refused switch answers `false` and leaves the session on the team it was on, so a caller that navigates after a switch must check the answer first.
 
-On success it also re-identifies the store rail as the paying subject (`StoreIdentitySync.syncNow()` from `magic_payments`), so a purchase made after the switch is not attributed to the team that was left. It identifies the team the switch was accepted for, not what the resolver reads at that moment: on the `Auth.restore()` fallback the cached user comes back first and the fresh one syncs in the background, so the resolver can still name the old team for a moment. A build without a store rail (web, desktop) identifies nothing. A refused switch identifies nothing.
+On success it also re-identifies the store rail as the paying subject (`StoreIdentitySync.syncNow()` from `magic_payments`), so a purchase made after the switch is not attributed to the team that was left. A build without a store rail (web, desktop) identifies nothing, and a refused switch identifies nothing.
 
-Pass it as the resolver's `onSwitch` (above) so the team selector gets the same behaviour. `MagicStarter.currentTeamId()` answers the active team's id as a string (`null` without a resolver or an active team), so an int id from your model and a string id from a link or a push payload compare equal.
+Pass `MagicStarter.switchTeam` as the resolver's `onSwitch` so the team selector gets the same behaviour. `MagicStarter.currentTeamId()` answers the active team's id as a string (`null` without a resolver or an active team), so an int id from your model and a string id from a link or a push payload compare equal.
 
-The team selector dropdown (see [Widget: MSTeamSelector](#widget-msteamselector)) is built from the resolver's `allTeams()` callback and triggers `onSwitch()` when a selection changes.
+<a name="billing"></a>
+## Billing
 
-<a name="billable-subject"></a>
+The billing screen (`teams.billing`, with the `billing` feature) sells plans through `magic_payments`: Stripe on the web, the store on mobile. It needs `magic_starter.billing.web_origin`, an absolute url, for the web rail; its absence fails silently at Stripe.
+
 ### The Billable Subject
 
-`magic_starter.billing.billable` names what a store purchase is billed to, and it mirrors magic-starter-laravel's key of the same name. The two must agree:
+`magic_starter.billing.billable` names what a store purchase is billed to, and it mirrors `magic-starter-laravel`'s key of the same name. The two must agree:
 
 | Value | The store rail is identified as |
-|---|---|
+|:------|:--------------------------------|
 | `'user'` (default) | `Auth.id()` |
-| `'team'` | the active team id |
+| `'team'` | The active team id |
 
 ```dart
 'billing': {
@@ -115,15 +127,14 @@ The team selector dropdown (see [Widget: MSTeamSelector](#widget-msteamselector)
 
 `MagicStarterServiceProvider` reads it at boot and sets `StoreIdentitySync.billableId`; any other value refuses the boot with a `StateError`, because a typo that fell back to `'user'` would bind every purchase to the wrong subject. Identifying on login and restore as well stays your call: add `StoreIdentitySync.attach()` to your provider's `boot()`.
 
-<a name="price-format"></a>
 ### Price Format
 
-Every web price the billing screen shows (the plan card, the trial line, the renewal line and the trialing line) reads the producer's `display` string, `379.00 TRY`, which carries no separator and no symbol. An app that writes money its own way registers a `MagicStarterPriceFormat` on the controller:
+Every web price the billing screen shows reads the producer's `display` string, such as `379.00 TRY`, which carries no separator and no symbol. An app that writes money its own way registers a `MagicStarterPriceFormat` on the controller:
 
 ```dart
 Magic.put(
   MagicStarterBillingController(
-    usageCopy: withUsageCopy,
+    usageCopy: usageCopy,
     formatNumber: Number.format,
     formatPrice: (MagicStarterWebPrice price) => switch (price.currency) {
       'TRY' => '${Number.format(price.amountMinor / 100)} TL',
@@ -133,98 +144,53 @@ Magic.put(
 );
 ```
 
-`MagicStarterWebPrice` carries `amountMinor` (in the currency's minor unit), `currency` (the ISO 4217 code) and `display`. Return `price.display` for any currency the app does not format itself. `MagicStarterBillingController.priceText(price)` is what the screen calls.
+`MagicStarterWebPrice` carries `amountMinor` (in the currency's minor unit), `currency` (the ISO 4217 code) and `display`. Return `price.display` for any currency the app does not format itself. `usageCopy` is your own `MagicStarterUsageCopy`; the controller takes required collaborators, so it is registered with `Magic.put` rather than `findOrPut`.
 
-<a name="free-trials"></a>
 ### Free Trials
 
-The billing screen (`teams.billing`) shows a trial and a store introductory offer without any setup beyond the right versions: `magic_payments` ^1.0.0 and `magic-starter-laravel` 0.0.23, whose catalogue rows carry `trial_days` per product.
-
-`MagicStarterProduct.trialDays` is the free days a purchase of that product starts with, and `0` for none. The backend answers it for the signed-in caller, so `0` also means a trial already used, and a positive value is safe to advertise. `MagicStarterBillingController.trialEnd` is the date a running trial ends (`null` unless the plan status is `trialing`); a store trial has no `trial_ends_at`, so it falls back to the entitlement's current period end.
+The billing screen shows a trial and a store introductory offer without further setup, provided the backend's catalogue rows carry `trial_days` per product. `MagicStarterProduct.trialDays` is the free days a purchase of that product starts with, and `0` for none. The backend answers it for the signed-in caller, so `0` also means a trial already used. `MagicStarterBillingController.trialEnd` is the date a running trial ends (`null` unless the plan status is `trialing`); a store trial has no `trial_ends_at`, so it falls back to the entitlement's current period end.
 
 | Where | What it shows |
-|---|---|
-| Current plan card | A "Trial" badge beside the plan name, and one line in place of the renewal line: "Free trial ends :date (:left), then :price per :cycle" (a web trial with a known price and cycle), the same without the price and cycle, the same with the store sentence (a store trial), or "Free trial ends :date. It will not renew." once the trial is cancelled |
-| Web plan card | Above the call to action, "Free for :period. Card required, then :price per :cycle.", and the call to action reads "Start free trial". Only on a web build, only for a product with `trialDays` above zero, and the billed price stays the large figure. The first upgrade with a trial takes the grid's one filled button (otherwise the cheapest upgrade keeps it), and that button glows in its own fill colour, pulsing three times when the card first paints; reduced motion keeps the glow and drops the pulse |
-| Store plan card (disclosure) | "Free for :intro_period, then :price per :period" for a free introductory offer. Only when the store says this customer is eligible (`StoreProductOffer.introEligible`); otherwise the plain "per period" line |
+|:------|:--------------|
+| Current plan card | A "Trial" badge beside the plan name, and one line in place of the renewal line saying when the trial ends and what is billed after it (or that it will not renew once cancelled) |
+| Web plan card | For a product with `trialDays` above zero, "Free for :period. Card required, then :price per :cycle." above the call to action, which reads "Start free trial". Web build only |
+| Store plan card | "Free for :intro_period, then :price per :period" for a free introductory offer, only when the store says this customer is eligible (`StoreProductOffer.introEligible`) |
 
-The translator has no plural API, so each count is chosen in Dart: `:count == 1` reads the `_one` key and any other count the `_other` key. The keys, all under `magic_starter.billing` in `en.stub`:
+The translator has no plural API, so each count is chosen in Dart: a count of one reads the `_one` key and any other count the `_other` key. A store introductory period is read from its ISO 8601 form when it is one whole unit (`P14D`, `P2W`, `P1M`, `P1Y`); anything else (`P1Y2M`) states no offer and keeps the plain line.
 
-| Key | Default |
-|---|---|
-| `trial_badge` | `Trial` |
-| `trial_line_renews` | `Free trial ends :date (:left), then :price per :cycle` |
-| `trial_line_cycleless` | `Free trial ends :date (:left)` |
-| `trial_line_store` | `Free trial ends :date (:left), then billed through the store that sold this plan.` |
-| `trial_line_ends` | `Free trial ends :date. It will not renew.` |
-| `trial_days_left_one`, `trial_days_left_other` | `1 day left`, `:count days left` |
-| `trial_card_required` | `Free for :period. Card required, then :price per :cycle.` |
-| `trial_cta` | `Start free trial` |
-| `store_disclosure_intro_free` | `Free for :intro_period, then :price per :period` |
-| `period_day_*`, `period_week_*`, `period_month_*`, `period_year_*` (each `_one` and `_other`) | `:count day`, `:count days`, and so on |
-
-An app that publishes its own `en.json` adds these keys by hand. A store introductory period is read from its ISO 8601 form when it is one whole unit (`P14D`, `P2W`, `P1M`, `P1Y`); anything else (`P1Y2M`) states no offer and keeps the plain line.
-
-<a name="changing-a-web-plan"></a>
 ### Changing a Web Plan
 
-A team that already holds a web (Stripe) subscription changes tier or cycle by moving that subscription, never by buying a second one: magic-starter-laravel refuses a checkout with a 409 `subscription_exists` while one still grants. `MagicStarterBillingController.holdsWebSubscription` is `true` once the entitlement names `BillingProvider.stripe` with a plan status that still grants (`trialing`, `active`, `pastDue`, `grace`), and while it is, a tap on another paid tier opens a confirmation instead of a checkout. On confirm the screen calls `WebBillingService.swap(productKey:)` (`POST /billing/swap`) with the card's catalogue product, re-reads the payment method and the invoices, and polls the entitlement with `MagicStarterBillingController.awaitEntitlementChange(before)` (the store purchase's backoff, 60 seconds in all), because the backend answers the swap before Stripe's webhook writes the new tier. A team with no web subscription still goes through the hosted checkout, and the move to the free tier still opens the billing portal.
+A team that already holds a web (Stripe) subscription changes tier or cycle by moving that subscription, never by buying a second one: `magic-starter-laravel` refuses a checkout with a 409 `subscription_exists` while one still grants. `MagicStarterBillingController.holdsWebSubscription` is `true` once the entitlement names `BillingProvider.stripe` with a plan status that still grants (`trialing`, `active`, `pastDue`, `grace`), and while it is, a tap on another paid tier opens a confirmation instead of a checkout. On confirm the screen calls `WebBillingService.swap(productKey:)` (`POST /billing/swap`), re-reads the payment method and the invoices, and polls the entitlement with `awaitEntitlementChange(before)`, because the backend answers the swap before Stripe's webhook writes the new tier. A team with no web subscription still goes through the hosted checkout, and the move to the free tier still opens the billing portal.
 
-The confirmation states what the backend (0.0.28 or later) does with the money:
+The confirmation states what the backend does with the money:
 
 | Move | The sentence |
-|---|---|
-| During a running trial (a trial end still ahead) | Nothing is charged until the trial ends |
+|:-----|:-------------|
+| During a running trial | Nothing is charged until the trial ends |
 | A higher tier, or a held tier the catalogue cannot rank | The card on file is charged the prorated difference now |
 | A lower tier on another cycle | The new billing period is billed at once, less the unused time on the current plan |
 | A lower tier on the same cycle | The change applies now and the unused time is credited to the next invoice |
 
-An upgrade is refused with a 402 when the card declines or the bank asks for 3D Secure, which `magic_payments` 0.0.10 reports as `BillingErrorCode.paymentDeclined` and `paymentRequiresAction`; the toast says the plan has not changed and why. The keys, all under `magic_starter.billing` in `en.stub`:
+An upgrade the card declines, or one the bank asks to confirm with 3D Secure, is refused with a 402, which `magic_payments` reports as `BillingErrorCode.paymentDeclined` and `paymentRequiresAction`; the toast says the plan has not changed and why.
 
-| Key | Default |
-|---|---|
-| `swap_confirm_title` | `Change to :name?` |
-| `swap_confirm_charge_now` | `Billed :cycle from now on. Your card on file is charged the prorated difference now.` |
-| `swap_confirm_credit` | `Billed :cycle from now on. The change applies now and the unused time is credited to your next invoice.` |
-| `swap_confirm_period_now` | `Billed :cycle from now on. The change applies now, and the new billing period is billed to your card at once, less the unused time on your current plan.` |
-| `swap_confirm_trial` | `Billed :cycle from now on. Your trial continues; you are charged when it ends.` |
-| `swap_confirm_button`, `swap_cancel_button` | `Change plan`, `Keep current plan` |
-| `toast_swap_description` | `Billed :cycle. The change applies now.` |
-| `errors.payment_declined` | `Your card was declined, so your plan has not changed. Update your payment method and try again.` |
-| `errors.payment_requires_action` | `Your bank asked to confirm this payment, which a plan change cannot do here, so your plan has not changed. Try a card that does not ask for confirmation, or contact us.` |
-
-An app that publishes its own `en.json` adds these keys by hand.
-
-<a name="campaigns"></a>
 ### Campaigns
 
 A staff-run, time-boxed offer on `magic-starter-laravel` (`GET /billing/campaign`) reaches a floor-tier team owner on the web rail as an app-wide banner and a tag on the plan cards it discounts. The backend answers `{"data": null}` unless the caller is the audience, so nothing here decides who qualifies; the client only declines to ask when it could not act on the offer.
 
-`MagicStarterBillingController.loadCampaign()` reads the offer. It is separate from `load()`, which stays the billing screen's six reads, and it asks only when the `billing` feature is on and `canPurchaseViaWeb` holds (a web rail, no store managing the subscription, not a known non-owner). The answer lives on the controller instance as `MagicStarterBillingController.campaign`, a `MagicStarterCampaign` (`id`, `startsAt`, `endsAt`, `products`, `discount`, and `headlineFor(languageCode)` / `bodyFor(languageCode)`, which pick the app locale, then `magic_starter.defaults.locale`, then any copy the backend sent). A team switch or a sign-in (`resetForSession`) clears it and the mounted banner asks again for the new team. The backend answers 404 when its `campaigns` feature is off (the default), which is read as no campaign and logs nothing; any other failed read is logged as a warning.
+`MagicStarterBillingController.loadCampaign()` reads the offer. It is separate from `load()` and asks only when the `billing` feature is on and `canPurchaseViaWeb` holds (a web rail, no store managing the subscription, not a known non-owner). The answer lives on the controller as `campaign`, a `MagicStarterCampaign` (`id`, `startsAt`, `endsAt`, `products`, `discount`, and `headlineFor(languageCode)` and `bodyFor(languageCode)`, which pick the app locale, then `magic_starter.defaults.locale`, then any copy the backend sent). A team switch or a sign-in clears it and the mounted banner asks again. The backend answers 404 when its `campaigns` feature is off, which is read as no campaign and logs nothing; any other failed read is logged as a warning.
 
 | Where | What it shows |
-|---|---|
-| `MagicStarterCampaignBanner` | The headline and body above every page, a "See plans" action that goes to `MagicStarterConfig.billingRoute()` and a "Dismiss" action. `MagicStarterAppLayout` mounts it beside the app update banner when `billing` is on; a host that maps `layout.app` to its own layout places it itself. It resolves the registered billing controller without running its `onInit`, so it never starts the six billing reads. It hides itself once `endsAt` has passed, without waiting for another read |
-| Plan card | For a card whose product at the selected billing cycle is in the campaign, a "Limited offer" tag and the discount (":value% off", or ":amount off" for a fixed sum) under the card's price. The tag follows the cycle toggle: a campaign on `pro_monthly` only tags the Pro card while Monthly is selected. It also hides once `endsAt` has passed. A fixed-amount discount tags only a card priced in the campaign's own currency or one the coupon lists in `currency_options`, because Stripe applies an amount coupon only in a currency it prices; a card in any other currency (one added to the catalogue after the coupon was snapshotted) carries no tag. The billing screen reads the campaign itself, so a host without the banner still gets the tag |
+|:------|:--------------|
+| `MagicStarterCampaignBanner` | The headline and body above every page, a "See plans" action to `MagicStarterConfig.billingRoute()` and a "Dismiss" action. `MagicStarterAppLayout` mounts it when `billing` is on; a host that maps `layout.app` to its own layout places it itself. It hides itself once `endsAt` has passed |
+| Plan card | For a card whose product at the selected billing cycle is in the campaign, a "Limited offer" tag and the discount under the card's price. The tag follows the cycle toggle, and a fixed-amount discount tags only a card priced in the campaign's own currency or one the coupon lists in `currency_options`. The billing screen reads the campaign itself, so a host without the banner still gets the tag |
 
-"Dismiss" stores the campaign id in the `Vault` under `MagicStarterCampaignBanner.dismissalKey()`, which is `dismissedCampaignKey` plus the signed-in account's id, so a second account on the same device does not inherit the first one's dismissal. That campaign stays hidden across launches; the next campaign has a new id and shows again.
+"Dismiss" stores the campaign id in the `Vault` under `MagicStarterCampaignBanner.dismissalKey()`, which is `dismissedCampaignKey` plus the signed-in account's id, so a second account on the same device does not inherit the first one's dismissal. The next campaign has a new id and shows again. A fixed-sum discount passes through the app's `MagicStarterPriceFormat` when one is registered; otherwise it is written the producer's way (`5.00 USD`), which assumes a currency with two decimals.
 
-The tag renders under the price whether or not the `plan_card_highlight` slot is registered; a registered slot draws its own content beside it and can read `MagicStarterBillingController.campaign` for more. A fixed-sum discount is a minor-unit amount, taken from the coupon's amount in the currency the card is priced in (`discount.currency_options`), else the campaign's own `value` and `currency`: the tag passes it through the app's `MagicStarterPriceFormat` when one is registered, and otherwise writes it the producer's way (`5.00 USD`), which assumes a currency with two decimals.
+The package ships English copy only. The headline and body come from the backend per language; the labels are keys under `magic_starter.billing` in `assets/stubs/install/en.stub`, and an app that published its own `en.json` adds new keys by hand.
 
-The package ships English copy only. The headline and body come from the backend per language; the labels are keys under `magic_starter.billing` in `en.stub`, and an app that publishes its own `en.json` adds them by hand:
+<a name="invitations"></a>
+## Invitations
 
-| Key | Default |
-|---|---|
-| `campaign_see_plans` | `See plans` |
-| `campaign_dismiss` | `Dismiss` |
-| `campaign_badge` | `Limited offer` |
-| `campaign_discount_percent` | `:value% off` |
-| `campaign_discount_amount` | `:amount off` |
-
-<a name="invitation"></a>
-## Invitation
-
-<a name="sending-invitations"></a>
 ### Sending Invitations
 
 Invite a member to the current team by email and role:
@@ -232,19 +198,15 @@ Invite a member to the current team by email and role:
 ```dart
 final success = await MagicStarterTeamController.instance.doInvite(
   email: 'colleague@example.com',
-  role: 'editor',
+  role: 'member',
 );
 ```
 
-The controller sends `POST /teams/{teamId}/invitations` and automatically refreshes the invitations list via `loadMembersAndInvitations()` on success.
+The controller sends `POST /teams/{teamId}/invitations` and refreshes the lists with `loadMembersAndInvitations()` on success. The team id is `activeTeamId`: the explicit `currentTeamId.value`, else the resolver's `currentTeam()`. With neither, the controller sets an error and returns `false`. The shipped settings view offers the roles `member` and `admin`.
 
-> [!NOTE]
-> The `activeTeamId` is resolved from either the explicit `currentTeamId.value` or the team resolver's `currentTeam()` callback. If neither provides a team ID, the controller sets an error and returns `false`.
-
-<a name="accepting-invitations"></a>
 ### Accepting Invitations
 
-Accept an invitation using the token from the invitation URL:
+Accept an invitation with the token from the invitation URL:
 
 ```dart
 final success = await MagicStarterTeamController.instance.doAcceptInvitation(
@@ -252,9 +214,7 @@ final success = await MagicStarterTeamController.instance.doAcceptInvitation(
 );
 ```
 
-This sends `POST /invitations/{token}/accept`. On success, `Auth.restore()` refreshes the user model to include the newly joined team.
-
-The invitation accept view is registered under `teams.invitation_accept`, on the route `/invitations/:token/accept`. The view reads the token from its own route's path once, in `didChangeDependencies` (route state cannot be read in `initState`):
+This sends `POST /invitations/{token}/accept` and, on success, calls `Auth.restore()` so the user model includes the new team. The accept view (`teams.invitation_accept`) reads the token from its own route once, in `didChangeDependencies`, because route state cannot be read in `initState`:
 
 ```dart
 _token ??= MagicRouter.instance.pathParameterOf(context, 'token');
@@ -262,10 +222,9 @@ _token ??= MagicRouter.instance.pathParameterOf(context, 'token');
 
 The static `pathParameter()` would answer for whichever page was built last, which across layout shells is not always this one.
 
-<a name="canceling-invitations"></a>
-### Canceling Invitations
+### Cancelling Invitations
 
-Cancel a pending invitation (team admin action):
+Cancel a pending invitation (a team admin action):
 
 ```dart
 final success = await MagicStarterTeamController.instance.cancelInvitation(
@@ -273,153 +232,74 @@ final success = await MagicStarterTeamController.instance.cancelInvitation(
 );
 ```
 
-This sends `DELETE /teams/{teamId}/invitations/{invitationId}` and removes the invitation from the local `invitations` ValueNotifier without requiring a full refresh.
+This sends `DELETE /teams/{teamId}/invitations/{invitationId}`.
 
 <a name="team-settings"></a>
 ## Team Settings
 
-<a name="updating-team-name"></a>
-### Updating Team Name
-
-Update the active team's name:
+### Updating the Team Name
 
 ```dart
 final success = await MagicStarterTeamController.instance.doUpdate(
-  name: form['name'],
+  name: form.get('name'),
 );
 ```
 
-Sends `PUT /teams/{teamId}` and calls `Auth.restore()` on success.
+This sends `PUT /teams/{teamId}` and calls `Auth.restore()` on success.
 
-<a name="managing-members"></a>
 ### Managing Members
-
-Load the full member and invitation lists for the active team:
 
 ```dart
 await MagicStarterTeamController.instance.loadMembersAndInvitations();
 ```
 
-This fires `GET /teams/{teamId}/members` and `GET /teams/{teamId}/invitations` in parallel via `Future.wait()`. Results are stored in the `members` and `invitations` ValueNotifier fields.
-
-Remove a member from the team:
+This fires `GET /teams/{teamId}/members` and `GET /teams/{teamId}/invitations` together and stores the results in the `members` and `invitations` notifiers. A newer read for another team supersedes an older one, so a slow answer never lands on the wrong team's screen.
 
 ```dart
-final success = await MagicStarterTeamController.instance.removeMember(
-  memberId,
-);
+final removed = await MagicStarterTeamController.instance.removeMember(memberId);
 ```
 
-Sends `DELETE /teams/{teamId}/members/{memberId}` and updates the local `members` list immediately.
-
-> [!TIP]
-> Use `ValueListenableBuilder` to react to changes in `controller.members` and `controller.invitations` — both are `ValueNotifier<List<Map<String, dynamic>>>` for fine-grained rebuilds.
-
-<a name="feature-gate"></a>
-## Feature Gate
-
-The entire teams module is gated by a single configuration flag:
-
-```dart
-Config.set('magic_starter.features.teams', true);
-```
-
-Check programmatically:
-
-```dart
-if (MagicStarterConfig.hasTeamFeatures()) {
-  // Team UI and routes are available
-}
-```
-
-When disabled, team routes are not registered and attempting to navigate to them throws a `StateError`. The team selector widget and team-related profile sections are hidden via feature-gated spreads in the view layer.
+This sends `DELETE /teams/{teamId}/members/{memberId}` and updates the local `members` list.
 
 <a name="controller"></a>
 ## Controller
 
-`MagicStarterTeamController` is accessed via the singleton:
+`MagicStarterTeamController.instance` is the singleton. It implements `SessionScoped`: a login or a team switch drops its members and invitations and re-points `currentTeamId` at the resolver's current team.
 
-```dart
-final controller = MagicStarterTeamController.instance;
-```
-
-Key reactive fields:
-
-| Field | Type | Purpose |
-|-------|------|---------|
-| `currentTeamId` | `ValueNotifier<dynamic>` | Explicitly set team ID — overrides resolver |
-| `members` | `ValueNotifier<List<Map<String, dynamic>>>` | Current team members |
+| Member | Type | Purpose |
+|:-------|:-----|:--------|
+| `currentTeamId` | `ValueNotifier<dynamic>` | An explicitly set team id; overrides the resolver |
+| `members` | `ValueNotifier<List<Map<String, dynamic>>>` | The current team's members |
 | `invitations` | `ValueNotifier<List<Map<String, dynamic>>>` | Pending invitations |
+| `activeTeamId` | `dynamic` | `currentTeamId.value`, else the resolver's `currentTeam()` id |
+| `activeTeamName` | `String?` | The name matching `activeTeamId`, from the resolver |
 
-Computed properties:
+Use `ValueListenableBuilder` on `members` and `invitations` for fine-grained rebuilds. The controller's `dispose()` disposes all three notifiers, so dispose it in test `tearDown()`.
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `activeTeamId` | `dynamic` | Resolves from `currentTeamId.value` or resolver's `currentTeam()` |
-| `activeTeamName` | `String?` | Name from the resolver's `currentTeam()` |
+<a name="overriding-a-view"></a>
+## Overriding a View
 
-> [!IMPORTANT]
-> The controller's `dispose()` method disposes all three `ValueNotifier` fields. Always call `controller.dispose()` in `tearDown()` during tests, and ensure `ValueNotifier` disposal in any widget that creates a local reference.
-
-<a name="views"></a>
-## Views
-
-| Registry Key | View | Route |
-|-------------|------|-------|
-| `teams.create` | `TeamCreateView` | `/teams/create` |
-| `teams.settings` | `TeamSettingsView` | `/teams/settings` |
-| `teams.invitation_accept` | `TeamInvitationAcceptView` | `/invitations/{token}/accept` |
-
-All views extend `MagicStatefulView<MagicStarterTeamController>` and are rendered inside `AppLayout`. They are instantiated through the view registry:
+Every team screen resolves through the view registry, so a host replaces one by registering a builder under the same key:
 
 ```dart
-MagicStarter.view.make('teams.create');
-MagicStarter.view.make('teams.settings');
-MagicStarter.view.make('teams.invitation_accept');
+MagicStarter.view.register('teams.settings', () => const MyTeamSettingsView());
 ```
 
-The host app can override any view by registering a custom builder under the same key.
+<a name="msteamselector"></a>
+## MSTeamSelector
 
-<a name="widget-msteamselector"></a>
-## Widget: MSTeamSelector
-
-The `MSTeamSelector` is a dropdown widget built from the team resolver callbacks. It displays the user's teams and triggers a team switch on selection:
+A dropdown built from the resolver's callbacks. It lists the user's teams and calls `onSwitch` when the selection changes:
 
 ```dart
-MSTeamSelector()
+const MSTeamSelector()
 ```
 
-The widget reads `MagicStarter.teamResolver` to populate the dropdown options and calls the resolver's `onSwitch` callback when the user selects a different team. It is typically placed in the app layout's sidebar or header.
+Pass `compact: true` for an icon-only trigger. It renders nothing without a registered resolver or with an empty `allTeams()`. The shipped app layout places it in the sidebar; a host layout places it where it wants.
 
-> [!NOTE]
-> The team selector only renders when `MagicStarter.hasTeamResolver` returns `true`. If no resolver is registered, the widget renders nothing.
+<a name="magicstarterteam"></a>
+## MagicStarterTeam
 
-<a name="model-magicstarterteam"></a>
-## Model: MagicStarterTeam
-
-`MagicStarterTeam` is a lightweight DTO that bridges your app's team model with the starter plugin:
-
-```dart
-class MagicStarterTeam {
-  final dynamic id;
-  final String? name;
-  final String? photoUrl;
-  final bool isPersonalTeam;
-
-  const MagicStarterTeam({
-    required this.id,
-    this.name,
-    this.photoUrl,
-    this.isPersonalTeam = false,
-  });
-
-  factory MagicStarterTeam.fromMap(Map<String, dynamic> map);
-}
-```
-
-The `fromMap()` factory handles backend response normalization, including `personal_team` which may arrive as `true` or `1`.
-
-Your app's Team model should provide a conversion method:
+A lightweight team DTO (`id`, `name`, `photoUrl`, `isPersonalTeam`) that bridges your app's team model with the starter. `MagicStarterTeam.fromMap()` normalises a backend map, including a `personal_team` that arrives as `true` or `1`. Give your own model a conversion:
 
 ```dart
 extension on Team {
@@ -434,10 +314,23 @@ extension on Team {
 }
 ```
 
----
+<a name="gotchas"></a>
+## Gotchas
 
-**Related links:**
+| Mistake | Fix |
+|:--------|:----|
+| Enabling `teams` without a team resolver | Register `MagicStarter.useTeamResolver()`, or pass the callbacks to `MagicStarter.bootstrap()`. The selector and the current team name read it. |
+| Navigating after `switchTeam` without reading the answer | A refused switch answers `false` and leaves the session on the old team; check it first. |
+| Calling `Auth.restore()` in your own switch path | Apply the switch answer's user directly, as the controller does, or the session identity flips late. |
+| Setting `billable: 'team'` on one side only | `magic_starter.billing.billable` and the backend key of the same name must agree. Any value other than `'user'` or `'team'` refuses the boot. |
+| Forgetting `billing.web_origin` | The web checkout needs an absolute url; without it Stripe fails silently. |
+| Expecting `members` and `invitations` to refill after a team switch | The controller refetches them only while a settings screen is mounted. Call `loadMembersAndInvitations()` from your own screen. |
 
-- [Authentication](https://magic.fluttersdk.com/packages/starter/authentication)
-- [Profile Management](https://magic.fluttersdk.com/packages/starter/profile)
-- [Configuration](https://magic.fluttersdk.com/packages/starter/configuration)
+<a name="related-documentation"></a>
+## Related Documentation
+
+- [Session Scope](./session-scope.md): what resets when the team changes.
+- [Profile](./profile.md): the settings hub and account pages.
+- [Authentication](./authentication.md): sign-in and `Auth.restore()`.
+- [Views and Layouts](./views-and-layouts.md): the view registry and the app shell.
+- [Configuration](../getting-started/configuration.md): the `teams` and `billing` flags and keys.

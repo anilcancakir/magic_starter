@@ -1,5 +1,7 @@
 # Design-System Components
 
+The `MS`-prefixed Wind components the starter's screens are built from, and the semantic token layer that skins them.
+
 - [Introduction](#introduction)
 - [Semantic Token Layer](#semantic-token-layer)
   - [MagicStarterTokens](#magicstartertokens)
@@ -14,13 +16,15 @@
   - [Composition and App Chrome](#composition-and-app-chrome)
 - [Import Collisions](#import-collisions)
 - [design.md.stub](#designmdstub)
+- [Gotchas](#gotchas)
+- [Related Documentation](#related-documentation)
 
 <a name="introduction"></a>
 ## Introduction
 
-Magic Starter ships a complete atomic design-system component library under `lib/src/ui/components/`. Every component is driven by a `WindRecipe` that resolves colors through the `MagicStarterTokens` semantic alias layer, so a single brand configuration flows into all built-in screens and every component your host app composes directly.
+Magic Starter ships an atomic design-system component library under `lib/src/ui/components/`. Each component is driven by a recipe that resolves colours through the `MagicStarterTokens` semantic alias layer, so a single brand configuration flows into all built-in screens and every component your host app composes directly.
 
-All 46 components are exported from `package:magic_starter/magic_starter.dart`.
+The components are exported from `package:magic_starter/magic_starter.dart`. The families below cover the form, display, navigation, overlay and layout components; the barrel also exports `MSAvatar`, `MSConfirmDialog`, the settings rows (`MSSettingsSection`, `MSSettingsRow`, `MSSettingsNavRow`), `MSUpdateBanner`, `MSUpgradeDialog`, `MSUpgradeNudge` and `MSUsageMeter`.
 
 <a name="semantic-token-layer"></a>
 ## Semantic Token Layer
@@ -28,69 +32,69 @@ All 46 components are exported from `package:magic_starter/magic_starter.dart`.
 <a name="magicstartertokens"></a>
 ### MagicStarterTokens
 
-`MagicStarterTokens` is a single `const` class with one public member: `defaultAliases`. It is a `Map<String, String>` of 17 semantic roles to light+dark Wind className pairs following the `bg-/text-/border-color-` prefix convention:
+`MagicStarterTokens` is a `final` class with a `const` map, `defaultAliases`, and two helpers. `defaultAliases` maps semantic class names to light and dark Wind className pairs. Each key is the full class it replaces (`bg-surface`, `text-fg`, `border-color-border`), not a bare role name, because Wind expands an alias only when a whole token matches a key:
 
 ```dart
 final aliases = MagicStarterTokens.defaultAliases;
 // {
-//   'surface':                  'bg-white dark:bg-gray-950',
-//   'surface-container':        'bg-gray-50 dark:bg-gray-900',
-//   'surface-container-high':   'bg-gray-100 dark:bg-gray-800',
-//   'fg':                       'text-gray-900 dark:text-gray-50',
-//   'fg-muted':                 'text-gray-500 dark:text-gray-400',
-//   'fg-disabled':              'text-gray-300 dark:text-gray-600',
-//   'primary':                  'bg-primary-600 dark:bg-primary-500',
-//   'on-primary':               'text-white dark:text-white',
-//   'primary-container':        'bg-primary-50 dark:bg-primary-950',
-//   'accent':                   'bg-accent-600 dark:bg-accent-500',
-//   'border':                   'border-gray-200 dark:border-gray-800',
-//   'border-subtle':            'border-gray-100 dark:border-gray-900',
-//   'destructive':              'bg-red-600 dark:bg-red-500',
-//   'on-destructive':           'text-white dark:text-white',
-//   'destructive-container':    'bg-red-50 dark:bg-red-950',
-//   'success':                  'bg-green-600 dark:bg-green-500',
-//   'warning':                  'bg-amber-500 dark:bg-amber-400',
+//   'bg-surface':               'bg-white dark:bg-gray-950',
+//   'text-fg':                  'text-gray-900 dark:text-gray-50',
+//   'bg-primary':               'bg-primary-600 dark:bg-primary-500',
+//   'border-color-border':      'border-gray-200 dark:border-gray-700',
+//   'bg-destructive':           'bg-red-600 dark:bg-red-500',
+//   ...
 // }
 ```
+
+| Helper | Returns |
+|:-------|:--------|
+| `MagicStarterTokens.role(theme, token)` | The token itself when the theme defines it (an alias key, or a backing colour in `WindThemeData.colors`); otherwise the default alias or a fallback pair, so a partly configured theme never renders an invisible surface. |
+| `MagicStarterTokens.readableOn(context, fill:, role:)` | The on-colour class for a fill: the host's own role when it defines one, otherwise `text-white` or `text-gray-950`, whichever has the better contrast against the fill in the current brightness. |
 
 <a name="wiring-into-windthemedata"></a>
 ### Wiring into WindThemeData
 
-Pass `MagicStarterTokens.defaultAliases` as the `aliases` argument when constructing your `WindThemeData`:
+Pass `MagicStarterTokens.defaultAliases` as the `aliases` argument of the `WindThemeData` you give `MagicApplication`, and hand the same theme to `MagicStarter.useWindTheme` so the navigation, modal, form, card, page header, layout, auth and dropdown themes are derived from it:
 
 ```dart
-WindApp(
-  theme: WindThemeData(
-    aliases: MagicStarterTokens.defaultAliases,
-  ),
-  child: const MyApp(),
-)
+final windTheme = WindThemeData(
+  colors: {'primary': myBrandColor},
+  aliases: MagicStarterTokens.defaultAliases,
+);
+
+MagicApplication(
+  title: 'Acme',
+  windTheme: windTheme,
+);
+
+// In AppServiceProvider.boot():
+MagicStarter.useWindTheme(windTheme);
 ```
 
-Components that reference a semantic role (e.g. `bg-surface`, `text-fg`, `bg-primary`) will resolve through this map at render time. Without the aliases wired in, the semantic class names are silently skipped by Wind, so your brand color and surface tokens will not apply.
+Components that reference a semantic class (`bg-surface`, `text-fg`, `bg-primary`) resolve through this map at render time. Without the aliases wired in, those class names are silently skipped by Wind, so your brand colour and surface tokens do not apply. `useWindTheme` resets the button and field themes, so call `MagicStarter.useButtonTheme` and `useFieldTheme` after it.
 
 <a name="token-reference"></a>
 ### Token Reference
 
-| Role | Semantic meaning | Maps to (default) |
-|------|-----------------|-------------------|
-| `surface` | Page/card background | `bg-white dark:bg-gray-950` |
-| `surface-container` | Subtle recessed area | `bg-gray-50 dark:bg-gray-900` |
-| `surface-container-high` | Elevated container | `bg-gray-100 dark:bg-gray-800` |
-| `fg` | Primary text | `text-gray-900 dark:text-gray-50` |
-| `fg-muted` | Secondary/supporting text | `text-gray-500 dark:text-gray-400` |
-| `fg-disabled` | Disabled state text | `text-gray-300 dark:text-gray-600` |
-| `primary` | Brand primary fill | `bg-primary-600 dark:bg-primary-500` |
-| `on-primary` | Text on primary fill | `text-white dark:text-white` |
-| `primary-container` | Tinted primary area | `bg-primary-50 dark:bg-primary-950` |
-| `accent` | Secondary brand fill | `bg-accent-600 dark:bg-accent-500` |
-| `border` | Standard border | `border-gray-200 dark:border-gray-800` |
-| `border-subtle` | Faint separator | `border-gray-100 dark:border-gray-900` |
-| `destructive` | Danger / delete fill | `bg-red-600 dark:bg-red-500` |
-| `on-destructive` | Text on danger fill | `text-white dark:text-white` |
-| `destructive-container` | Tinted danger area | `bg-red-50 dark:bg-red-950` |
-| `success` | Positive / confirmed | `bg-green-600 dark:bg-green-500` |
-| `warning` | Caution / review | `bg-amber-500 dark:bg-amber-400` |
+| Alias key | Semantic meaning | Maps to (default) |
+|:----------|:-----------------|:------------------|
+| `bg-surface` | Page/card background | `bg-white dark:bg-gray-950` |
+| `bg-surface-container` | Subtle recessed area | `bg-gray-50 dark:bg-gray-900` |
+| `bg-surface-container-high` | Elevated container | `bg-gray-100 dark:bg-gray-800` |
+| `text-fg` | Primary text | `text-gray-900 dark:text-gray-50` |
+| `text-fg-muted` | Secondary/supporting text | `text-gray-500 dark:text-gray-400` |
+| `text-fg-disabled` | Disabled state text | `text-gray-300 dark:text-gray-600` |
+| `bg-primary` | Brand primary fill | `bg-primary-600 dark:bg-primary-500` |
+| `text-on-primary` | Text on primary fill | `text-white dark:text-white` |
+| `bg-primary-container` | Tinted primary area | `bg-primary-100 dark:bg-primary-900` |
+| `bg-accent` | Secondary brand fill | `bg-indigo-600 dark:bg-indigo-500` |
+| `border-color-border` | Standard border colour | `border-gray-200 dark:border-gray-700` |
+| `border-color-border-subtle` | Faint separator colour | `border-gray-100 dark:border-gray-800` |
+| `bg-destructive` | Danger / delete fill | `bg-red-600 dark:bg-red-500` |
+| `text-on-destructive` | Text on danger fill | `text-white dark:text-white` |
+| `bg-destructive-container` | Tinted danger area | `bg-red-100 dark:bg-red-900` |
+| `bg-success` | Positive / confirmed | `bg-green-600 dark:bg-green-500` |
+| `bg-warning` | Caution / review | `bg-amber-600 dark:bg-amber-500` |
 | `bg-ai-soft` | Soft container for AI-authored content (replies, summaries) | `bg-violet-100 dark:bg-violet-900` |
 | `text-ai-soft-foreground` | Text or icon on top of `bg-ai-soft` | `text-violet-700 dark:text-violet-200` |
 | `border-ai` | Accent edge of AI-authored content | `border-violet-500 dark:border-violet-400` |
@@ -99,7 +103,7 @@ Components that reference a semantic role (e.g. `bg-surface`, `text-fg`, `bg-pri
 | `bg-success-soft` | Soft green container for a quiet status pill | `bg-green-100 dark:bg-green-900` |
 | `text-success-soft-foreground` | Text or icon on top of `bg-success-soft` | `text-green-800 dark:text-green-200` |
 
-These keys are written as the full class they replace (`bg-ai-soft`, `border-ai`), not as a bare role. The support screens use the AI pair and `border-ai` for the assistant's avatar, its bubble (a 2px left edge) and its chip, and the soft warning and success pairs for the "Team answering" and "Resolved" pills. A host theme that defines the same keys supplies its own map and wins.
+`text-destructive`, `text-primary`, `text-on-success` and `text-on-warning` are not alias keys: `MagicStarterTokens.role` answers them with a fallback pair when the host theme does not define them. The support screens use the AI pair and `border-ai` for the assistant's avatar, its bubble (a 2px left edge) and its chip, and the soft warning and success pairs for the "Team answering" and "Resolved" pills. A host theme that defines the same keys supplies its own map and wins.
 
 To override individual roles, spread `defaultAliases` and replace specific keys:
 
@@ -107,8 +111,8 @@ To override individual roles, spread `defaultAliases` and replace specific keys:
 WindThemeData(
   aliases: {
     ...MagicStarterTokens.defaultAliases,
-    'primary': 'bg-indigo-600 dark:bg-indigo-500',
-    'on-primary': 'text-white dark:text-white',
+    'bg-primary': 'bg-indigo-600 dark:bg-indigo-500',
+    'text-on-primary': 'text-white dark:text-white',
   },
 )
 ```
@@ -121,12 +125,12 @@ Every component lives in a 4-file atomic folder:
 ```
 lib/src/ui/components/<name>/
   <name>.dart          # The widget class (StatelessWidget or StatefulWidget)
-  <name>.recipe.dart   # WindRecipe function: resolves className from theme tokens
+  <name>.recipe.dart   # Recipe: resolves className from theme tokens
   <name>.preview.dart  # Standalone preview widget for interactive inspection
   index.dart           # Barrel: re-exports the public API for this component
 ```
 
-The `.recipe.dart` file contains a top-level function (e.g. `buildButtonRecipe`, `buildInputRecipe`, `cardRecipe`) that accepts variant/state arguments and returns a Wind className string. The widget delegates its className derivation to the recipe so the visual contract is inspectable and testable in isolation.
+The `.recipe.dart` file holds the recipe: a top-level `WindRecipe` or slot recipe (`badgeRecipe`, `textareaRecipe`), or a function that builds a recipe or a slot-to-className map from a theme or state (`buildButtonRecipe`, `buildInputRecipe`, `buildCardRecipe`, `selectRecipe`). The widget delegates its className derivation to the recipe, so the visual contract is inspectable and testable in isolation.
 
 <a name="component-families"></a>
 ## Component Families
@@ -137,10 +141,10 @@ The `.recipe.dart` file contains a top-level function (e.g. `buildButtonRecipe`,
 | Component | Enums / Helpers | Notes |
 |-----------|----------------|-------|
 | `MSButton` | `ButtonIntent` (primary/secondary/ghost/destructive), `ButtonSize` (sm/md/lg), `buildButtonRecipe` | Use `ButtonIntent.destructive` for delete / danger actions; `fullWidth: true` fills the parent width (wraps in `SizedBox`, defaults `false`). Shape, the three sizes and the secondary border come from `MagicStarterButtonTheme` (`MagicStarter.useButtonTheme`). Below `lg`, every size keeps its painted size but takes a 44x44 hit area |
-| `MSInput` | `InputState` (idle/focused/error/disabled), `buildInputRecipe` | Pairs with `MSFormField` for label + error display; `fullWidth: true` fills the parent width (defaults `false`). A single-line field is 44px tall below `lg` and 40px from `lg` up (`py-3 lg:py-2.5` over a `leading-5` line); the padding and type of the text, placeholder and value come from `MagicStarterFieldTheme.inputSizeClassName` (`MagicStarter.useFieldTheme`) |
-| `MSTextarea` | `TextareaState`, `textareaRecipe` | Multi-line input, same state model as `MSInput`; `fullWidth: true` fills the parent width (defaults `false`). On iOS a focused field carries a Done toolbar above the keyboard, since a multiline field's Return key inserts a newline and would otherwise leave the keyboard with no way out. One consequence for consumer TESTS: while that toolbar is up it schedules a frame callback every frame, so `pumpAndSettle` under `debugDefaultTargetPlatformOverride = TargetPlatform.iOS` never settles; pump explicitly instead |
+| `MSInput` | `InputState` (normal/error), `buildInputRecipe` | Pairs with `MSFormField` for label + error display; `fullWidth: true` fills the parent width (defaults `false`). A single-line field is 44px tall below `lg` and 40px from `lg` up (`py-3 lg:py-2.5` over a `leading-5` line); the padding and type of the text, placeholder and value come from `MagicStarterFieldTheme.inputSizeClassName` (`MagicStarter.useFieldTheme`) |
+| `MSTextarea` | `TextareaState` (normal/error), `textareaRecipe` | Multi-line input, same state model as `MSInput`; `fullWidth: true` fills the parent width (defaults `false`). On iOS a focused field carries a Done toolbar above the keyboard, since a multiline field's Return key inserts a newline and would otherwise leave the keyboard with no way out. One consequence for consumer TESTS: while that toolbar is up it schedules a frame callback every frame, so `pumpAndSettle` under `debugDefaultTargetPlatformOverride = TargetPlatform.iOS` never settles; pump explicitly instead |
 | `MSCheckbox` | | Boolean toggle; Wind-only, no Material dependency |
-| `MSSwitch` | | Toggle; replaces Flutter's `MSSwitch` in Wind layouts. An optional `label` renders beside the track and is part of the tap target; below `lg` the hit area is at least 44 px tall. Shows a focus ring on keyboard focus |
+| `MSSwitch` | | Toggle that wraps `WSwitch` with semantic colours. An optional `label` renders beside the track and is part of the tap target; below `lg` the hit area is at least 44 px tall. Shows a focus ring on keyboard focus |
 | `MSRadio` | | Single-select option |
 | `MSSelect` | `selectRecipe` | Dropdown single-select backed by an item list; the trigger is the same height as `MSInput` (44px below `lg`, 40px from `lg` up), and its padding, minimum height and type come from `MagicStarterFieldTheme.selectSizeClassName` |
 | `MSCombobox` | `comboboxRecipe` | Searchable single-select with filter input; the trigger is the same height as `MSInput` (44px below `lg`, 40px from `lg` up) and shares `MagicStarterFieldTheme.selectSizeClassName` with `MSSelect`. The search field's placeholder defaults to `trans('common.search_placeholder')` |
@@ -153,13 +157,13 @@ The `.recipe.dart` file contains a top-level function (e.g. `buildButtonRecipe`,
 
 | Component | Enums / Helpers | Notes |
 |-----------|----------------|-------|
-| `MSBadge` | `BadgeTone` (neutral/primary/success/warning/destructive) | Inline label chip |
-| `MSTypography` | `TypographyVariant` (h1-h6/body/caption/overline) | Semantic text wrapper |
-| `MSSkeleton` | `SkeletonShape` (line/rect/circle) | Placeholder loading block |
+| `MSBadge` | `BadgeTone` (neutral/primary/accent/success/warning/destructive/outline) | Inline label chip |
+| `MSTypography` | `TypographyVariant` (h1/h2/h3/body/caption) | Semantic text wrapper |
+| `MSSkeleton` | `SkeletonShape` (block/text/circle) | Placeholder loading block |
 | `MSToast` | `ToastVariant` (info/success/warning/error) | Transient feedback banner (the message is `text-sm font-medium`; `messageClassName` is appended after it, so `text-[15px] leading-5 font-normal` sets another body type, with or without an action); presents nothing itself, so the host shows it (through its own `OverlayEntry`) and decides how long it stays. `Magic.toast(String)` cannot carry an action and its overlay ignores pointers, so an action needs the host's own overlay. `actionLabel` and `onAction` (both or neither) add a trailing text action such as Undo: a cell at least 44 px tall and wide at every width (it grows with the label at a large text size), named by `actionLabel` for assistive technology, with a ring inside the toast on keyboard focus. A long message wraps beside it and the action keeps its size; a one line toast is as tall with an action as without |
 | `MSTooltip` | | Hover/long-press hint bubble |
-| `MSEmptyState` | | Illustrated empty-list placeholder |
-| `MSErrorState` | | Full-screen or inline error with retry |
+| `MSEmptyState` | | Centred placeholder with optional icon, title, description and action |
+| `MSErrorState` | | Same slots as `MSEmptyState` with a destructive tone; the retry is whatever `action` widget you pass |
 | `MSDataTable` | `MSDataColumn`, `dataTable*ClassName` | Header plus rows, with the columns passed in. Two modes: the default renders `rows` eagerly (right for a short, complete list); `MSDataTable.paginated` hands the body to magic's `MagicPaginatedListView` inside a bounded box, so a long collection costs the viewport rather than the result and reaching the tail asks the paginator for its next page. The header stays outside the scrolling body. `bodyHeight` is what bounds it, since a `ListView` needs a bound and `shrinkWrap: true` would build every row anyway. Column labels and `loadingLabel` are ALREADY TRANSLATED strings, not keys: half the callers render a label that is not a key at all (a currency code, a region name) |
 
 <a name="selection-and-navigation"></a>
@@ -204,9 +208,7 @@ The `.recipe.dart` file contains a top-level function (e.g. `buildButtonRecipe`,
 <a name="import-collisions"></a>
 ## Import Collisions
 
-Every component carries an `MS` prefix (`MSButton`, `MSDialog`, `MSSwitch`, ...),
-so none of the barrel's component exports collide with
-`package:material_ui/material_ui.dart`. You can import both without a `hide` clause:
+Every component class carries an `MS` prefix (`MSButton`, `MSDialog`, `MSSwitch`, ...), so the barrel's component exports do not collide with `package:material_ui/material_ui.dart` (`Switch`, `Dialog`, ...). Import both without a `hide` clause:
 
 ```dart
 import 'package:material_ui/material_ui.dart';
@@ -215,31 +217,12 @@ import 'package:magic_starter/magic_starter.dart';
 // No ambiguity: MSSwitch is the component, Switch is Material's.
 ```
 
-> Earlier releases exported unprefixed names (`Switch`, `Dialog`, ...) and
-> required a `hide` clause. See the migration table in the package README to
-> update from the pre-`MS` names.
-
-Or hide the specific colliding names:
-
-```dart
-import 'package:material_ui/material_ui.dart' hide MSSwitch, MSDialog, MSCheckbox;
-import 'package:magic_starter/magic_starter.dart';
-```
-
-Widget tests that need both Material and magic_starter types must do the same.
-
 <a name="designmdstub"></a>
 ## design.md.stub
 
-`assets/stubs/design.md.stub` is a `DESIGN.md` template that covers all 17 semantic roles, typography on the 4px logical scale, rounded/spacing scales, and key component entries with `{{ placeholder }}` tokens.
+`assets/stubs/design.md.stub` is a `DESIGN.md` template covering the colour roles, typography, rounded and spacing scales, and key component entries, with `{{ placeholder }}` tokens for the app name, brand colours and font family.
 
-Consumers copy it into their project root:
-
-```bash
-cp $(flutter pub cache list magic_starter)/assets/stubs/design.md.stub DESIGN.md
-```
-
-Then fill in brand hex values and fonts, and run the CLI commands:
+Copy it from the package source into your project root as `DESIGN.md` (a hosted dependency sits in the pub cache; `.dart_tool/package_config.json` lists its `rootUri`), fill in the brand hex values and fonts, then run the core commands:
 
 ```bash
 # Validate your DESIGN.md against the schema
@@ -249,4 +232,24 @@ dart run magic:dowel design:lint
 dart run magic:dowel design:sync
 ```
 
-`design:sync` regenerates the `WindThemeData(aliases: ...)` map, replacing `MagicStarterTokens.defaultAliases` with your brand-specific values so every component reflects your brand automatically.
+`design:sync` writes a Dart file (`lib/config/wind_theme.g.dart` by default, `--output` changes it) with an alias map for `WindThemeData(aliases: ...)` and a brand `primary` colour ramp. Pass that map where this page passes `MagicStarterTokens.defaultAliases`. See [Magic CLI](https://anilcancakir.com/magic/docs/packages/magic-cli) for the command reference.
+
+<a name="gotchas"></a>
+## Gotchas
+
+| Mistake | Fix |
+|:--------|:----|
+| Adding a bare role such as `primary` to your `aliases` | Alias keys are full classes (`bg-primary`, `text-fg`, `border-color-border`); Wind expands only a whole token that matches a key. |
+| Leaving `aliases` out of the `WindThemeData` | The semantic classes are silently skipped and the components lose their colours. Pass `MagicStarterTokens.defaultAliases` or a `design:sync` map. |
+| Calling `useButtonTheme` or `useFieldTheme` before `useWindTheme` | `useWindTheme` resets both, so call them after it. |
+| Hardcoding `className: 'py-3 ...'` on an `MSButton` | A caller className is appended after the theme and wins, which breaks a host's button standard; set the shape and sizes through `MagicStarter.useButtonTheme`. |
+| Calling `Magic.toast()` to show an `MSToast` with an action | `Magic.toast(String)` carries no action and its overlay ignores pointers; show the `MSToast` through your own `OverlayEntry`. |
+| Putting `Icons.*` inline in a `build()` | Extract it to `static const _icon = Icons.xxx`; Flutter web cannot tree-shake an inline icon. |
+
+<a name="related-documentation"></a>
+## Related Documentation
+
+- [Views and Layouts](./views-and-layouts.md): the screens these components compose into.
+- [Manager](../architecture/manager.md): the sub-themes (`useTheme`, `useButtonTheme`, `useFieldTheme`) and the page container.
+- [Wind Theme Adoption](../guides/wind-theme-adoption.md): moving a host's palette onto the semantic aliases.
+- [Notifications](./notifications.md): the bell dropdown that lives in `magic_notifications`.
