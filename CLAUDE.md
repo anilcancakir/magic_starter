@@ -81,6 +81,7 @@ Every feature, fix, or refactor goes through red-green-refactor: write a failing
 | Documenting `profile.settings` as a view key | It is not registered by default; the settings surface is `settings.hub` plus `profile.profile`, `settings.*` and `settings.security.*`. `MagicStarterProfileController.profile()` and the publish map still name it |
 | Expecting a `teams.billing` route | `lib/` registers only the view key; the host mounts it at `routes.billing` |
 | Overriding a `starter.*` Gate ability before this provider boots | `boot()` defines them again; a host overrides after `MagicStarterServiceProvider` |
+| Adding an import to a publishable view or layout | The file is copied into the host: its imports must resolve there through the package barrel (or a `package:magic_starter/src/...` path the publish command can rewrite); `magic_starter_publish_compiles_test` fails otherwise |
 | A new direct dependency or a raised floor | `pubspec.yaml` comments say why each floor sits where it does; keep the reason next to the constraint |
 | Relative paths in `pubspec_overrides.yaml` | Use absolute ones; the file is never committed |
 
