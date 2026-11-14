@@ -160,7 +160,7 @@ The provider registers two hooks that run before every sign-out the user asks fo
 1. **Push device release**, when `magic_notifications` is bound and its push state is configured: `Notify.pushState.release`, which frees the backend's push-state row.
 2. **Token revoke**, when an `auth` guard is bound and a token exists: `POST /auth/logout`. A non-success answer is logged as a warning and the token may stay valid until it expires.
 
-A hook that throws or runs past five seconds is logged and skipped. A sign-out the app performs on its own, such as magic's `AuthInterceptor` after a failed token refresh, does not run them: the token is already dead.
+Both register in `boot()`, in `providers` order, and hooks run in registration order: a hook from a provider listed after this one runs after the revoke, on a revoked token. A hook that throws or runs past five seconds is logged and skipped. A sign-out the app performs on its own, such as magic's `AuthInterceptor` after a failed token refresh, does not run them: the token is already dead.
 
 <a name="ioc-bindings"></a>
 ## IoC Bindings

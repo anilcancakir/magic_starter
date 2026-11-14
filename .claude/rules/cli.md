@@ -11,7 +11,7 @@ paths:
 - Overridable methods for testability: `getProjectRoot()`, `getStubSearchPaths()`, `runDartFormat()`
 - Install command pattern: extends `DowelInstallCommand`, drives `install.yaml` manifest, fluent override for dynamic logic (feature toggles, conditional prompts, validation)
 - Manifest-driven install: static scaffolding (config publish, provider injection) via `install.yaml` schema (plugin_name, publish, prompts, magic.provider, post_install)
-- Stub lookup: through the overridable `getStubSearchPaths()`, which resolves the plugin's `assets/stubs/` without a consumer `.dart_tool`
+- Stub lookup: through the overridable `getStubSearchPaths()`, which reads the host's `.dart_tool/package_config.json` to find the plugin's `assets/stubs/` and falls back to `assets/stubs` under the current directory when that file is missing
 - File operations via `FileHelper`: `fileExists()`, `findProjectRoot()`, `readFile()`, `writeFile()`
 - Process execution: `Process.run('dart', ['format', '.'], workingDirectory: path)`: captured output, not streamed
 - User feedback: `ctx.output.info('message')` for progress, `ctx.output.error('message')` for errors

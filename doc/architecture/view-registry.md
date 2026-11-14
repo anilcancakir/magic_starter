@@ -292,11 +292,16 @@ MagicRoute.group(
   routes: () {
     MagicRoute.page(
       MagicStarterConfig.profileRoute(),
-      () => MagicStarter.view.make('profile.profile'),
+      () {
+        Magic.findOrPut(MagicStarterProfileController.new);
+        return MagicStarter.view.make('profile.profile');
+      },
     );
   },
 );
 ```
+
+A view that extends `MagicStatefulView` resolves its controller with `Magic.find`, so the route registers the controller first, as the starter's own profile routes do. Skip that line in your own route and the default view fails to resolve it.
 
 Route files import controllers and string keys, never view classes, so the registry resolves the plugin default or the host's override at runtime. Your own authenticated routes use the same `layout` and `layoutId` to land inside the starter's shell.
 

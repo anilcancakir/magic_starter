@@ -237,7 +237,7 @@ The controllers call `magic-starter-laravel`'s `api/v1` routes one to one throug
 | Command | Does |
 |---------|------|
 | `dart run magic:dowel starter:install` | Scaffolds and injects the starter; `--features=`, `--non-interactive`, `--force`, `--dry-run`. `--dry-run` is not a full preview: it stages the file writes without writing them, but the in-place edits of `main.dart`, `kernel.dart`, the route provider, `AppServiceProvider`, the translations and `pubspec.yaml` still run. |
-| `dart run magic:dowel starter:configure` | `--show` prints the toggles; `--teams`, `--two-factor`, ... turn a toggle on (turn one off by editing the file). |
+| `dart run magic:dowel starter:configure` | `--show` prints the toggles; `--teams`, `--two-factor`, ... turn a toggle on and `--no-teams` and its siblings turn it off. It edits the config only, not the scaffolding a feature needs. |
 | `dart run magic:dowel starter:doctor` | Checks the install; also the read-only MCP tool `starter_doctor`. |
 | `dart run magic:dowel starter:publish` | `--tag=config`, `views`, `layouts`, `middleware`, `lang` or `all`, with a scope such as `views:auth`. |
 | `dart run magic:dowel starter:uninstall` | Removes the config file, the dependency and the injected registrations; lists the `AppServiceProvider` code, middleware files and strings to remove by hand. `--force` skips the prompt. |

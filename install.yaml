@@ -44,10 +44,13 @@ post_install:
 
       dart run magic:dowel starter:install
 
-    Enable features afterwards with `dart run magic:dowel starter:configure`
-    or by editing `lib/config/magic_starter.dart`: `starter:install
-    --features=...` skips a config file that already exists unless you add
-    `--force`.
+    `dart run magic:dowel starter:configure` flips a toggle in the config and
+    writes nothing else, so a feature that needs scaffolding (teams needs the
+    Team model, the User team accessors, the bootstrap team callbacks and the
+    team routes) still needs the install. `starter:install --features=...`
+    skips a config file that already exists unless you add `--force`, and
+    `--force` also replaces AppServiceProvider and merges the translations:
+    commit or back up your changes first.
 
     To choose the features during the install, pass `--no-bootstrap` to
     `plugin:install` and then run:

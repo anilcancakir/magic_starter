@@ -189,7 +189,7 @@ Read route values a controller call needs (a reset token, say) in the view's `di
 
 `MagicStarterAppLayout` is the authenticated shell: a sidebar with brand, team selector, navigation and user menu on a wide screen, and a header, drawer and bottom navigation on a narrow one. `MagicStarterServiceProvider` registers it under `layout.app`.
 
-It starts notification polling when it mounts (with notifications on, through `Notify.startPolling()`), mounts the update and campaign banners when their features are on, and rebuilds on `Auth.stateNotifier` and on the static `MagicStarterAppLayout.refreshNotifier`, which auth changes bump for you. Do not poke the notifier by hand.
+It starts notification polling when it mounts (with notifications on, through `Notify.startPolling()`), mounts the update and campaign banners when their features are on, and rebuilds on `Auth.stateNotifier` and on the static `MagicStarterAppLayout.refreshNotifier`. Nothing in the package bumps that notifier, since the layout already rebuilds on `Auth.stateNotifier`; only a host that needs an extra rebuild increments its `value`.
 
 Customise it before the layout first paints, ideally in `AppServiceProvider.boot()`:
 

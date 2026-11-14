@@ -162,7 +162,8 @@ dart run magic:dowel starter:configure --teams --notifications
 > [!NOTE]
 > Only flags you pass are touched; the rest stay as they are. The command rewrites the Dart source with a regular expression through `MagicStarterConfigHelper.updateFeature()`. Features without a flag here (registration, billing, support and the rest) are edited in the config file by hand.
 
-The signature declares these as plain flags, so a flag can only turn a feature on from the command line. To turn one off, edit `'<key>': false` in `lib/config/magic_starter.dart`.
+Each flag is negatable: `--teams` turns the feature on and `--no-teams` turns it off, for example `dart run magic:dowel starter:configure --no-teams`.
+Flipping a toggle edits the config file and nothing else. A feature that needs scaffolding (teams needs the `Team` model, the `User` team accessors, the `bootstrap()` team callbacks and `registerMagicStarterTeamRoutes()`) gets it only from `starter:install`.
 
 <a name="non-interactive-mode"></a>
 ### Non-Interactive Mode
@@ -364,7 +365,7 @@ class TestableInstallCommand extends MagicStarterInstallCommand {
 | Mistake | Fix |
 |:--------|:----|
 | Running `dart run magic_starter install` | The package has no executable. Every command is `dart run magic:dowel starter:<command>`. |
-| Passing `--no-teams` (or any `--no-` form) to `starter:configure` | The flags are not negatable, so the parser rejects them. Set `'<key>': false` in `lib/config/magic_starter.dart` to turn a feature off. |
+| Running `starter:configure --teams` on a host installed without teams | It only flips `'teams': true` in the config; the `Team` model, the `User` team accessors, the `bootstrap()` team callbacks and the team routes are not written, so the app throws on startup. Re-run `starter:install --features=...,teams --force` after committing your changes, since `--force` also replaces `AppServiceProvider` and merges the translations. |
 | Expecting `starter:configure` to toggle every feature | Only the flags in the table have one. `registration`, `billing`, `support` and the others are edited in the config file. |
 | Running `starter:install` before the host is scaffolded | It throws when `lib/config/app.dart` is missing. Run `dart run magic:dowel magic:install` first. |
 | Expecting `--features` to leave the prompts on | Passing `--features` skips them, and every key it does not name is written as `false`. |

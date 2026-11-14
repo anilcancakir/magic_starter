@@ -82,19 +82,26 @@ Future<void> doLogin({
   setLoading();
   clearErrors();
 
-  final response = await Http.post('/auth/login', data: {
-    'email': email,
-    'password': password,
-  });
+  try {
+    final response = await Http.post('/auth/login', data: {
+      'email': email,
+      'password': password,
+    });
 
-  if (!response.successful) {
-    handleApiError(response, fallback: trans('auth.login_failed'));
-    return;
+    if (!response.successful) {
+      handleApiError(response, fallback: trans('auth.login_failed'));
+      return;
+    }
+
+    // ... complete the sign-in
+  } catch (e, stackTrace) {
+    Log.error('[doLogin] $e\n$stackTrace');
+    setError(trans('errors.unexpected'));
   }
-
-  // ... complete the sign-in
 }
 ```
+
+A throw before the response (a timeout, a dropped connection) would leave the controller in the loading state, so the action catches it, logs it and sets an error state. `MagicStarterAuthController.doLogin` also maps a timeout and a socket failure to their own messages.
 
 > [!TIP]
 > Call `setLoading()` and `clearErrors()` at the top of an async action, before the first `await`. The view gets immediate feedback and stale errors from the previous run are gone.
