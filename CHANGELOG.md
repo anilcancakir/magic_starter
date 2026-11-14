@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- **A view or layout published with `starter:publish` compiles in your app.** The command copied the file byte for byte, so its relative imports (`'../../../configuration/magic_starter_config.dart'`) pointed at paths that do not exist under `lib/resources/`, and every published view and layout failed to compile. The registration it added to `AppServiceProvider` broke the app as well: the provider imports the package barrel, which exports the original class under the same name, so the call was an ambiguous import. A published file's relative imports now become `import 'package:magic_starter/magic_starter.dart';` where the barrel covers the target and a `package:magic_starter/src/...` URI where it does not (only the support screens' helper widgets, which the unscoped `views` tag publishes), and the registration imports your copy `as published`. If an earlier publish left an unprefixed registration in `AppServiceProvider`, delete that import and its `register` or `registerLayout` line and publish again with `--force`. (`lib/src/cli/commands/magic_starter_publish_command.dart`)
+
+### Changed
+
+- **The barrel exports what a publishable view or layout reads:** `NavigatesRoutes` and `MagicStarterNextPath` (the login and register views), `MagicStarterBreakpoints` (the app layout), `confirmAndDeleteAccount` (the profile view) and `MSConfirmDialog` (the billing view). A published copy reaches them without importing from `src/`. (`lib/magic_starter.dart`)
+
 ## [1.0.0] - 2026-11-14
 
 ### BREAKING

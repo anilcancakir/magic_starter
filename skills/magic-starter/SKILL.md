@@ -56,7 +56,7 @@ Requires Dart >=3.13, Flutter >=3.47 and `magic` ^1.0.0, in an app already scaff
 3. `notifications.list` and `notifications.preferences` live on `magic_notifications`' `Notify.view`. Registering them on `MagicStarter.view` mounts nothing.
 4. A slot adds a widget inside a shipped view: `MagicStarter.view.slot(viewKey, slotName, builder)`, registered before the view builds. Only the names a view reads work (`header` and `footer` on the auth views, the hub, `profile.profile` and the team views; `formFooter` on login and register; `afterSection:members` on `teams.settings`); any other name is inert.
 5. `makeLayout` wraps the child in a route-keyed subtree before your layout sees it, so a replacement layout keeps the remount behaviour. Render the child inside the routed subtree, never in an `Overlay` entry or a nested `Navigator`.
-6. `dart run magic:dowel starter:publish --tag=views:<key>` copies a view into `lib/resources/views/starter/` and registers it in `AppServiceProvider`. The copy does not follow later releases; `starter:doctor` flags a published view nothing registers.
+6. `dart run magic:dowel starter:publish --tag=views:<key>` copies a view into `lib/resources/views/starter/`, rewrites its relative imports to `package:magic_starter/magic_starter.dart`, and registers it in `AppServiceProvider` under an `as published` import (the barrel exports the original under the same class name). The copy does not follow later releases; `starter:doctor` flags a published view nothing registers.
 
 Every key with its condition and widget: `references/views-and-layouts.md`.
 
