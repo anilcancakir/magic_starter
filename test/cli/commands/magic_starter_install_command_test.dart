@@ -311,6 +311,73 @@ void main() {
       );
     });
 
+    test('swaps a double-quoted, CRLF flutter/material import too', () async {
+      setupMagicProjectFiles(tempDir);
+      final File mainFile = File('${tempDir.path}/lib/main.dart');
+      mainFile.writeAsStringSync(
+        mainFile
+            .readAsStringSync()
+            .replaceFirst(
+              "import 'package:material_ui/material_ui.dart';",
+              'import "package:flutter/material.dart";',
+            )
+            .replaceAll('\n', '\r\n'),
+      );
+
+      await runInstall(command);
+
+      final String content = mainFile.readAsStringSync();
+      expect(content, isNot(contains('package:flutter/material.dart')));
+      expect(content, contains('package:material_ui/material_ui.dart'));
+    });
+
+    test('keeps the prefix of a prefixed flutter/material import', () async {
+      setupMagicProjectFiles(tempDir);
+      final File mainFile = File('${tempDir.path}/lib/main.dart');
+      mainFile.writeAsStringSync(
+        mainFile.readAsStringSync().replaceFirst(
+          "import 'package:material_ui/material_ui.dart';",
+          "import 'package:flutter/material.dart' as m;",
+        ),
+      );
+
+      await runInstall(command);
+
+      final String content = mainFile.readAsStringSync();
+      expect(content, isNot(contains('package:flutter/material.dart')));
+      expect(
+        content,
+        contains("import 'package:material_ui/material_ui.dart' as m;"),
+      );
+      // The generated theme code uses MaterialColor unprefixed, so a plain
+      // import is added beside the prefixed one.
+      expect(
+        content,
+        contains("import 'package:material_ui/material_ui.dart';"),
+      );
+    });
+
+    test('a commented material_ui line is not a declared dependency', () async {
+      setupMagicProjectFiles(tempDir);
+      final File pubspec = File('${tempDir.path}/pubspec.yaml');
+      pubspec.writeAsStringSync(
+        pubspec.readAsStringSync().replaceFirst(
+          '  magic:\n',
+          '  # material_ui: ^1.11.0\n  magic:\n',
+        ),
+      );
+
+      await runInstall(command);
+
+      expect(
+        RegExp(
+          r'^  material_ui:',
+          multiLine: true,
+        ).hasMatch(pubspec.readAsStringSync()),
+        isTrue,
+      );
+    });
+
     test('adds material_ui to the host pubspec', () async {
       setupMagicProjectFiles(tempDir);
 

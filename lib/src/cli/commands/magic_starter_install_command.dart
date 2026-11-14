@@ -1033,24 +1033,68 @@ $teamArgs    );
   /// and the Flutter one is deprecated, so it is the one that goes (the
   /// `dart fix --apply --code=deprecated_member_use` swap, which magic 1.0.0
   /// asks of every app anyway).
+  ///
+  /// The directive is matched in either quote style and with any prefix or
+  /// combinator (`as m`, `show X`), and its line ending is kept: the URI is
+  /// replaced in place, so what the host wrote around it survives. A plain
+  /// Flutter import beside a plain `material_ui` one is simply dropped. The
+  /// generated code uses `MaterialColor` unprefixed, so a plain `material_ui`
+  /// import is added when none is left.
   void _ensureMaterialUiImport(String filePath) {
     const String materialUi = "import 'package:material_ui/material_ui.dart';";
-    const String flutterMaterial = "import 'package:flutter/material.dart';";
+    final RegExp flutterMaterial = RegExp(
+      r'''^import\s+(['"])package:flutter/material\.dart\1([^;]*);[ \t]*(\r?\n)?''',
+      multiLine: true,
+    );
+    final RegExp plainMaterialUi = RegExp(
+      r'''^import\s+(['"])package:material_ui/material_ui\.dart\1\s*;''',
+      multiLine: true,
+    );
 
     final String content = FileHelper.readFile(filePath);
-    if (content.contains(flutterMaterial)) {
-      final String swapped = content.contains(materialUi)
-          ? content.replaceAll('$flutterMaterial\n', '')
-          : content.replaceFirst(flutterMaterial, materialUi);
-      FileHelper.writeFile(filePath, swapped);
+    final bool hadPlainMaterialUi = plainMaterialUi.hasMatch(content);
+    final String swapped = content.replaceAllMapped(flutterMaterial, (
+      Match match,
+    ) {
+      final String directives = match.group(2)!;
+      if (directives.trim().isEmpty && hadPlainMaterialUi) {
+        return '';
+      }
 
-      return;
+      return "import 'package:material_ui/material_ui.dart'$directives;"
+          '${match.group(3) ?? ''}';
+    });
+    if (swapped != content) {
+      FileHelper.writeFile(filePath, swapped);
     }
 
-    ConfigEditor.addImportToFile(
-      filePath: filePath,
-      importStatement: materialUi,
-    );
+    if (!plainMaterialUi.hasMatch(swapped)) {
+      ConfigEditor.addImportToFile(
+        filePath: filePath,
+        importStatement: materialUi,
+      );
+    }
+  }
+
+  /// Whether the host's `pubspec.yaml` declares [name] under `dependencies:`.
+  ///
+  /// A line scan rather than a substring match: a commented entry, a
+  /// `dev_dependencies` or `dependency_overrides` entry, or a package whose
+  /// name merely ends in [name] does not count.
+  bool _declaresDependency(String pubspec, String name) {
+    bool inDependencies = false;
+    for (final String line in pubspec.split(RegExp(r'\r?\n'))) {
+      if (RegExp(r'^\S').hasMatch(line)) {
+        inDependencies = RegExp(r'^dependencies\s*:').hasMatch(line);
+
+        continue;
+      }
+      if (inDependencies && RegExp('^  $name\\s*:').hasMatch(line)) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   /// Adds `material_ui` to the host's `dependencies`: the imports the install
@@ -1061,7 +1105,7 @@ $teamArgs    );
     if (!FileHelper.fileExists(pubspecPath)) {
       return;
     }
-    if (FileHelper.readFile(pubspecPath).contains('material_ui:')) {
+    if (_declaresDependency(FileHelper.readFile(pubspecPath), 'material_ui')) {
       return;
     }
 
