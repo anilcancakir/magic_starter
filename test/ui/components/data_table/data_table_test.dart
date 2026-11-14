@@ -306,7 +306,7 @@ void main() {
   ) async {
     // Scoped to the WIRING on purpose. Whether that footer appears while a page
     // is in flight is `MagicPaginatedListView`'s behaviour, so it belongs to
-    // magic; the assertion for it rides along with fluttersdk/magic#134, which
+    // magic; the assertion for it rides along with anilcancakir/magic#134, which
     // is where holding a request open became possible. It is NOT in magic's
     // default branch today, so until that merges the positive path is covered
     // nowhere and this comment is a pointer rather than a claim.

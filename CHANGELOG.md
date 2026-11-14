@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- **The dashboard `starter:install` scaffolds links to the current Magic pages.** Its Documentation, GitHub and CLI Commands cards open `https://anilcancakir.com/magic/docs/getting-started/installation`, `https://github.com/anilcancakir/magic` and `https://anilcancakir.com/magic/docs/packages/magic-cli`, and the CLI card names `dart run magic:dowel list`. (`assets/stubs/install/dashboard_view.stub`)
+
 ## [1.0.0] - 2026-11-14
 
 ### BREAKING
