@@ -187,7 +187,7 @@ Read route values a controller call needs (a reset token, say) in the view's `di
 <a name="applayout"></a>
 ## AppLayout
 
-`MagicStarterAppLayout` is the authenticated shell: a sidebar with brand, team selector, navigation and user menu on a wide screen, and a header, drawer and bottom navigation on a narrow one. `MagicStarterServiceProvider` registers it under `layout.app`.
+`MagicStarterAppLayout` is the authenticated shell: a sidebar with brand, team selector, navigation and user menu on a wide screen, and a header, drawer and bottom navigation on a narrow one. The `MagicStarterManager` constructor registers it under `layout.app` as a default.
 
 It starts notification polling when it mounts (with notifications on, through `Notify.startPolling()`), mounts the update and campaign banners when their features are on, and rebuilds on `Auth.stateNotifier` and on the static `MagicStarterAppLayout.refreshNotifier`. Nothing in the package bumps that notifier, since the layout already rebuilds on `Auth.stateNotifier`; only a host that needs an extra rebuild increments its `value`.
 
@@ -546,7 +546,7 @@ final widget = MagicStarter.view.makeLayout(
 <a name="overriding-the-app-shell"></a>
 ## Overriding the App Shell
 
-Every account, profile, team and settings route renders through the `layout.app` key. `MagicStarterServiceProvider` registers `MagicStarterAppLayout` under it, so a fresh install already renders in a working shell.
+Every account, profile, team and settings route renders through the `layout.app` key. The `MagicStarterManager` constructor registers `MagicStarterAppLayout` under it, so a fresh install already renders in a working shell.
 
 An app that already has its own navigation chrome does not want starter routes rendering inside a second, different shell on top of its own. Re-register `layout.app` with your own shell and every starter route renders inside it:
 

@@ -124,8 +124,9 @@ Failure modes:
 |-----------|--------------|
 | `MagicStarter.view.make(key)` for a feature that is off | Throws `StateError`; check `MagicStarterConfig.has<Feature>Features()` first. |
 | `social_login` on, no bridge | No provider buttons and no hub row render. The flag alone does nothing visible. |
-| `billing` on, `billing.web_origin` unset or relative | Checkout fails at Stripe and the error is only logged: the button does nothing. `starter:doctor` reports the missing key. |
-| `billing` on | `lib/` registers the `teams.billing` view key and no route. Register a page of yours at `MagicStarterConfig.billingRoute()` (`routes.billing`, default `/teams/billing`) that builds `MagicStarter.view.make('teams.billing')`, or the upgrade prompts lead nowhere. |
+| `billing` on, `billing.web_origin` unset or empty | The billing screen hides the web checkout button. `starter:doctor` reports the missing key. |
+| `billing` on, `billing.web_origin` relative | Stripe refuses the return URL and the error is only logged: the checkout button does nothing. |
+| `billing` on | `lib/` registers the `teams.billing` view key and no route. Put a `MagicStarterBillingController` in the container with `Magic.put(...)` (it takes required collaborators, so the view cannot construct one) and register a page of yours at `MagicStarterConfig.billingRoute()` (`routes.billing`, default `/teams/billing`) that builds `MagicStarter.view.make('teams.billing')`, or the upgrade prompts lead nowhere. |
 | `notifications.external_id_prefix` differs from the backend's `MAGIC_STARTER_EXTERNAL_ID_PREFIX` | OneSignal accepts the id and delivers to nobody. Both default to `user_`. |
 | `support` turned on after install | Call `registerMagicStarterSupportRoutes()` yourself, or the Support menu item leads nowhere. |
 
@@ -162,6 +163,8 @@ void registerStarter() {
 | `RedirectIfAuthenticated` | Sends a signed-in visitor to `routes.home`; a guest session is let through. |
 
 Failure mode: an `auth` or `guest` alias nobody registered is unresolvable, and magic's `Kernel.resolveAll` throws `StateError` for it. `starter:install` writes both into `lib/app/kernel.dart`.
+
+`starter:install` registers its own copies in `lib/app/middleware/`, not the package classes: they redirect without recording the intended URL and do not let a guest session through. Register the package's `EnsureAuthenticated` and `RedirectIfAuthenticated` to get the behaviour in the table.
 
 ## View registry
 
@@ -253,7 +256,7 @@ The controllers call `magic-starter-laravel`'s `api/v1` routes one to one throug
 | Override a screen with `MagicStarter.view.register` and a notification screen with `Notify.view.register` | The notification screens live on `magic_notifications`' registry. |
 | Use `settings.hub` and the `settings.*` and `profile.profile` keys for the settings surface | `profile.settings` is not a registered default key. |
 | Call `useButtonTheme()` and `useFieldTheme()` after `useWindTheme()` or `useTheme()` | The unified calls reset them. |
-| Set `billing.web_origin` to an absolute URL with `billing` on | Stripe rejects a relative return URL and the failure is only logged. |
+| Set `billing.web_origin` to an absolute URL with `billing` on | Unset, the web checkout button is hidden; a relative value makes Stripe refuse the return URL and the failure is only logged. |
 | Keep `notifications.external_id_prefix` equal to the backend's `MAGIC_STARTER_EXTERNAL_ID_PREFIX` | A mismatch delivers pushes to nobody. |
 | Run commands as `dart run magic:dowel starter:<command>` | The package has no executable of its own. |
 | Never fake a sign-in in a test or a demo; bind a fake `NetworkDriver` and assert the request | Every flow concludes through the backend's answer. |
@@ -266,7 +269,7 @@ The controllers call `magic-starter-laravel`'s `api/v1` routes one to one throug
 
 - [Documentation](https://anilcancakir.com/magic/docs/starter/getting-started/installation): installation, configuration, every feature, the view registry, theming and the CLI
 - [API reference](https://pub.dev/documentation/magic_starter/latest/)
-- [llms.txt](llms.txt) and the [agent skill](skills/magic-starter/SKILL.md) for AI coding agents: `npx skills add anilcancakir/magic_starter`
+- [llms.txt](llms.txt) and the [agent skill](https://github.com/anilcancakir/magic_starter/tree/master/skills/magic-starter) for AI coding agents: `npx skills add anilcancakir/magic_starter`
 - [Changelog](CHANGELOG.md)
 - [Report an issue](https://github.com/anilcancakir/magic_starter/issues)
 - [Security policy](SECURITY.md)

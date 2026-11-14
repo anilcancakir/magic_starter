@@ -29,7 +29,7 @@ The notification list, preferences and push-state requests are `magic_notificati
 |:------------|:--------|:-------------------------|
 | `magic_starter.notifications.external_id_prefix` (default `user_`) | `MAGIC_STARTER_EXTERNAL_ID_PREFIX` (`onesignal.external_id_prefix`, default `user_`) | OneSignal accepts the id and delivers to nobody |
 | `magic_starter.billing.billable` (`'user'` or `'team'`) | `billable` in `config/magic-starter.php` | The app and the backend disagree on what a store purchase is billed to; a Flutter value other than the two throws `StateError` |
-| `magic_starter.billing.web_origin` (absolute, no trailing slash) | Stripe return URLs | Stripe rejects the relative URL; the error is only logged |
+| `magic_starter.billing.web_origin` (absolute, no trailing slash) | Stripe return URLs | Unset or empty, the web checkout button is hidden; a relative value makes Stripe refuse it and the error is only logged |
 | A feature toggle | The same feature in `features` | The screens call routes that answer 404 |
 
 ## Refusal codes

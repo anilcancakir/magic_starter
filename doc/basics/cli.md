@@ -81,7 +81,7 @@ Beyond creating files, the installer modifies existing host files. Each injectio
 
 ```dart
 // Injected into lib/config/app.dart
-MagicStarterServiceProvider(),
+(app) => MagicStarterServiceProvider(app),
 
 // Injected into lib/main.dart
 () => magicStarterConfig,
@@ -265,7 +265,7 @@ dart run magic:dowel starter:publish --force
 
 | Tag | What It Publishes |
 |:----|:------------------|
-| `config` | `lib/config/magic_starter.dart` |
+| `config` | `lib/config/magic_starter.dart`, copied from the package's template, which turns `registration`, `extended_profile`, `social_login` and `notifications` on (unlike `starter:install`, which writes every unchosen feature `false`). It matters only when the host has no config yet, since an existing file is skipped without `--force` |
 | `views` | View files to `lib/resources/views/starter/` |
 | `layouts` | `app` and `guest` layouts to `lib/resources/layouts/starter/` |
 | `middleware` | Auth middleware files to `lib/app/middleware/` |
