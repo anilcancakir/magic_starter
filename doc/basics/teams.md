@@ -107,7 +107,7 @@ Pass `MagicStarter.switchTeam` as the resolver's `onSwitch` so the team selector
 <a name="billing"></a>
 ## Billing
 
-The billing screen (`teams.billing`, with the `billing` feature) sells plans through `magic_payments`: Stripe on the web, the store on mobile. It needs `magic_starter.billing.web_origin`, an absolute url, for the web rail; its absence fails silently at Stripe.
+The billing screen (`teams.billing`, with the `billing` feature) sells plans through `magic_payments`: Stripe on the web, the store on mobile. It needs `magic_starter.billing.web_origin`, an absolute url, for the web rail. Unset or empty, the screen hides the web checkout button; a relative value reaches Stripe, which refuses it, and the error is only logged.
 
 ### The Billable Subject
 
@@ -125,7 +125,7 @@ The billing screen (`teams.billing`, with the `billing` feature) sells plans thr
 },
 ```
 
-`MagicStarterServiceProvider` reads it at boot and sets `StoreIdentitySync.billableId`; any other value refuses the boot with a `StateError`, because a typo that fell back to `'user'` would bind every purchase to the wrong subject. Identifying on login and restore as well stays your call: add `StoreIdentitySync.attach()` to your provider's `boot()`.
+`MagicStarterServiceProvider` reads it in `register()` and sets `StoreIdentitySync.billableId`; any other value throws a `StateError` there and stops `Magic.init`, because a typo that fell back to `'user'` would bind every purchase to the wrong subject. Identifying on login and restore as well stays your call: add `StoreIdentitySync.attach()` to your provider's `boot()`.
 
 ### Price Format
 
@@ -323,7 +323,7 @@ extension on Team {
 | Navigating after `switchTeam` without reading the answer | A refused switch answers `false` and leaves the session on the old team; check it first. |
 | Calling `Auth.restore()` in your own switch path | Apply the switch answer's user directly, as the controller does, or the session identity flips late. |
 | Setting `billable: 'team'` on one side only | `magic_starter.billing.billable` and the backend key of the same name must agree. Any value other than `'user'` or `'team'` refuses the boot. |
-| Forgetting `billing.web_origin` | The web checkout needs an absolute url; without it Stripe fails silently. |
+| Forgetting `billing.web_origin`, or setting a relative one | Set an absolute url. Without one the web checkout button is hidden; a relative one makes Stripe refuse the checkout and the error is only logged. |
 | Expecting `members` and `invitations` to refill after a team switch | The controller refetches them only while a settings screen is mounted. Call `loadMembersAndInvitations()` from your own screen. |
 
 <a name="related-documentation"></a>

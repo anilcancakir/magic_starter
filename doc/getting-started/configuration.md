@@ -16,7 +16,7 @@ The `magic_starter` config file turns features on, sets the route prefixes and c
 <a name="introduction"></a>
 ## Introduction
 
-The plugin is configured by one Dart file in your app, `lib/config/magic_starter.dart`, which `starter:install` generates from the features you chose. Every feature defaults to `false`: a toggle decides whether its routes are registered, its views are put in the view registry and its UI shows.
+The plugin is configured by one Dart file in your app, `lib/config/magic_starter.dart`, which `starter:install` generates from the features you chose. Every feature defaults to `false` (an absent key reads `false`; only `starter:publish`, with `--tag=config` or the default `all`, on a host without the file copies a template with four features on, see [CLI](../basics/cli.md#publish-tags)): a toggle decides whether its routes are registered, its views are put in the view registry and its UI shows.
 
 ```bash
 dart run magic:dowel starter:install
@@ -231,7 +231,7 @@ The `billing` feature gates the `teams.billing` view, which sells subscriptions 
 | `billing.billable` | `'user'` | What a store purchase is billed to: `'user'` or `'team'`. It must match `magic-starter-laravel`'s `billable` key. Any other value throws a `StateError`. |
 
 > [!WARNING]
-> `billing.web_origin` carries no default on purpose. The billing view builds Stripe's `successUrl`, `cancelUrl` and the portal `returnUrl` by concatenating this origin with a path, and Stripe rejects a relative url. Leave it unset and checkout fails at Stripe, where the resulting `BillingException` is logged rather than shown, so the customer sees a button that does nothing. `dart run magic:dowel starter:doctor` reports the missing key.
+> `billing.web_origin` carries no default on purpose. The billing view builds Stripe's `successUrl`, `cancelUrl` and the portal `returnUrl` by concatenating this origin with a path, and Stripe requires absolute urls. Left unset or empty, the screen hides the web checkout button rather than build a relative url, and the portal still opens, without a return url. Set to a relative value, the checkout reaches Stripe, which refuses it; the resulting `BillingException` is logged rather than shown, so the customer sees a button that does nothing. `dart run magic:dowel starter:doctor` reports the missing key.
 
 A store purchase on iOS or Android never reads `web_origin`. See [Teams](../basics/teams.md) for what `billable` changes.
 
@@ -283,7 +283,7 @@ The `auth` block controls which identity fields the login and registration forms
 |:--------|:--------|:-------|
 | `true` | `false` | Email only (default). |
 | `false` | `true` | Phone only. |
-| `true` | `true` | Both fields are offered; phone takes precedence in the login payload when both are filled in. |
+| `true` | `true` | Both fields are offered; the payload carries every non-empty identity field and the backend decides which one identifies the account. |
 
 Read the modes at runtime:
 
