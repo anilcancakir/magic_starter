@@ -17,6 +17,11 @@ import '../helpers/magic_starter_config_helper.dart';
 /// magic_starter backwards to a release that fits rather than by failing.
 const String magicNotificationsConstraint = '^1.0.0';
 
+/// The `material_ui` constraint `starter:install` writes into the host
+/// application's own `pubspec.yaml`: the floor `magic` 1.0.0 and `wind_kit`
+/// build on.
+const String materialUiConstraint = '^1.11.0';
+
 /// Installs and configures Magic Starter inside a host Magic application.
 ///
 /// ## Layered architecture (hybrid manifest + fluent override)
@@ -338,11 +343,10 @@ class MagicStarterInstallCommand extends DowelInstallCommand {
       importStatement: "import 'config/magic_starter.dart';",
     );
 
-    // 2. Ensure material_ui import (needed for MaterialColor, Color).
-    ConfigEditor.addImportToFile(
-      filePath: mainPath,
-      importStatement: "import 'package:material_ui/material_ui.dart';",
-    );
+    // 2. Ensure material_ui import (needed for MaterialColor, Color), and the
+    //    dependency the import needs.
+    _ensureMaterialUiImport(mainPath);
+    _ensureMaterialUiDependency();
 
     // 3. Inject magicStarterConfig factory into configFactories.
     String content = FileHelper.readFile(mainPath);
@@ -680,10 +684,7 @@ class MagicStarterInstallCommand extends DowelInstallCommand {
     required Map<String, bool> features,
   }) {
     // 1. Add required imports.
-    ConfigEditor.addImportToFile(
-      filePath: targetPath,
-      importStatement: "import 'package:material_ui/material_ui.dart';",
-    );
+    _ensureMaterialUiImport(targetPath);
     ConfigEditor.addImportToFile(
       filePath: targetPath,
       importStatement: "import 'package:magic_starter/magic_starter.dart';",
@@ -1022,6 +1023,53 @@ $teamArgs    );
   /// the transactional write should be skipped to preserve the existing file.
   bool _shouldSkip(String path, {required bool force}) {
     return FileHelper.fileExists(path) && !force;
+  }
+
+  /// Makes [filePath] import `package:material_ui/material_ui.dart` exactly once.
+  ///
+  /// A host written before magic 1.0.0 imports `package:flutter/material.dart`
+  /// instead. Both libraries define `MaterialColor` and `Colors`, so adding the
+  /// second import beside the first makes the generated theme code ambiguous,
+  /// and the Flutter one is deprecated, so it is the one that goes (the
+  /// `dart fix --apply --code=deprecated_member_use` swap, which magic 1.0.0
+  /// asks of every app anyway).
+  void _ensureMaterialUiImport(String filePath) {
+    const String materialUi = "import 'package:material_ui/material_ui.dart';";
+    const String flutterMaterial = "import 'package:flutter/material.dart';";
+
+    final String content = FileHelper.readFile(filePath);
+    if (content.contains(flutterMaterial)) {
+      final String swapped = content.contains(materialUi)
+          ? content.replaceAll('$flutterMaterial\n', '')
+          : content.replaceFirst(flutterMaterial, materialUi);
+      FileHelper.writeFile(filePath, swapped);
+
+      return;
+    }
+
+    ConfigEditor.addImportToFile(
+      filePath: filePath,
+      importStatement: materialUi,
+    );
+  }
+
+  /// Adds `material_ui` to the host's `dependencies`: the imports the install
+  /// writes need it, and a host that was not created by `magic:install` 1.0.0
+  /// may not have it yet.
+  void _ensureMaterialUiDependency() {
+    final String pubspecPath = '$projectRoot/pubspec.yaml';
+    if (!FileHelper.fileExists(pubspecPath)) {
+      return;
+    }
+    if (FileHelper.readFile(pubspecPath).contains('material_ui:')) {
+      return;
+    }
+
+    ConfigEditor.addDependencyToPubspec(
+      pubspecPath: pubspecPath,
+      name: 'material_ui',
+      version: materialUiConstraint,
+    );
   }
 
   void _injectTranslationAssetIntoPubspec() {

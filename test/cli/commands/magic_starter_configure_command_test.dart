@@ -92,6 +92,44 @@ void main() {
   });
 
   // -------------------------------------------------------------------------
+  // The real argv parser
+  // -------------------------------------------------------------------------
+  group('argv parsing', () {
+    // The tests below drive handle() through MapInput, which never meets the
+    // parser: dowel registers signature flags as non-negatable, so a real
+    // `--no-teams` used to die with "Could not find an option named".
+    test('accepts --no-<feature> on the real parser', () async {
+      _setupConfigFile(tempDir, teams: true);
+      final ArgParser parser = ArgParser();
+      command.configure(parser);
+
+      final DowelInput input = ArgvInput.parse(parser, <String>[
+        '--no-teams',
+      ], signature: command.parsedSignature);
+      final int exit = await command.handle(
+        DowelContext.bare(input, BufferedOutput()),
+      );
+
+      expect(exit, 0);
+      expect(
+        File('${tempDir.path}/lib/config/magic_starter.dart')
+            .readAsStringSync(),
+        contains("'teams': false"),
+      );
+    });
+
+    test('accepts --<feature> and --show on the real parser', () {
+      final ArgParser parser = ArgParser();
+      command.configure(parser);
+
+      final ArgResults results = parser.parse(<String>['--teams', '--show']);
+
+      expect(results['teams'], isTrue);
+      expect(results['show'], isTrue);
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // --show flag
   // -------------------------------------------------------------------------
   group('--show', () {

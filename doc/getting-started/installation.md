@@ -20,8 +20,8 @@ Under the hood the package provides 7 controllers, overridable views via a strin
 <a name="requirements"></a>
 ## Requirements
 
-- **Dart SDK**: 3.6.0 or higher
-- **Flutter**: 3.27.0 or higher
+- **Dart SDK**: 3.13.0 or higher
+- **Flutter**: 3.47.0 or higher
 - **Magic Framework** installed and bootstrapped (`lib/config/app.dart` present)
 
 <a name="installing-the-package"></a>
