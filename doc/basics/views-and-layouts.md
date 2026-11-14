@@ -320,6 +320,12 @@ MagicStarter.useNavigationTheme(
 );
 ```
 
+### Names for a screen reader
+
+Every control the shell draws has a name in the semantics tree, which is what a screen reader announces and what a semantics-driven test tool finds a control by. A labelled sidebar row, a drawer row and a bottom bar item are named by their label. The compact rail drops the label it draws, so its items carry that label as their name all the same, with a badge's count sentence after it.
+
+The phone header's three icon controls read their names from the catalogue: `nav.open_menu` for the menu button, `nav.notifications` for the bell (the bell in the sidebar takes the same name) and `nav.account_menu` for the avatar that opens the account menu, which also names the avatar on the compact rail. The install stub ships the three keys; an app installed before them gets the English names (`Open menu`, `Notifications`, `Account menu`) rather than the raw keys until it adds them to its own language files. A `triggerBuilder` handed to `MSUserProfileDropdown` names its own trigger.
+
 ### A live count on a destination
 
 A `MagicStarterNavItem` takes a `badgeCount`, a `ValueListenable<int?>`. The shell listens to it, so the host moves the number by updating the notifier and never rebuilds the navigation config:
