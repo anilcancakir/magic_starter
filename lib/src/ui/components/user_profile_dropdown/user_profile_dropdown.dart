@@ -102,23 +102,34 @@ class MSUserProfileDropdown extends StatelessWidget {
     // themed one: the shipped default has no state variants, so nothing would
     // have shown it. The avatar keeps only the geometry, which is what it needs
     // to clip the photo to the same circle this div paints.
-    return WDiv(
-      states: {if (isOpen) 'active', if (isHovering) 'hover'},
-      className:
-          '''
-                w-8 h-8 rounded-full shadow-sm
-                ${navTheme.dropdownAvatarClassName}
-                cursor-pointer
-                transition-all duration-200
-                hover:scale-105
-                active:scale-95
-            ''',
-      child: MSAvatar(
-        photoUrl: user?.get<String>('profile_photo_url'),
-        className: 'w-full h-full rounded-full',
-        fallback: _buildAvatarFallback(
-          userName,
-          navTheme.dropdownAvatarTextClassName,
+    //
+    // The popover merges its trigger into one button node, and an avatar gives
+    // that node nothing to announce but an initial, so the trigger is named
+    // here and the initial or glyph under it is excluded. A host
+    // `triggerBuilder` names its own trigger.
+    return Semantics(
+      label: Lang.has('nav.account_menu')
+          ? trans('nav.account_menu')
+          : 'Account menu',
+      excludeSemantics: true,
+      child: WDiv(
+        states: {if (isOpen) 'active', if (isHovering) 'hover'},
+        className:
+            '''
+                  w-8 h-8 rounded-full shadow-sm
+                  ${navTheme.dropdownAvatarClassName}
+                  cursor-pointer
+                  transition-all duration-200
+                  hover:scale-105
+                  active:scale-95
+              ''',
+        child: MSAvatar(
+          photoUrl: user?.get<String>('profile_photo_url'),
+          className: 'w-full h-full rounded-full',
+          fallback: _buildAvatarFallback(
+            userName,
+            navTheme.dropdownAvatarTextClassName,
+          ),
         ),
       ),
     );

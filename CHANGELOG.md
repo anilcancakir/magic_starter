@@ -11,6 +11,7 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 
 - **`useWindTheme()` no longer discards sub-theme fields a host set before it, and it now themes the drawer and content backgrounds.** The derived values land only on fields the host has not set: a field is the host's when it differs from its sub-theme's default and from what the previous `useWindTheme()` derived, so the call can come before or after `useLayoutTheme()`, `useNavigationTheme()` and the other setters. This changes one documented behaviour: a button or field theme set before `useWindTheme()` is now kept rather than reset. `useTheme()` still replaces every sub-theme. The drawer and content area backgrounds now follow the theme's `bg-surface` role instead of staying stock grey. (#149; `lib/src/magic_starter_manager.dart`, `lib/src/facades/magic_starter.dart`, `lib/src/configuration/magic_starter_theme.dart`)
+- **The compact sidebar rail and the phone header controls are named for screen readers.** A compact rail item announces its destination (with its badge count), and the phone header's menu button, notification bell and account avatar carry names from the new `nav.open_menu`, `nav.notifications` and `nav.account_menu` keys in the install stub, falling back to English rather than the raw key when an app's language files lack them. (#150; `lib/src/ui/layouts/magic_starter_app_layout.dart`, `lib/src/ui/components/user_profile_dropdown/user_profile_dropdown.dart`, `assets/stubs/install/en.stub`)
 
 ## [1.0.0] - 2026-11-14
 

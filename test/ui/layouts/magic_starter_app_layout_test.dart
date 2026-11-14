@@ -251,6 +251,19 @@ class _NavBadgeCopyLoader implements TranslationLoader {
   };
 }
 
+/// A host catalogue that names the three mobile header controls in its own
+/// words, so a test can tell a translated label from the shipped fallback.
+class _HeaderCopyLoader implements TranslationLoader {
+  const _HeaderCopyLoader();
+
+  @override
+  Future<Map<String, dynamic>> load(Locale _) async => <String, dynamic>{
+    'nav.open_menu': 'Main menu',
+    'nav.notifications': 'Alerts',
+    'nav.account_menu': 'Your account',
+  };
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -2723,6 +2736,222 @@ void main() {
       }
 
       expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('MagicStarterAppLayout semantics', () {
+    const items = [
+      MagicStarterNavItem(icon: Icons.home, labelKey: 'Home', path: '/'),
+      MagicStarterNavItem(
+        icon: Icons.monitor_heart,
+        labelKey: 'Monitors',
+        path: '/monitors',
+      ),
+    ];
+
+    void useViewport(WidgetTester tester, double width, double height) {
+      tester.view.physicalSize = Size(width, height);
+      tester.view.devicePixelRatio = 1.0;
+
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+    }
+
+    /// Asserts one tappable button named exactly [label] is in the tree.
+    void expectNamedButton(WidgetTester tester, String label) {
+      final finder = find.bySemanticsLabel(label);
+
+      expect(finder, findsOneWidget, reason: 'no node is named "$label"');
+      expect(
+        tester.getSemantics(finder).getSemanticsData().flagsCollection.isButton,
+        isTrue,
+        reason: '"$label" is not announced as a button',
+      );
+    }
+
+    Future<void> pumpShell(WidgetTester tester) async {
+      await tester.pumpWidget(createApp(child: const SizedBox()));
+      await tester.pumpAndSettle();
+    }
+
+    group('at 1440 wide', () {
+      testWidgets('names every item of the labelled sidebar', (tester) async {
+        final handle = tester.ensureSemantics();
+        useViewport(tester, 1440, 900);
+        MagicStarter.useNavigation(mainItems: items, bottomItems: items);
+
+        await pumpShell(tester);
+
+        expectNamedButton(tester, 'Home');
+        expectNamedButton(tester, 'Monitors');
+
+        handle.dispose();
+      });
+
+      // The rail drops every text label, and the label was the only name the
+      // item had: the button stayed in the tree with nothing to announce, so
+      // a screen reader read "button" and a semantics-driven test tool could
+      // not find a destination by name.
+      testWidgets('names every item of the compact rail', (tester) async {
+        final handle = tester.ensureSemantics();
+        useViewport(tester, 1440, 900);
+        MagicStarter.useNavigation(mainItems: items, bottomItems: items);
+        MagicStarter.useLayoutTheme(
+          const MagicStarterLayoutTheme(sidebarExpandedBreakpoint: '2xl'),
+        );
+
+        await pumpShell(tester);
+
+        expect(find.text('Home'), findsNothing, reason: 'the rail is labelled');
+        expectNamedButton(tester, 'Home');
+        expectNamedButton(tester, 'Monitors');
+
+        handle.dispose();
+      });
+
+      testWidgets('names the rail a viewer collapsed', (tester) async {
+        final handle = tester.ensureSemantics();
+        useViewport(tester, 1440, 900);
+        MagicStarter.useNavigation(mainItems: items, bottomItems: items);
+        MagicStarter.useLayoutTheme(
+          const MagicStarterLayoutTheme(
+            sidebarCollapsible: true,
+            sidebarCollapsedByDefault: true,
+          ),
+        );
+
+        await pumpShell(tester);
+
+        expectNamedButton(tester, 'Home');
+        expectNamedButton(tester, 'Monitors');
+
+        handle.dispose();
+      });
+
+      testWidgets('keeps the count in the name of a rail item', (tester) async {
+        final handle = tester.ensureSemantics();
+        useViewport(tester, 1440, 900);
+        Translator.instance.setLoader(const _NavBadgeCopyLoader());
+        await Translator.instance.setLocale(const Locale('en'));
+        addTearDown(Translator.reset);
+        final count = ValueNotifier<int?>(4);
+        addTearDown(count.dispose);
+        MagicStarter.useNavigation(
+          mainItems: [
+            MagicStarterNavItem(
+              icon: Icons.shopping_cart,
+              labelKey: 'Shopping',
+              path: '/shopping',
+              badgeCount: count,
+            ),
+          ],
+        );
+        MagicStarter.useLayoutTheme(
+          const MagicStarterLayoutTheme(sidebarExpandedBreakpoint: '2xl'),
+        );
+
+        await pumpShell(tester);
+
+        final node = tester.getSemantics(
+          find
+              .ancestor(
+                of: find.byIcon(Icons.shopping_cart),
+                matching: find.byType(WAnchor),
+              )
+              .first,
+        );
+        expect(node.label, contains('Shopping'));
+        expect(node.label, contains('4 items'));
+
+        handle.dispose();
+      });
+    });
+
+    group('at 414 wide', () {
+      testWidgets('names every item of the bottom bar', (tester) async {
+        final handle = tester.ensureSemantics();
+        useViewport(tester, 414, 900);
+        MagicStarter.useNavigation(mainItems: items, bottomItems: items);
+
+        await pumpShell(tester);
+
+        expectNamedButton(tester, 'Home');
+        expectNamedButton(tester, 'Monitors');
+
+        handle.dispose();
+      });
+
+      testWidgets('names the three header controls without a catalogue', (
+        tester,
+      ) async {
+        final handle = tester.ensureSemantics();
+        useViewport(tester, 414, 900);
+        Config.set('magic_starter.features.notifications', true);
+        MagicStarter.useNavigation(mainItems: items, bottomItems: items);
+
+        await pumpShell(tester);
+
+        expectNamedButton(tester, 'Open menu');
+        expectNamedButton(tester, 'Notifications');
+        expectNamedButton(tester, 'Account menu');
+        for (final key in const [
+          'nav.open_menu',
+          'nav.notifications',
+          'nav.account_menu',
+        ]) {
+          expect(
+            find.bySemanticsLabel(RegExp(RegExp.escape(key))),
+            findsNothing,
+            reason: 'the raw key "$key" reached the tree',
+          );
+        }
+
+        handle.dispose();
+      });
+
+      testWidgets('names the three header controls from the catalogue', (
+        tester,
+      ) async {
+        final handle = tester.ensureSemantics();
+        useViewport(tester, 414, 900);
+        Translator.instance.setLoader(const _HeaderCopyLoader());
+        await Translator.instance.setLocale(const Locale('en'));
+        addTearDown(Translator.reset);
+        Config.set('magic_starter.features.notifications', true);
+        MagicStarter.useNavigation(mainItems: items, bottomItems: items);
+
+        await pumpShell(tester);
+
+        expectNamedButton(tester, 'Main menu');
+        expectNamedButton(tester, 'Alerts');
+        expectNamedButton(tester, 'Your account');
+
+        handle.dispose();
+      });
+
+      testWidgets('the menu control still opens the drawer', (tester) async {
+        useViewport(tester, 414, 900);
+        MagicStarter.useNavigation(mainItems: items, bottomItems: items);
+
+        await pumpShell(tester);
+        await tester.tap(find.byIcon(Icons.menu));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(Drawer), findsOneWidget);
+      });
+    });
+
+    test('the header labels ship in the install stub', () {
+      final stub = jsonDecode(
+        File('assets/stubs/install/en.stub').readAsStringSync(),
+      ) as Map<String, dynamic>;
+      final nav = stub['nav'] as Map<String, dynamic>;
+
+      expect(nav['open_menu'], 'Open menu');
+      expect(nav['notifications'], 'Notifications');
+      expect(nav['account_menu'], 'Account menu');
     });
   });
 }
