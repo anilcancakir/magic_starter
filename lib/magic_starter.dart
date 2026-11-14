@@ -1,6 +1,7 @@
 // Magic Starter plugin exports
 
 export 'src/ui/theme/magic_starter_tokens.dart';
+export 'src/ui/theme/magic_starter_breakpoints.dart';
 export 'src/cli/starter_dowel_provider.dart';
 export 'src/facades/magic_starter.dart';
 export 'src/magic_starter_manager.dart';
@@ -14,6 +15,7 @@ export 'src/configuration/magic_starter_theme.dart';
 export 'src/models/magic_starter_team.dart';
 export 'src/models/magic_starter_nav_item.dart';
 export 'src/http/controllers/magic_starter_auth_controller.dart';
+export 'src/http/controllers/concerns/navigates_routes.dart';
 export 'src/models/magic_starter_auth_user.dart';
 export 'src/models/magic_starter_plan.dart';
 export 'src/models/magic_starter_campaign.dart';
@@ -55,6 +57,11 @@ export 'src/ui/views/auth/magic_starter_two_factor_challenge_view.dart';
 export 'src/ui/views/auth/magic_starter_otp_verify_view.dart';
 export 'src/ui/views/auth/magic_starter_handoff_view.dart';
 export 'src/ui/views/profile/magic_starter_profile_settings_view.dart';
+
+/// The account-deletion flow is shared by the sessions and profile screens and
+/// lives beside the first; a published profile view reaches it through here.
+export 'src/ui/views/settings/security/magic_starter_sessions_view.dart'
+    show confirmAndDeleteAccount;
 export 'src/ui/views/support/chat/magic_starter_support_chat_launcher.dart';
 export 'src/ui/views/support/chat/magic_starter_support_chat_panel.dart';
 export 'src/ui/views/support/magic_starter_feedback_view.dart';
@@ -97,8 +104,11 @@ export 'src/ui/views/teams/magic_starter_team_invitation_accept_view.dart';
 
 // Design-system components (Wave 4 atomic-component library).
 // Migrated components (card, page_header, social_divider,
-// user_profile_dropdown, team_selector, confirm_dialog) are already reachable
-// through their existing alias exports above and are intentionally excluded here.
+// user_profile_dropdown, team_selector) are already reachable through their
+// existing alias exports above and are intentionally excluded here. The
+// confirm dialog's alias only re-exports its variant enum, so its index is
+// listed here for `MSConfirmDialog` itself.
+export 'src/ui/components/confirm_dialog/index.dart';
 export 'src/ui/components/button/index.dart';
 export 'src/ui/components/input/index.dart';
 export 'src/ui/components/textarea/index.dart';

@@ -51,6 +51,26 @@ class MagicStarterPublishCommand extends DowelCommand {
     'guest': 'ui/layouts/magic_starter_guest_layout.dart',
   };
 
+  /// The barrel import a published file gets in place of relative imports
+  /// whose target the barrel exports.
+  static const _barrelImport =
+      "import 'package:magic_starter/magic_starter.dart';";
+
+  /// An `import` or `export` directive: keyword, quote, URI, then whatever
+  /// combinators follow up to the semicolon (multi-line `show` lists included),
+  /// plus the line break after it so a dropped directive leaves no blank line.
+  static final _directive = RegExp(
+    r'''^(import|export)\s+(['"])([^'"]+)\2([^;]*);[ \t]*(?:\r?\n)?''',
+    multiLine: true,
+  );
+
+  /// The prefix the auto-wired provider imports a published file under.
+  ///
+  /// The provider also imports the package barrel, which exports the original
+  /// view or layout under the class name the published copy declares, so an
+  /// unprefixed import is an ambiguous-import compile error.
+  static const _publishedPrefix = 'published';
+
   @override
   String get signature =>
       'starter:publish '
@@ -265,6 +285,7 @@ class MagicStarterPublishCommand extends DowelCommand {
     }
 
     final published = <String>[];
+    final barrelExports = _barrelExports(pluginSourceDir);
 
     for (final entry in sourceViewsDir.listSync(recursive: true)) {
       if (entry is! File || !entry.path.endsWith('.dart')) {
@@ -281,7 +302,20 @@ class MagicStarterPublishCommand extends DowelCommand {
         relativePath,
       );
 
-      published.addAll(_copyFile(ctx, entry.path, destination, force));
+      published.addAll(
+        _copyFile(
+          ctx,
+          entry.path,
+          destination,
+          force,
+          transform: (content) => _rewriteImportsForHost(
+            content,
+            sourcePath: entry.path,
+            pluginSourceDir: pluginSourceDir,
+            barrelExports: barrelExports,
+          ),
+        ),
+      );
     }
 
     return published;
@@ -316,6 +350,7 @@ class MagicStarterPublishCommand extends DowelCommand {
     String destinationPrefix,
   ) {
     final published = <String>[];
+    final barrelExports = _barrelExports(pluginSourceDir);
 
     for (final entry in fileMap.entries) {
       final source = p.join(pluginSourceDir, 'lib', 'src', entry.value);
@@ -334,10 +369,141 @@ class MagicStarterPublishCommand extends DowelCommand {
               fileName,
             );
 
-      published.addAll(_copyFile(ctx, source, destination, force));
+      published.addAll(
+        _copyFile(
+          ctx,
+          source,
+          destination,
+          force,
+          transform: (content) => _rewriteImportsForHost(
+            content,
+            sourcePath: source,
+            pluginSourceDir: pluginSourceDir,
+            barrelExports: barrelExports,
+          ),
+        ),
+      );
     }
 
     return published;
+  }
+
+  /// Library paths (relative to the plugin's `lib/`, POSIX separators) the
+  /// package barrel exports, followed through nested `export` directives such
+  /// as a component's `index.dart`.
+  ///
+  /// A `show` export counts: a component's `index.dart` shows its public
+  /// widget and keeps helpers private, and that public widget is what a view
+  /// imports the file for. A view that reached a hidden helper would fail to
+  /// compile once published; the host-analyze test publishes every view and
+  /// layout into a host app and fails on exactly that.
+  Set<String> _barrelExports(String pluginSourceDir) {
+    final libDir = p.join(pluginSourceDir, 'lib');
+    final exported = <String>{};
+    final pending = ['magic_starter.dart'];
+
+    while (pending.isNotEmpty) {
+      final library = pending.removeLast();
+      final file = File(p.join(libDir, library));
+      if (!file.existsSync()) {
+        continue;
+      }
+
+      for (final match in _directive.allMatches(file.readAsStringSync())) {
+        final uri = match[3]!;
+        if (match[1] != 'export' || uri.contains(':')) {
+          continue;
+        }
+
+        final target = _libraryPath(libDir, p.join(libDir, library), uri);
+        if (exported.add(target)) {
+          pending.add(target);
+        }
+      }
+    }
+
+    return exported;
+  }
+
+  /// Rewrites a published file's relative imports so they resolve from the
+  /// host app, where the file no longer sits inside this package's `lib/src/`.
+  ///
+  /// A relative import whose target the barrel exports collapses into a single
+  /// unrestricted barrel import, so the host does not reach into `src/`. Any
+  /// other relative import or export keeps its combinators and points at the
+  /// same library through a `package:magic_starter/` URI, which compiles from
+  /// anywhere. `package:` and `dart:` directives are left as they are, except
+  /// a `show` import of the barrel in a file that gains the barrel import: it
+  /// becomes that import, so the file does not import the barrel twice.
+  String _rewriteImportsForHost(
+    String content, {
+    required String sourcePath,
+    required String pluginSourceDir,
+    required Set<String> barrelExports,
+  }) {
+    final libDir = p.join(pluginSourceDir, 'lib');
+
+    String? targetOf(Match match) {
+      final uri = match[3]!;
+
+      return uri.contains(':') ? null : _libraryPath(libDir, sourcePath, uri);
+    }
+
+    // A directive the barrel import can stand in for: a plain or `show`
+    // import of an exported library, or of the barrel itself.
+    bool collapsible(Match match) {
+      final combinators = match[4]!.trim();
+      if (match[1] != 'import' ||
+          (combinators.isNotEmpty && !combinators.startsWith('show'))) {
+        return false;
+      }
+
+      final target = targetOf(match);
+
+      return target == null
+          ? match[3] == 'package:magic_starter/magic_starter.dart'
+          : barrelExports.contains(target);
+    }
+
+    // 1. The barrel import is only introduced when a relative import needs it;
+    //    a file that already imports the barrel with `show` keeps that form.
+    final needsBarrel = _directive
+        .allMatches(content)
+        .any((match) => targetOf(match) != null && collapsible(match));
+
+    // 2. The first collapsible directive becomes the barrel import and the
+    //    rest are dropped, so the file never imports the barrel twice.
+    var barrelPlaced = false;
+
+    return content.replaceAllMapped(_directive, (match) {
+      final target = targetOf(match);
+
+      if (needsBarrel && collapsible(match)) {
+        if (barrelPlaced) {
+          return '';
+        }
+
+        barrelPlaced = true;
+
+        return '$_barrelImport\n';
+      }
+
+      if (target == null) {
+        return match[0]!;
+      }
+
+      // 3. Everything else keeps its exact form with only the URI replaced.
+      return match[0]!.replaceFirst(match[3]!, 'package:magic_starter/$target');
+    });
+  }
+
+  /// Resolves [uri], relative to the library at [fromPath], into a path
+  /// relative to [libDir] with POSIX separators, the form a `package:` URI
+  /// and an `export` directive both use.
+  static String _libraryPath(String libDir, String fromPath, String uri) {
+    final resolved = p.normalize(p.join(p.dirname(fromPath), uri));
+
+    return p.split(p.relative(resolved, from: libDir)).join('/');
   }
 
   List<String> _publishMiddleware(
@@ -383,12 +549,16 @@ class MagicStarterPublishCommand extends DowelCommand {
     );
   }
 
+  /// Copies [sourcePath] to [destinationPath], passing the content through
+  /// [transform] when one is given (views and layouts rewrite their imports;
+  /// config, middleware and lang are copied byte for byte).
   List<String> _copyFile(
     DowelContext ctx,
     String sourcePath,
     String destinationPath,
-    bool force,
-  ) {
+    bool force, {
+    String Function(String content)? transform,
+  }) {
     final sourceFile = File(sourcePath);
 
     if (!sourceFile.existsSync()) {
@@ -403,7 +573,10 @@ class MagicStarterPublishCommand extends DowelCommand {
 
     final content = FileHelper.readFile(sourcePath);
     FileHelper.ensureDirectoryExists(File(destinationPath).parent.path);
-    FileHelper.writeFile(destinationPath, content);
+    FileHelper.writeFile(
+      destinationPath,
+      transform == null ? content : transform(content),
+    );
 
     ctx.output.info('Published: $destinationPath');
     return [destinationPath];
@@ -457,10 +630,10 @@ class MagicStarterPublishCommand extends DowelCommand {
 
         registrations.add(
           _AutoWireEntry(
-            importLine: "import '$importPath';",
+            importLine: "import '$importPath' as $_publishedPrefix;",
             registrationLine:
                 "    MagicStarter.view.register('${entry.key}', "
-                '() => const $className());',
+                '() => const $_publishedPrefix.$className());',
             displayLabel: "MagicStarter.view.register('${entry.key}', ...)",
           ),
         );
@@ -489,10 +662,10 @@ class MagicStarterPublishCommand extends DowelCommand {
 
         registrations.add(
           _AutoWireEntry(
-            importLine: "import '$importPath';",
+            importLine: "import '$importPath' as $_publishedPrefix;",
             registrationLine:
                 "    MagicStarter.view.registerLayout('layout.${entry.key}', "
-                '(child) => $className(child: child));',
+                '(child) => $_publishedPrefix.$className(child: child));',
             displayLabel:
                 "MagicStarter.view.registerLayout('layout.${entry.key}', ...)",
           ),
