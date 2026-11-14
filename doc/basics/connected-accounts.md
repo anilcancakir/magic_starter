@@ -112,4 +112,4 @@ MagicStarter.view.register(
 - [Identity Confirmation](./identity-confirmation.md): the proof a connect asks for.
 - [Set a Password](./set-password.md): the first-password form for a provider account.
 - [View Registry](../architecture/view-registry.md): overriding the page.
-- [Social Auth Flows](https://anilcancakir.com/magic_social_auth/docs/basics/flows): the connect flow on the bridge side.
+- [Social Auth Flows](https://anilcancakir.com/magic/docs/social_auth/basics/flows): the connect flow on the bridge side.

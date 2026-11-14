@@ -80,28 +80,28 @@ class AppServiceProvider extends ServiceProvider {
 
 ## Docs
 
-- [Installation](https://anilcancakir.com/magic_starter/docs/getting-started/installation.md): add the package, register its dowel commands and let `starter:install` scaffold the features you choose.
-- [Configuration](https://anilcancakir.com/magic_starter/docs/getting-started/configuration.md): the config file, feature toggles, route prefixes, and the billing, push, handoff and legal keys.
-- [Authentication](https://anilcancakir.com/magic_starter/docs/basics/authentication.md): login, registration, password reset, email verification, two-factor, social, phone OTP, guest and handoff.
-- [Profile](https://anilcancakir.com/magic_starter/docs/basics/profile.md): the settings hub and its sub-pages through `MagicStarterProfileController`.
-- [Confirming Identity](https://anilcancakir.com/magic_starter/docs/basics/identity-confirmation.md): the proof each kind of account gives before a sensitive action.
-- [Set a Password](https://anilcancakir.com/magic_starter/docs/basics/set-password.md): a first password for an account created through a provider.
-- [Connected Accounts](https://anilcancakir.com/magic_starter/docs/basics/connected-accounts.md): linking and removing a social provider.
-- [Teams](https://anilcancakir.com/magic_starter/docs/basics/teams.md): create, switch, invite and the team resolver.
-- [Notifications](https://anilcancakir.com/magic_starter/docs/basics/notifications.md): the `magic_notifications` screens and bell, polling and the push identity.
-- [Support](https://anilcancakir.com/magic_starter/docs/basics/support.md): the support desk, chat popup, ratings, attachments and feedback.
-- [Releases](https://anilcancakir.com/magic_starter/docs/basics/releases.md): the "What's new" page, the build caption and the update banner.
-- [Session Scope](https://anilcancakir.com/magic_starter/docs/basics/session-scope.md): resetting cached per-user and per-team state when the identity changes.
-- [Middleware](https://anilcancakir.com/magic_starter/docs/basics/middleware.md): `EnsureAuthenticated`, `RedirectIfAuthenticated` and their aliases.
-- [Views and Layouts](https://anilcancakir.com/magic_starter/docs/basics/views-and-layouts.md): views, the app and guest shells, and replacing them.
-- [Design-System Components](https://anilcancakir.com/magic_starter/docs/basics/components.md): the `MS` components and their semantic tokens.
-- [CLI Commands](https://anilcancakir.com/magic_starter/docs/basics/cli.md): every `starter:*` command and flag.
-- [Manager](https://anilcancakir.com/magic_starter/docs/architecture/manager.md): the singleton behind the facade, its hooks and sub-themes.
-- [Service Provider](https://anilcancakir.com/magic_starter/docs/architecture/service-provider.md): the bindings, listeners and Gate abilities.
-- [View Registry](https://anilcancakir.com/magic_starter/docs/architecture/view-registry.md): every view, layout and modal key and slot.
-- [Controllers](https://anilcancakir.com/magic_starter/docs/architecture/controllers.md): the controllers behind each screen.
-- [State Management](https://anilcancakir.com/magic_starter/docs/guides/state-management.md): writing your own controller on the same pattern.
-- [wind_kit Theme Adoption](https://anilcancakir.com/magic_starter/docs/guides/wind-theme-adoption.md): `MagicStarter.useWindTheme` and the alias mapping.
+- [Installation](https://anilcancakir.com/magic/docs/starter/getting-started/installation.md): add the package, register its dowel commands and let `starter:install` scaffold the features you choose.
+- [Configuration](https://anilcancakir.com/magic/docs/starter/getting-started/configuration.md): the config file, feature toggles, route prefixes, and the billing, push, handoff and legal keys.
+- [Authentication](https://anilcancakir.com/magic/docs/starter/basics/authentication.md): login, registration, password reset, email verification, two-factor, social, phone OTP, guest and handoff.
+- [Profile](https://anilcancakir.com/magic/docs/starter/basics/profile.md): the settings hub and its sub-pages through `MagicStarterProfileController`.
+- [Confirming Identity](https://anilcancakir.com/magic/docs/starter/basics/identity-confirmation.md): the proof each kind of account gives before a sensitive action.
+- [Set a Password](https://anilcancakir.com/magic/docs/starter/basics/set-password.md): a first password for an account created through a provider.
+- [Connected Accounts](https://anilcancakir.com/magic/docs/starter/basics/connected-accounts.md): linking and removing a social provider.
+- [Teams](https://anilcancakir.com/magic/docs/starter/basics/teams.md): create, switch, invite and the team resolver.
+- [Notifications](https://anilcancakir.com/magic/docs/starter/basics/notifications.md): the `magic_notifications` screens and bell, polling and the push identity.
+- [Support](https://anilcancakir.com/magic/docs/starter/basics/support.md): the support desk, chat popup, ratings, attachments and feedback.
+- [Releases](https://anilcancakir.com/magic/docs/starter/basics/releases.md): the "What's new" page, the build caption and the update banner.
+- [Session Scope](https://anilcancakir.com/magic/docs/starter/basics/session-scope.md): resetting cached per-user and per-team state when the identity changes.
+- [Middleware](https://anilcancakir.com/magic/docs/starter/basics/middleware.md): `EnsureAuthenticated`, `RedirectIfAuthenticated` and their aliases.
+- [Views and Layouts](https://anilcancakir.com/magic/docs/starter/basics/views-and-layouts.md): views, the app and guest shells, and replacing them.
+- [Design-System Components](https://anilcancakir.com/magic/docs/starter/basics/components.md): the `MS` components and their semantic tokens.
+- [CLI Commands](https://anilcancakir.com/magic/docs/starter/basics/cli.md): every `starter:*` command and flag.
+- [Manager](https://anilcancakir.com/magic/docs/starter/architecture/manager.md): the singleton behind the facade, its hooks and sub-themes.
+- [Service Provider](https://anilcancakir.com/magic/docs/starter/architecture/service-provider.md): the bindings, listeners and Gate abilities.
+- [View Registry](https://anilcancakir.com/magic/docs/starter/architecture/view-registry.md): every view, layout and modal key and slot.
+- [Controllers](https://anilcancakir.com/magic/docs/starter/architecture/controllers.md): the controllers behind each screen.
+- [State Management](https://anilcancakir.com/magic/docs/starter/guides/state-management.md): writing your own controller on the same pattern.
+- [wind_kit Theme Adoption](https://anilcancakir.com/magic/docs/starter/guides/wind-theme-adoption.md): `MagicStarter.useWindTheme` and the alias mapping.
 
 ## Links
 

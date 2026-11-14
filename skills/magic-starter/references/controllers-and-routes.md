@@ -20,7 +20,7 @@ Each is a `MagicController` with `MagicStateMixin`, reached through `.instance` 
 
 Methods answer `bool` (or a map) so a caller branches without reading state; errors land in the controller's state through `handleApiError`. The gated profile methods take `proof:` (see `SKILL.md`, Sign-in and identity rules).
 
-A controller of your own follows the same shape: [State Management](https://anilcancakir.com/magic_starter/docs/guides/state-management).
+A controller of your own follows the same shape: [State Management](https://anilcancakir.com/magic/docs/starter/guides/state-management).
 
 ## Routes
 

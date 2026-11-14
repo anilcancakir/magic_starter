@@ -173,7 +173,7 @@ On a phone the thread hides the bottom navigation, like a chat screen: `register
 <a name="live-updates"></a>
 ## Live Updates
 
-The list and the thread refetch when the backend broadcasts `support.conversation.updated` on the private channel `App.Models.User.{id}`. They subscribe through `BroadcastListeners` from `magic_socket` (see [Listeners](https://anilcancakir.com/magic_socket/docs/basics/listeners)), which the notification bell shares, so neither listener replaces the other. With no broadcast connection configured, or while the socket is down, both screens poll every 30 seconds instead.
+The list and the thread refetch when the backend broadcasts `support.conversation.updated` on the private channel `App.Models.User.{id}`. They subscribe through `BroadcastListeners` from `magic_socket` (see [Listeners](https://anilcancakir.com/magic/docs/socket/basics/listeners)), which the notification bell shares, so neither listener replaces the other. With no broadcast connection configured, or while the socket is down, both screens poll every 30 seconds instead.
 
 <a name="contact-sales"></a>
 ## Contact Sales
@@ -308,4 +308,4 @@ Copy lives under `magic_starter.support.*`, `magic_starter.nav.support` and `mag
 - [Teams](./teams.md): the billing screen whose "Contact sales" opens a conversation.
 - [Views and Layouts](./views-and-layouts.md): the view registry the screens resolve through.
 - [Configuration](../getting-started/configuration.md): the feature flags and the `support` keys.
-- [Listeners](https://anilcancakir.com/magic_socket/docs/basics/listeners): the broadcast listeners the live updates share.
+- [Listeners](https://anilcancakir.com/magic/docs/socket/basics/listeners): the broadcast listeners the live updates share.

@@ -236,7 +236,7 @@ MagicStarter.useSocialAuth(AppSocialAuth());
 
 While a bridge is registered and the feature is on, login and register render one button per provider the bridge offers, and the Connected accounts page is reachable from the settings hub. Without a bridge the buttons and the hub row are absent: the feature flag alone renders nothing. The page's route is registered on the feature alone, since the bridge is set after the routes are.
 
-`magic_social_auth` installs the bridge for you: `social:install` publishes `lib/app/providers/social_auth_starter_service_provider.dart`, which implements the contract below over `SocialAuth` and calls `MagicStarter.useSocialAuth`. See its [installation guide](https://anilcancakir.com/magic_social_auth/docs/getting-started/installation).
+`magic_social_auth` installs the bridge for you: `social:install` publishes `lib/app/providers/social_auth_starter_service_provider.dart`, which implements the contract below over `SocialAuth` and calls `MagicStarter.useSocialAuth`. See its [installation guide](https://anilcancakir.com/magic/docs/social_auth/getting-started/installation).
 
 ### The MagicStarterSocialAuth Contract
 

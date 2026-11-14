@@ -18,7 +18,7 @@
 </p>
 
 <p align="center">
-  <a href="https://anilcancakir.com/magic_starter">Documentation</a> ·
+  <a href="https://anilcancakir.com/magic/docs/starter">Documentation</a> ·
   <a href="https://pub.dev/packages/magic_starter">pub.dev</a> ·
   <a href="https://github.com/anilcancakir/magic_starter/issues">Issues</a>
 </p>
@@ -129,7 +129,7 @@ Failure modes:
 | `notifications.external_id_prefix` differs from the backend's `MAGIC_STARTER_EXTERNAL_ID_PREFIX` | OneSignal accepts the id and delivers to nobody. Both default to `user_`. |
 | `support` turned on after install | Call `registerMagicStarterSupportRoutes()` yourself, or the Support menu item leads nowhere. |
 
-The full key list, the route prefixes and the billing, push, handoff and legal keys: [Configuration](https://anilcancakir.com/magic_starter/docs/getting-started/configuration).
+The full key list, the route prefixes and the billing, push, handoff and legal keys: [Configuration](https://anilcancakir.com/magic/docs/starter/getting-started/configuration).
 
 ## Routes and middleware
 
@@ -188,7 +188,7 @@ void customiseStarter() {
 | `has(key)`, `hasLayout(key)`, `hasModal(key)` | Whether a key is registered. |
 | `slot(viewKey, slotName, builder)`, `buildSlot(...)` | A widget inside a shipped view; a slot name the view does not read is inert. |
 
-The settings surface is `settings.hub` plus drill-down keys (`profile.profile`, `settings.appearance`, `settings.security.*`, ...). The notification screens are not on this registry: override them on `magic_notifications`' `Notify.view`. Every key and slot: [View Registry](https://anilcancakir.com/magic_starter/docs/architecture/view-registry). To own a screen's source instead, `dart run magic:dowel starter:publish --tag=views:auth.login` copies it into `lib/resources/views/starter/` and registers it; a published copy does not follow later releases.
+The settings surface is `settings.hub` plus drill-down keys (`profile.profile`, `settings.appearance`, `settings.security.*`, ...). The notification screens are not on this registry: override them on `magic_notifications`' `Notify.view`. Every key and slot: [View Registry](https://anilcancakir.com/magic/docs/starter/architecture/view-registry). To own a screen's source instead, `dart run magic:dowel starter:publish --tag=views:auth.login` copies it into `lib/resources/views/starter/` and registers it; a published copy does not follow later releases.
 
 ## Theming
 
@@ -226,7 +226,7 @@ Failure modes:
 | `useFormTheme(MagicStarterFormTheme(inputClassName: ...))` | Every field you left out goes back to its default; change one with `MagicStarter.formTheme.copyWith(...)` (the modal theme has `copyWith` too). |
 | A Wind alias the palette lacks | Wind drops it silently and the class paints nothing. |
 
-The derivation table: [wind_kit Theme Adoption](https://anilcancakir.com/magic_starter/docs/guides/wind-theme-adoption).
+The derivation table: [wind_kit Theme Adoption](https://anilcancakir.com/magic/docs/starter/guides/wind-theme-adoption).
 
 ## The backend
 
@@ -264,7 +264,7 @@ The controllers call `magic-starter-laravel`'s `api/v1` routes one to one throug
 
 ## Links
 
-- [Documentation](https://anilcancakir.com/magic_starter/docs/getting-started/installation): installation, configuration, every feature, the view registry, theming and the CLI
+- [Documentation](https://anilcancakir.com/magic/docs/starter/getting-started/installation): installation, configuration, every feature, the view registry, theming and the CLI
 - [API reference](https://pub.dev/documentation/magic_starter/latest/)
 - [llms.txt](llms.txt) and the [agent skill](skills/magic-starter/SKILL.md) for AI coding agents: `npx skills add anilcancakir/magic_starter`
 - [Changelog](CHANGELOG.md)

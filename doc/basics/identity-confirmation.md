@@ -109,4 +109,4 @@ final success = await confirmAndRun(
 - [Connected Accounts](./connected-accounts.md): the page that asks for a proof before it links a provider.
 - [Set a Password](./set-password.md): the first-password form for a provider account.
 - [Profile](./profile.md): two-factor, sessions and account deletion, the gated screens.
-- [Social Auth Flows](https://anilcancakir.com/magic_social_auth/docs/basics/flows): how the bridge's `confirm` and `beginConnect` run.
+- [Social Auth Flows](https://anilcancakir.com/magic/docs/social_auth/basics/flows): how the bridge's `confirm` and `beginConnect` run.

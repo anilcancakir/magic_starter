@@ -243,5 +243,5 @@ When it is off:
 - [Components](./components.md): `MSConfirmDialog`, `MSPageHeader` and the page container the screens are wrapped in.
 - [Views and Layouts](./views-and-layouts.md): the app layout that owns polling and the bell.
 - [Configuration](../getting-started/configuration.md): the feature flag and the prefix key.
-- [Channels](https://anilcancakir.com/magic_notifications/docs/basics/channels): the notification channels.
-- [Preferences](https://anilcancakir.com/magic_notifications/docs/basics/preferences): the preference model behind the matrix.
+- [Channels](https://anilcancakir.com/magic/docs/notifications/basics/channels): the notification channels.
+- [Preferences](https://anilcancakir.com/magic/docs/notifications/basics/preferences): the preference model behind the matrix.

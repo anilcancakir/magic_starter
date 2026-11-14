@@ -1,7 +1,7 @@
 name: magic_starter
 description: "Ready-made Magic screens for sign-in, profile, teams, notifications, billing and support chat, each one overridable from your app through a view registry."
 version: 1.0.0
-homepage: https://anilcancakir.com/magic_starter
+homepage: https://anilcancakir.com/magic/starter
 repository: https://github.com/anilcancakir/magic_starter
 issue_tracker: https://github.com/anilcancakir/magic_starter/issues
 
