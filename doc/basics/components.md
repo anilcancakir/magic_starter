@@ -16,6 +16,7 @@ The `MS`-prefixed Wind components the starter's screens are built from, and the 
   - [Composition and App Chrome](#composition-and-app-chrome)
 - [Import Collisions](#import-collisions)
 - [design.md.stub](#designmdstub)
+- [Component Previews](#component-previews)
 - [Gotchas](#gotchas)
 - [Related Documentation](#related-documentation)
 
@@ -233,6 +234,33 @@ dart run magic:dowel design:sync
 ```
 
 `design:sync` writes a Dart file (`lib/config/wind_theme.g.dart` by default, `--output` changes it) with an alias map for `WindThemeData(aliases: ...)` and a brand `primary` colour ramp. Pass that map where this page passes `MagicStarterTokens.defaultAliases`. See [Magic CLI](https://anilcancakir.com/magic/docs/packages/magic-cli) for the command reference.
+
+<a name="component-previews"></a>
+## Component Previews
+
+`package:magic_starter/previews.dart` is a dev-only library, kept out of the runtime barrel. `starterComponentPreviews()` returns one `StarterComponentPreview` record per component: a `label`, a URL-safe `slug` (the component folder name) and a `WidgetBuilder` that renders the component's variants. Feed it to your own preview catalog behind a release guard, so a release build that never reaches the call tree-shakes every preview:
+
+```dart
+import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
+import 'package:magic_starter/previews.dart';
+
+List<StarterComponentPreview> catalogPreviews() {
+  if (kReleaseMode) return const <StarterComponentPreview>[];
+
+  return starterComponentPreviews();
+}
+
+Widget buildPreview(BuildContext context, String slug) {
+  final StarterComponentPreview preview = catalogPreviews().firstWhere(
+    (StarterComponentPreview entry) => entry.slug == slug,
+  );
+
+  return preview.builder(context);
+}
+```
+
+`buildPreview` here throws a `StateError` when `slug` matches no entry. In a release build `catalogPreviews()` is empty, so every call throws; the release guard (a route, a menu entry or a flag that a release build never reaches) is what keeps release builds away from this call.
 
 <a name="gotchas"></a>
 ## Gotchas

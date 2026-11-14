@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- **The documentation now matches what the package does.** An unset or empty `billing.web_origin` hides the web checkout button; only a relative value reaches Stripe, which refuses it and the error is only logged. With both identity modes on, login and registration send every non-empty identity field rather than preferring the phone. `plugin:install` injects `(app) => MagicStarterServiceProvider(app),`. A disabled feature's path hits the router's not-found handling instead of throwing; only `MagicStarter.view.make` throws. The middleware `starter:install` writes records no intended URL and does not let a guest through; the package classes do. `starter:publish --tag=config` copies a template with four features on. The README names the `MagicStarterBillingController` registration, links the agent skill on GitHub, and `doc/basics/components.md` documents `package:magic_starter/previews.dart`. (`README.md`, `llms.txt`, `doc/`, `skills/magic-starter/`)
+
 ## [1.0.0] - 2026-11-14
 
 ### BREAKING
