@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:fluttersdk_artisan/artisan.dart';
+import 'package:dowel/dowel.dart';
 import 'package:magic_starter/src/cli/commands/magic_starter_install_command.dart';
 import 'package:test/test.dart';
 import 'package:path/path.dart' as p;
@@ -38,9 +38,9 @@ class TestMagicStarterInstallCommand extends MagicStarterInstallCommand {
   }
 }
 
-/// Drives [command.handle] with a programmatic [ArtisanContext] composed of a
+/// Drives [command.handle] with a programmatic [DowelContext] composed of a
 /// [MapInput] (flags) and a [BufferedOutput] (capturable). The four base
-/// install flags are always defaulted so the [ArtisanInstallCommand] hard
+/// install flags are always defaulted so the [DowelInstallCommand] hard
 /// casts (`option('force') as bool`) never trip on absence.
 Future<int> runInstall(
   MagicStarterInstallCommand command, {
@@ -55,7 +55,7 @@ Future<int> runInstall(
     'no-bootstrap': false,
     'features': ?features,
   };
-  final ctx = ArtisanContext.bare(MapInput(options), BufferedOutput());
+  final ctx = DowelContext.bare(MapInput(options), BufferedOutput());
   return command.handle(ctx);
 }
 
@@ -83,8 +83,8 @@ void main() {
       }
     });
 
-    test('extends ArtisanInstallCommand', () {
-      expect(command, isA<ArtisanInstallCommand>());
+    test('extends DowelInstallCommand', () {
+      expect(command, isA<DowelInstallCommand>());
     });
 
     test('name is starter:install', () {
@@ -150,9 +150,8 @@ void main() {
 
       await runInstall(command);
 
-      final String appContent = File(
-        '${tempDir.path}/lib/config/app.dart',
-      ).readAsStringSync();
+      final String appContent = File('${tempDir.path}/lib/config/app.dart')
+          .readAsStringSync();
       expect(
         appContent,
         contains("import 'package:magic_starter/magic_starter.dart';"),
@@ -166,9 +165,8 @@ void main() {
 
         await runInstall(command);
 
-        final String appContent = File(
-          '${tempDir.path}/lib/config/app.dart',
-        ).readAsStringSync();
+        final String appContent = File('${tempDir.path}/lib/config/app.dart')
+            .readAsStringSync();
         expect(
           appContent,
           contains('(app) => MagicStarterServiceProvider(app),'),
@@ -184,12 +182,11 @@ void main() {
         await runInstall(command);
         await runInstall(command);
 
-        final String appContent = File(
-          '${tempDir.path}/lib/config/app.dart',
-        ).readAsStringSync();
-        final int providerCount = RegExp(
-          'MagicStarterServiceProvider',
-        ).allMatches(appContent).length;
+        final String appContent = File('${tempDir.path}/lib/config/app.dart')
+            .readAsStringSync();
+        final int providerCount = RegExp('MagicStarterServiceProvider')
+            .allMatches(appContent)
+            .length;
         expect(providerCount, 1);
       },
     );
@@ -199,9 +196,8 @@ void main() {
 
       await runInstall(command);
 
-      final String content = File(
-        '${tempDir.path}/lib/main.dart',
-      ).readAsStringSync();
+      final String content = File('${tempDir.path}/lib/main.dart')
+          .readAsStringSync();
       expect(content, contains("import 'config/magic_starter.dart';"));
     });
 
@@ -210,9 +206,8 @@ void main() {
 
       await runInstall(command);
 
-      final String content = File(
-        '${tempDir.path}/lib/main.dart',
-      ).readAsStringSync();
+      final String content = File('${tempDir.path}/lib/main.dart')
+          .readAsStringSync();
       expect(content, contains('() => magicStarterConfig,'));
     });
 
@@ -224,12 +219,11 @@ void main() {
         await runInstall(command);
         await runInstall(command);
 
-        final String content = File(
-          '${tempDir.path}/lib/main.dart',
-        ).readAsStringSync();
-        final int factoryCount = RegExp(
-          r'\(\) => magicStarterConfig',
-        ).allMatches(content).length;
+        final String content = File('${tempDir.path}/lib/main.dart')
+            .readAsStringSync();
+        final int factoryCount = RegExp(r'\(\) => magicStarterConfig')
+            .allMatches(content)
+            .length;
         expect(factoryCount, 1);
       },
     );
@@ -241,9 +235,8 @@ void main() {
 
         await runInstall(command);
 
-        final String content = File(
-          '${tempDir.path}/lib/main.dart',
-        ).readAsStringSync();
+        final String content = File('${tempDir.path}/lib/main.dart')
+            .readAsStringSync();
         expect(content, contains('WindThemeData'));
         expect(content, contains("'primary'"));
         expect(content, contains('MaterialColor'));
@@ -281,15 +274,157 @@ void main() {
       );
     });
 
-    test('injects material.dart import into main.dart', () async {
+    test('injects material_ui import into main.dart', () async {
       setupMagicProjectFiles(tempDir);
 
       await runInstall(command);
 
-      final String content = File(
-        '${tempDir.path}/lib/main.dart',
-      ).readAsStringSync();
-      expect(content, contains("import 'package:flutter/material.dart';"));
+      final String content = File('${tempDir.path}/lib/main.dart')
+          .readAsStringSync();
+      expect(
+        content,
+        contains("import 'package:material_ui/material_ui.dart';"),
+      );
+    });
+
+    test('swaps a host flutter/material import for material_ui', () async {
+      setupMagicProjectFiles(tempDir);
+      final File mainFile = File('${tempDir.path}/lib/main.dart');
+      mainFile.writeAsStringSync(
+        mainFile.readAsStringSync().replaceFirst(
+          "import 'package:material_ui/material_ui.dart';",
+          "import 'package:flutter/material.dart';",
+        ),
+      );
+
+      await runInstall(command);
+
+      final String content = mainFile.readAsStringSync();
+      // The generated MaterialColor(...) would be ambiguous between the two
+      // libraries, and flutter/material is deprecated: one import, material_ui.
+      expect(content, isNot(contains('package:flutter/material.dart')));
+      expect(
+        "import 'package:material_ui/material_ui.dart';"
+            .allMatches(content)
+            .length,
+        1,
+      );
+    });
+
+    test('swaps a double-quoted, CRLF flutter/material import too', () async {
+      setupMagicProjectFiles(tempDir);
+      final File mainFile = File('${tempDir.path}/lib/main.dart');
+      mainFile.writeAsStringSync(
+        mainFile
+            .readAsStringSync()
+            .replaceFirst(
+              "import 'package:material_ui/material_ui.dart';",
+              'import "package:flutter/material.dart";',
+            )
+            .replaceAll('\n', '\r\n'),
+      );
+
+      await runInstall(command);
+
+      final String content = mainFile.readAsStringSync();
+      expect(content, isNot(contains('package:flutter/material.dart')));
+      expect(content, contains('package:material_ui/material_ui.dart'));
+    });
+
+    test('keeps the prefix of a prefixed flutter/material import', () async {
+      setupMagicProjectFiles(tempDir);
+      final File mainFile = File('${tempDir.path}/lib/main.dart');
+      mainFile.writeAsStringSync(
+        mainFile.readAsStringSync().replaceFirst(
+          "import 'package:material_ui/material_ui.dart';",
+          "import 'package:flutter/material.dart' as m;",
+        ),
+      );
+
+      await runInstall(command);
+
+      final String content = mainFile.readAsStringSync();
+      expect(content, isNot(contains('package:flutter/material.dart')));
+      expect(
+        content,
+        contains("import 'package:material_ui/material_ui.dart' as m;"),
+      );
+      // The generated theme code uses MaterialColor unprefixed, so a plain
+      // import is added beside the prefixed one.
+      expect(
+        content,
+        contains("import 'package:material_ui/material_ui.dart';"),
+      );
+    });
+
+    test('a commented material_ui line is not a declared dependency', () async {
+      setupMagicProjectFiles(tempDir);
+      final File pubspec = File('${tempDir.path}/pubspec.yaml');
+      pubspec.writeAsStringSync(
+        pubspec.readAsStringSync().replaceFirst(
+          '  magic:\n',
+          '  # material_ui: ^1.11.0\n  magic:\n',
+        ),
+      );
+
+      await runInstall(command);
+
+      expect(
+        RegExp(
+          r'^  material_ui:',
+          multiLine: true,
+        ).hasMatch(pubspec.readAsStringSync()),
+        isTrue,
+      );
+    });
+
+    test('drops a plain flutter/material import beside a plain material_ui one', () async {
+      setupMagicProjectFiles(tempDir);
+      final File mainFile = File('${tempDir.path}/lib/main.dart');
+      mainFile.writeAsStringSync(
+        "import 'package:flutter/material.dart';\n${mainFile.readAsStringSync()}",
+      );
+
+      await runInstall(command);
+
+      final String content = mainFile.readAsStringSync();
+      expect(content, isNot(contains('package:flutter/material.dart')));
+      expect(
+        "import 'package:material_ui/material_ui.dart';"
+            .allMatches(content)
+            .length,
+        1,
+      );
+    });
+
+    test(
+      'leaves a declared material_ui dependency alone, any indentation',
+      () async {
+        setupMagicProjectFiles(tempDir);
+        final File pubspec = File('${tempDir.path}/pubspec.yaml');
+        pubspec.writeAsStringSync(
+          pubspec.readAsStringSync().replaceFirst(
+            '  magic:\n',
+            '    material_ui: ^1.20.0\n  magic:\n',
+          ),
+        );
+
+        await runInstall(command);
+
+        final String after = pubspec.readAsStringSync();
+        expect(after, contains('material_ui: ^1.20.0'));
+        expect('material_ui:'.allMatches(after).length, 1);
+      },
+    );
+
+    test('adds material_ui to the host pubspec', () async {
+      setupMagicProjectFiles(tempDir);
+
+      await runInstall(command);
+
+      final String pubspec = File('${tempDir.path}/pubspec.yaml')
+          .readAsStringSync();
+      expect(pubspec, contains('material_ui:'));
     });
 
     test(
@@ -300,12 +435,11 @@ void main() {
         await runInstall(command);
         await runInstall(command);
 
-        final String content = File(
-          '${tempDir.path}/lib/main.dart',
-        ).readAsStringSync();
-        final int themeCount = RegExp(
-          'WindThemeData',
-        ).allMatches(content).length;
+        final String content = File('${tempDir.path}/lib/main.dart')
+            .readAsStringSync();
+        final int themeCount = RegExp('WindThemeData')
+            .allMatches(content)
+            .length;
         expect(themeCount, 1);
       },
     );
@@ -359,9 +493,8 @@ void main() {
 
       await runInstall(command);
 
-      final String kernelContent = File(
-        '${tempDir.path}/lib/app/kernel.dart',
-      ).readAsStringSync();
+      final String kernelContent = File('${tempDir.path}/lib/app/kernel.dart')
+          .readAsStringSync();
 
       expect(
         RegExp(
@@ -675,9 +808,8 @@ void main() {
 
       await runInstall(command);
 
-      final String content = File(
-        '${tempDir.path}/pubspec.yaml',
-      ).readAsStringSync();
+      final String content = File('${tempDir.path}/pubspec.yaml')
+          .readAsStringSync();
       expect(content, contains('- assets/lang/en.json'));
     });
 
@@ -687,12 +819,10 @@ void main() {
       await runInstall(command);
       await runInstall(command);
 
-      final String app = File(
-        '${tempDir.path}/lib/config/app.dart',
-      ).readAsStringSync();
-      final String main = File(
-        '${tempDir.path}/lib/main.dart',
-      ).readAsStringSync();
+      final String app = File('${tempDir.path}/lib/config/app.dart')
+          .readAsStringSync();
+      final String main = File('${tempDir.path}/lib/main.dart')
+          .readAsStringSync();
       final String rsp = File(
         '${tempDir.path}/lib/app/providers/route_service_provider.dart',
       ).readAsStringSync();
@@ -957,21 +1087,18 @@ flutter:
         );
       });
 
-      test(
-        'app service provider excludes teams import and mapping when teams disabled',
-        () async {
-          setupMagicProjectFiles(tempDir);
+      test('app service provider excludes teams import and mapping when teams disabled', () async {
+        setupMagicProjectFiles(tempDir);
 
-          await runInstall(command);
+        await runInstall(command);
 
-          final String content = File(
-            '${tempDir.path}/lib/app/providers/app_service_provider.dart',
-          ).readAsStringSync();
+        final String content = File(
+          '${tempDir.path}/lib/app/providers/app_service_provider.dart',
+        ).readAsStringSync();
 
-          expect(content, isNot(contains("import '../models/team.dart';")));
-          expect(content, isNot(contains('Team.fromMap')));
-        },
-      );
+        expect(content, isNot(contains("import '../models/team.dart';")));
+        expect(content, isNot(contains('Team.fromMap')));
+      });
 
       test(
         'app service provider points at the social auth bridge when enabled',
@@ -1012,18 +1139,16 @@ flutter:
         expect(content, isNot(contains('MagicStarter.useTeamResolver(')));
       });
 
-      test(
-        'leaves a provider already wired with the legacy setters untouched',
-        () async {
-          // The injection appends at the END of boot(), so on an app installed
-          // before bootstrap() existed a generic call would land AFTER that app's
-          // own useLocaleOptions() and useLogout() and win by write order,
-          // silently replacing a customized locale list and logout behaviour.
-          setupMagicProjectFiles(tempDir);
-          final File provider = File(
-            '${tempDir.path}/lib/app/providers/app_service_provider.dart',
-          );
-          provider.writeAsStringSync('''
+      test('leaves a provider already wired with the legacy setters untouched', () async {
+        // The injection appends at the END of boot(), so on an app installed
+        // before bootstrap() existed a generic call would land AFTER that app's
+        // own useLocaleOptions() and useLogout() and win by write order,
+        // silently replacing a customized locale list and logout behaviour.
+        setupMagicProjectFiles(tempDir);
+        final File provider = File(
+          '${tempDir.path}/lib/app/providers/app_service_provider.dart',
+        );
+        provider.writeAsStringSync('''
 class AppServiceProvider extends ServiceProvider {
   AppServiceProvider(super.app);
 
@@ -1036,29 +1161,26 @@ class AppServiceProvider extends ServiceProvider {
 }
 ''');
 
-          await runInstall(command);
+        await runInstall(command);
 
-          final String content = provider.readAsStringSync();
+        final String content = provider.readAsStringSync();
 
-          expect(content, isNot(contains('MagicStarter.bootstrap(')));
-          expect(content, contains("'tr': 'Turkce'"));
-          expect(content, contains('MagicStarter.useLogout('));
-        },
-      );
+        expect(content, isNot(contains('MagicStarter.bootstrap(')));
+        expect(content, contains("'tr': 'Turkce'"));
+        expect(content, contains('MagicStarter.useLogout('));
+      });
 
-      test(
-        'a commented-out identity call does not suppress the injection',
-        () async {
-          // The guard is anchored (`^\s*MagicStarter\.…`) for this reason: with a
-          // plain `contains`, a commented-out example call would match and leave
-          // the provider permanently unconfigured. The magic install stub ships
-          // exactly such a commented example, which is why the neighbouring
-          // setUserFactory check is anchored too.
-          setupMagicProjectFiles(tempDir);
-          final File provider = File(
-            '${tempDir.path}/lib/app/providers/app_service_provider.dart',
-          );
-          provider.writeAsStringSync('''
+      test('a commented-out identity call does not suppress the injection', () async {
+        // The guard is anchored (`^\s*MagicStarter\.…`) for this reason: with a
+        // plain `contains`, a commented-out example call would match and leave
+        // the provider permanently unconfigured. The magic install stub ships
+        // exactly such a commented example, which is why the neighbouring
+        // setUserFactory check is anchored too.
+        setupMagicProjectFiles(tempDir);
+        final File provider = File(
+          '${tempDir.path}/lib/app/providers/app_service_provider.dart',
+        );
+        provider.writeAsStringSync('''
 class AppServiceProvider extends ServiceProvider {
   AppServiceProvider(super.app);
 
@@ -1070,14 +1192,13 @@ class AppServiceProvider extends ServiceProvider {
 }
 ''');
 
-          await runInstall(command);
+        await runInstall(command);
 
-          expect(
-            provider.readAsStringSync(),
-            contains('MagicStarter.bootstrap('),
-          );
-        },
-      );
+        expect(
+          provider.readAsStringSync(),
+          contains('MagicStarter.bootstrap('),
+        );
+      });
 
       test('includes the team resolver trio inside bootstrap() when the teams '
           'feature is enabled', () async {
@@ -1134,9 +1255,8 @@ class AppServiceProvider extends ServiceProvider {
 
         await runInstall(command, force: true, features: 'notifications');
 
-        final String pubspecContent = File(
-          '${tempDir.path}/pubspec.yaml',
-        ).readAsStringSync();
+        final String pubspecContent = File('${tempDir.path}/pubspec.yaml')
+            .readAsStringSync();
 
         expect(
           pubspecContent,
@@ -1170,7 +1290,7 @@ class AppServiceProvider extends ServiceProvider {
       final manifest = ManifestParser.parseFile(p.normalize(manifestPath));
       final installer = command.stageInstaller(
         command.buildContext(
-          ArtisanContext.bare(
+          DowelContext.bare(
             MapInput(const <String, dynamic>{}),
             BufferedOutput(),
           ),
@@ -1232,9 +1352,8 @@ class AppServiceProvider extends ServiceProvider {
       // older starter. The literal sat at `^0.0.1-alpha.1` for twenty-six
       // releases, excluding every 0.1.0 and later the floor has required since
       // alpha.25, which is the drift this test exists to stop.
-      final String pubspec = File(
-        '${Directory.current.path}/pubspec.yaml',
-      ).readAsStringSync();
+      final String pubspec = File('${Directory.current.path}/pubspec.yaml')
+          .readAsStringSync();
       final RegExpMatch? declared = RegExp(
         r'^  magic_notifications:\s*(\S+)',
         multiLine: true,
@@ -1297,7 +1416,6 @@ Map<String, dynamic> get appConfig => {
       (app) => LaunchServiceProvider(app),
       (app) => AuthServiceProvider(app),
       (app) => VaultServiceProvider(app),
-      (app) => DatabaseServiceProvider(app),
       (app) => NetworkServiceProvider(app),
       (app) => CacheServiceProvider(app),
       (app) => LocalizationServiceProvider(app),
@@ -1312,12 +1430,11 @@ void setupMainFile(Directory directory) {
   final File mainFile = File('${directory.path}/lib/main.dart');
   mainFile.createSync(recursive: true);
   mainFile.writeAsStringSync('''
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:magic/magic.dart';
 import 'config/app.dart';
 import 'config/view.dart';
 import 'config/auth.dart';
-import 'config/database.dart';
 import 'config/network.dart';
 import 'config/cache.dart';
 import 'config/logging.dart';
@@ -1330,7 +1447,6 @@ void main() async {
       () => appConfig,
       () => viewConfig,
       () => authConfig,
-      () => databaseConfig,
       () => networkConfig,
       () => cacheConfig,
       () => loggingConfig,

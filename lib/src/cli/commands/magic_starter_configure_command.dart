@@ -1,4 +1,4 @@
-import 'package:fluttersdk_artisan/artisan.dart';
+import 'package:dowel/dowel.dart';
 
 import '../helpers/magic_starter_config_helper.dart';
 
@@ -11,10 +11,10 @@ import '../helpers/magic_starter_config_helper.dart';
 ///
 /// Usage:
 /// ```
-/// artisan starter:configure --show
-/// artisan starter:configure --teams --no-social-login
+/// dart run magic:dowel starter:configure --show
+/// dart run magic:dowel starter:configure --teams --no-social-login
 /// ```
-class MagicStarterConfigureCommand extends ArtisanCommand {
+class MagicStarterConfigureCommand extends DowelCommand {
   /// The feature flag definitions: CLI flag name → config key name.
   ///
   /// CLI flags use kebab-case; config keys use snake_case.
@@ -45,6 +45,31 @@ class MagicStarterConfigureCommand extends ArtisanCommand {
   @override
   String get description => 'Update Magic Starter configuration';
 
+  /// Registers the feature flags as negatable, so a real argv accepts
+  /// `--no-teams`.
+  ///
+  /// The signature DSL registers every flag with `negatable: false`, which is
+  /// right for `--show` and wrong here: the usage above, and the docs, switch
+  /// a feature off with `--no-<feature>`. [signature] still lists the flags
+  /// for the help text and the programmatic input, so `super.configure` is not
+  /// called: it would register the same names a second time.
+  @override
+  void configure(ArgParser parser) {
+    parser.addFlag(
+      'show',
+      help: 'Display current feature configuration',
+      negatable: false,
+    );
+    for (final String flag in _featureFlags.keys) {
+      parser.addFlag(
+        flag,
+        help:
+            'Enable or disable the ${_featureFlags[flag]} feature '
+            '(--no-$flag turns it off)',
+      );
+    }
+  }
+
   @override
   CommandBoot get boot => CommandBoot.none;
 
@@ -58,14 +83,16 @@ class MagicStarterConfigureCommand extends ArtisanCommand {
   String get _configPath => '$projectRoot/lib/config/magic_starter.dart';
 
   @override
-  Future<int> handle(ArtisanContext ctx) async {
+  Future<int> handle(DowelContext ctx) async {
     // 1. Attempt to read config — bail early if missing.
     final String? content = MagicStarterConfigHelper.readConfigContent(
       projectRoot,
     );
     if (content == null) {
       ctx.output.error('Configuration file not found: $_configPath');
-      ctx.output.info('Run installation first: artisan starter:install');
+      ctx.output.info(
+        'Run installation first: dart run magic:dowel starter:install',
+      );
       return 1;
     }
 
@@ -105,9 +132,9 @@ class MagicStarterConfigureCommand extends ArtisanCommand {
   /// Collects all feature flag updates that were explicitly parsed.
   ///
   /// Returns a map of config key → bool for every flag the user supplied.
-  /// Flags the user did not pass are omitted via [ArtisanInput.hasOption]
+  /// Flags the user did not pass are omitted via [DowelInput.hasOption]
   /// (i.e. `wasParsed`) so they remain untouched in the config file.
-  Map<String, bool> _collectUpdates(ArtisanContext ctx) {
+  Map<String, bool> _collectUpdates(DowelContext ctx) {
     final updates = <String, bool>{};
 
     for (final entry in _featureFlags.entries) {
@@ -127,7 +154,7 @@ class MagicStarterConfigureCommand extends ArtisanCommand {
   ///
   /// Parses [content] via [MagicStarterConfigHelper.parseFeatures] and renders
   /// a simple two-column report into the output stream.
-  void _showConfig(ArtisanContext ctx, String content) {
+  void _showConfig(DowelContext ctx, String content) {
     final Map<String, bool> features = MagicStarterConfigHelper.parseFeatures(
       content,
     );

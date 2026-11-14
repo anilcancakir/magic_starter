@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-11-14
+
+### BREAKING
+
+- **The CLI moved from `fluttersdk_artisan` to `dowel`.** The provider is renamed to `MagicStarterDowelProvider` (`lib/src/cli/starter_dowel_provider.dart`, exported from `package:magic_starter/cli.dart`); re-run `dart run magic:dowel plugin:install magic_starter` to register it under `.dowel/`. The commands are run as `dart run magic:dowel starter:<command>`, and the read-only `starter_doctor` MCP tool routes through `dowel:starter:doctor`. (`lib/src/cli/`, `lib/cli.dart`, `install.yaml`)
+- **Wind moved to `wind_kit` and Material to `material_ui`.** `fluttersdk_wind` is replaced by `wind_kit ^1.12.0`, and every Material import now comes from `package:material_ui/material_ui.dart`, which `material_ui ^1.11.0` provides. `starter:install` writes the `material_ui` import into a host's `main.dart` and `AppServiceProvider`, swaps a host's `package:flutter/material.dart` import in those files for it (both define `MaterialColor` and `Colors`, so keeping the two would make the generated theme ambiguous), and adds `material_ui ^1.11.0` to the host's `pubspec.yaml`. The SDK floor is Dart 3.13 and Flutter 3.47. (`pubspec.yaml`, `lib/`, `assets/stubs/install/`)
+
+### Changed
+
+- **First stable release: version 1.0.0 replaces the planned 0.1.0 and requires `magic ^1.0.0` and `dowel ^1.0.0`; no API change beyond what is listed below.**
+- **Now depends on `magic ^1.0.0`, `magic_picker` and `magic_socket`.** `Pick` (attachments, profile photo) comes from `package:magic_picker/magic_picker.dart` and `BroadcastListeners` (support sync) from `package:magic_socket/magic_socket.dart`, since core 1.0.0 no longer ships either. (`pubspec.yaml`, `lib/src/support/support_sync.dart`, `lib/src/ui/views/support/magic_starter_support_attachments.dart`, `lib/src/ui/views/profile/`)
+- **`starter:configure` accepts `--no-<feature>` on a real command line.** dowel registers a signature flag as non-negatable, so `--no-teams` (the form the usage and the docs show) was rejected with "Could not find an option named"; the command now registers the eight feature flags as negatable. (`lib/src/cli/commands/magic_starter_configure_command.dart`)
+- **Direct dependencies raised to the latest release.** `path ^1.9.1`, `web ^1.1.2` and dev `test ^1.32.0`. (`pubspec.yaml`)
+
 ## [0.0.73] - 2026-11-08
 
 ### Added

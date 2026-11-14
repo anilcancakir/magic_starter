@@ -12,7 +12,7 @@
 <a name="introduction"></a>
 ## Introduction
 
-The notification UI moved to the `magic_notifications` package. This package no longer ships the list view, the preferences view, the controller behind them, or the bell dropdown; `magic_notifications` >= 0.1.0 does, under `NotificationsListView`, `NotificationPreferencesView`, `NotificationPreferencesController` and `NotificationDropdown`.
+The notification UI moved to the `magic_notifications` package. This package no longer ships the list view, the preferences view, the controller behind them, or the bell dropdown; `magic_notifications` >= 1.0.0 does, under `NotificationsListView`, `NotificationPreferencesView`, `NotificationPreferencesController` and `NotificationDropdown`.
 
 What stays here is what a published notifications package cannot know on its own: `registerMagicStarterNotificationRoutes()` owns the two paths (`/notifications` and `/settings/notifications`), mounts them inside the authenticated `layout.app` shell, and wraps `magic_notifications`'s screens in this package's own page geometry (`MSPageContainer`) so they read like every other page in the app rather than spreading full-bleed. `MagicStarterAppLayout` owns the polling lifecycle and renders the bell.
 

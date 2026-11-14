@@ -20,8 +20,8 @@ Under the hood the package provides 7 controllers, overridable views via a strin
 <a name="requirements"></a>
 ## Requirements
 
-- **Dart SDK**: 3.6.0 or higher
-- **Flutter**: 3.27.0 or higher
+- **Dart SDK**: 3.13.0 or higher
+- **Flutter**: 3.47.0 or higher
 - **Magic Framework** installed and bootstrapped (`lib/config/app.dart` present)
 
 <a name="installing-the-package"></a>
@@ -37,7 +37,7 @@ Or add it manually to `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  magic_starter: ^0.0.73
+  magic_starter: ^1.0.0
 ```
 
 Then fetch dependencies:
@@ -112,7 +112,7 @@ final appConfig = {
 The install command also adds the config factory to `Magic.init()` in `lib/main.dart`:
 
 ```dart
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:magic/magic.dart';
 import 'config/app.dart';
 import 'config/magic_starter.dart'; // injected by install

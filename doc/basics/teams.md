@@ -138,7 +138,7 @@ Magic.put(
 <a name="free-trials"></a>
 ### Free Trials
 
-The billing screen (`teams.billing`) shows a trial and a store introductory offer without any setup beyond the right versions: `magic_payments` ^0.0.9 and `magic-starter-laravel` 0.0.23, whose catalogue rows carry `trial_days` per product.
+The billing screen (`teams.billing`) shows a trial and a store introductory offer without any setup beyond the right versions: `magic_payments` ^1.0.0 and `magic-starter-laravel` 0.0.23, whose catalogue rows carry `trial_days` per product.
 
 `MagicStarterProduct.trialDays` is the free days a purchase of that product starts with, and `0` for none. The backend answers it for the signed-in caller, so `0` also means a trial already used, and a positive value is safe to advertise. `MagicStarterBillingController.trialEnd` is the date a running trial ends (`null` unless the plan status is `trialing`); a store trial has no `trial_ends_at`, so it falls back to the entitlement's current period end.
 
