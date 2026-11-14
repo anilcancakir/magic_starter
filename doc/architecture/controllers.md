@@ -1,83 +1,83 @@
 # Controllers
 
+The starter's controllers hold the business logic and async state behind each screen: every view delegates its API calls, state transitions and navigation to a paired controller.
+
 - [Introduction](#introduction)
 - [Lazy Singleton Pattern](#lazy-singleton-pattern)
 - [MagicController and MagicStateMixin](#magiccontroller-and-magicstatemixin)
 - [Controller Lifecycle](#controller-lifecycle)
 - [View Binding](#view-binding)
-- [Consumer App Pattern](#consumer-app-pattern)
-- [View Integration for Consumer Apps](#view-integration-for-consumer-apps)
 - [Fine-Grained Reactivity](#fine-grained-reactivity)
-- [Testing Controllers](#testing-controllers)
-- [Related](#related)
+- [Consumer Apps](#consumer-apps)
+- [Related Documentation](#related-documentation)
 
 <a name="introduction"></a>
 ## Introduction
 
-Controllers in magic_starter are the single source of truth for business logic and async state. Every page-level view delegates all API calls, state transitions, and navigation to its paired controller. Views contain zero business logic — they render state and forward user input.
+A view renders state and forwards user input; the controller calls the backend, moves the state machine and navigates. Controllers live in `lib/src/http/controllers/` and are exported from `package:magic_starter/magic_starter.dart`. They share two small mixins from `concerns/`:
 
-The plugin ships six controllers covering auth, profile, teams, OTP, guest auth, and newsletter flows. All six share the same structural core: lazy singleton via `Magic.findOrPut` and `MagicController + MagicStateMixin` for state. Controllers that handle page navigation also mix in `NavigatesRoutes` (auth, guest auth, profile), while others (team, newsletter) manage state without navigation concerns. Consumer apps building custom features on top of magic_starter should follow the same conventions for consistency.
+| Mixin | Provides |
+|:------|:---------|
+| `NavigatesRoutes` | `navigateTo(path, {query})` and `navigateHome()`, which are no-ops while no navigator is mounted and send the user to the intended URL or `routes.home` |
+| `CompletesSignIn` | `completeSignIn(...)`, the one way a sign-in concludes (password, social, two-factor challenge, OTP, guest, handoff), which also announces a cancelled account deletion |
 
-Notification preferences state moved with the rest of the notification UI: `NotificationPreferencesController` now lives in `magic_notifications` and follows the same lazy-singleton shape.
+Notification preferences state moved with the notification UI: `NotificationPreferencesController` lives in `magic_notifications` and follows the same lazy-singleton shape.
 
 <a name="lazy-singleton-pattern"></a>
 ## Lazy Singleton Pattern
 
-Every controller exposes a single static accessor that delegates instantiation to the Magic IoC container:
+A controller exposes one static accessor that delegates instantiation to the Magic container:
 
 ```dart
 class MagicStarterAuthController extends MagicController
-    with MagicStateMixin<bool>, ValidatesRequests, NavigatesRoutes {
+    with MagicStateMixin<bool>, ValidatesRequests, NavigatesRoutes, CompletesSignIn {
   static MagicStarterAuthController get instance =>
       Magic.findOrPut(MagicStarterAuthController.new);
 }
 ```
 
-`Magic.findOrPut` checks whether a binding already exists under the controller's runtime type. On first access it calls `MagicStarterAuthController.new` (the default constructor), stores the result, and returns it. Every subsequent call returns the cached instance. This means a controller is created only when first needed and lives for the lifetime of the IoC container.
+`Magic.findOrPut` checks whether a binding for the controller's runtime type exists. On first access it calls the tear-off constructor, stores the result and returns it; every later call returns the cached instance. A controller is created only when first needed and lives as long as the container.
 
-The same pattern across all seven controllers:
+| Controller | State mixin | Also |
+|:-----------|:------------|:-----|
+| `MagicStarterAuthController` | `MagicStateMixin<bool>` | `ValidatesRequests`, `NavigatesRoutes`, `CompletesSignIn` |
+| `MagicStarterOtpController` | `MagicStateMixin` | `ValidatesRequests`, `NavigatesRoutes`, `CompletesSignIn` |
+| `MagicStarterGuestAuthController` | `MagicStateMixin<bool>` | `ValidatesRequests`, `NavigatesRoutes`, `CompletesSignIn` |
+| `MagicStarterHandoffController` | none | `NavigatesRoutes`, `CompletesSignIn`, `SessionScoped` |
+| `MagicStarterProfileController` | `MagicStateMixin<bool>` | `ValidatesRequests`, `NavigatesRoutes` |
+| `MagicStarterNewsletterController` | `MagicStateMixin` | `ValidatesRequests` |
+| `MagicStarterReleasesController` | `MagicStateMixin<MagicStarterReleaseFeed>` | none |
+| `MagicStarterTeamController` | `MagicStateMixin<bool>` | `ValidatesRequests`, `SessionScoped` |
+| `MagicStarterSupportController` | none | `ValidatesRequests`, `SessionScoped` |
+| `MagicStarterFeedbackController` | none | `ValidatesRequests`, `SessionScoped` |
 
-| Controller | Singleton key |
-|------------|---------------|
-| `MagicStarterAuthController.instance` | `Magic.findOrPut(MagicStarterAuthController.new)` |
-| `MagicStarterProfileController.instance` | `Magic.findOrPut(MagicStarterProfileController.new)` |
-| `MagicStarterTeamController.instance` | `Magic.findOrPut(MagicStarterTeamController.new)` |
-| `MagicStarterOtpController.instance` | `Magic.findOrPut(MagicStarterOtpController.new)` |
-| `MagicStarterGuestAuthController.instance` | `Magic.findOrPut(MagicStarterGuestAuthController.new)` |
-| `MagicStarterNewsletterController.instance` | `Magic.findOrPut(MagicStarterNewsletterController.new)` |
+Each has a static `instance` accessor like the one above. `MagicStarterBillingController` is the exception: it takes required collaborators (the usage copy and number formatter), so there is no zero-argument constructor for `findOrPut` to call, and the host registers it with `Magic.put(...)`; see [Teams](../basics/teams.md).
 
 > [!NOTE]
-> `Magic.findOrPut` is distinct from `Magic.singleton`. `singleton` registers a factory eagerly so the container can resolve it by key string. `findOrPut` uses the concrete type as the implicit key and creates the instance on first access — no upfront registration required.
+> `Magic.findOrPut` is distinct from `Magic.singleton`. `singleton` registers a factory under a string key so the container can resolve it by name. `findOrPut` uses the concrete type as the implicit key and creates the instance on first access, with no upfront registration.
 
 <a name="magiccontroller-and-magicstatemixin"></a>
 ## MagicController and MagicStateMixin
 
-All magic_starter controllers extend `MagicController` and mix in `MagicStateMixin<T>`.
+Every starter controller extends `MagicController`, which extends `ChangeNotifier`, so each one is a `Listenable`. Most add `MagicStateMixin<T>`, a typed state machine on top of it:
 
-`MagicController` extends `ChangeNotifier`, so every controller is a `Listenable`. `MagicStateMixin<T>` adds a typed state machine on top of it.
+| Member | Description |
+|:-------|:------------|
+| `setLoading()` | Moves to the loading state and notifies listeners |
+| `setSuccess(T value)` | Moves to success with a typed payload |
+| `setError(String message)` | Moves to error with a message |
+| `setEmpty()` | Resets to the empty (idle) state |
+| `isLoading`, `isSuccess`, `isError`, `isEmpty` | The current state |
+| `renderState(onSuccess, {onLoading, onError, onEmpty})` | A widget factory that dispatches on the current state |
 
-The mixin provides these state-transition methods and read properties:
+`T` is the success payload type. `MagicStateMixin<bool>` is the common choice because most controllers only signal success or failure. `clearErrors()` and `hasErrors` come from the `ValidatesRequests` mixin and concern the field validation errors a backend 422 sets, not the state machine.
 
-| Method / Property | Description |
-|-------------------|-------------|
-| `setLoading()` | Transitions to loading state, calls `notifyListeners()` |
-| `setSuccess(T value)` | Transitions to success state with a typed payload, notifies listeners |
-| `setError(String message)` | Transitions to error state with a message, notifies listeners |
-| `setEmpty()` | Resets to empty/idle state, notifies listeners |
-| `clearErrors()` | Clears any error state without changing the primary state |
-| `isLoading` | `true` while the controller is in loading state |
-| `isSuccess` | `true` after a successful transition |
-| `hasErrors` | `true` when the controller holds an error message |
-| `renderState(builder, {onEmpty, onError})` | Widget factory — dispatches to the correct builder based on current state |
-
-The type parameter `T` is the success payload type. `MagicStateMixin<bool>` is the most common pattern because many controllers only need to signal success or failure, not carry data. However, some controllers use a different success payload type (or omit the explicit type argument) and call `setSuccess(...)` with non-boolean data when the state itself needs to carry a result. Controllers may also expose structured data through `ValueNotifier<T>` fields alongside `MagicStateMixin<T>` when that produces a cleaner API.
-
-A standard async action looks like this:
+A standard async action:
 
 ```dart
 Future<void> doLogin({
-  required String email,
   required String password,
+  String? email,
 }) async {
   setLoading();
   clearErrors();
@@ -89,37 +89,38 @@ Future<void> doLogin({
     });
 
     if (!response.successful) {
-      setError(trans('auth.login_failed'));
+      handleApiError(response, fallback: trans('auth.login_failed'));
       return;
     }
 
-    await Auth.restore();
-    setSuccess(true);
+    // ... complete the sign-in
   } catch (e, stackTrace) {
-    Log.error('[MagicStarterAuthController.doLogin] $e\n$stackTrace');
+    Log.error('[doLogin] $e\n$stackTrace');
     setError(trans('errors.unexpected'));
   }
 }
 ```
 
+A throw before the response (a timeout, a dropped connection) would leave the controller in the loading state, so the action catches it, logs it and sets an error state. `MagicStarterAuthController.doLogin` also maps a timeout and a socket failure to their own messages.
+
 > [!TIP]
-> Always call `setLoading()` and `clearErrors()` at the top of an async action, before the first `await`. This gives the UI immediate feedback and clears stale error messages from the previous run.
+> Call `setLoading()` and `clearErrors()` at the top of an async action, before the first `await`. The view gets immediate feedback and stale errors from the previous run are gone.
 
 <a name="controller-lifecycle"></a>
 ## Controller Lifecycle
 
-Because `Magic.findOrPut` stores the instance in the IoC container, a controller outlives any individual view. A user may navigate away from the login screen and back — `MagicStarterAuthController.instance` returns the same object both times.
+Because `findOrPut` stores the instance in the container, a controller outlives any view. Navigate away from the login screen and back and `MagicStarterAuthController.instance` is the same object.
 
-Practical consequences:
-
-- State carries over between visits. If a controller is in the error state when the view is dismissed, it will still be in the error state the next time the view mounts. Reset state in the view's `onInit()` hook (see [View Binding](#view-binding)).
-- `ValueNotifier` fields must be disposed when the controller is no longer needed. In tests, call `controller.dispose()` in `tearDown`. In production, controllers that live for the full app session typically do not need explicit disposal.
-- The container is reset by calling `Magic.flush()` or `MagicApp.reset()`, which replaces the IoC container entirely. After a reset, the next call to `Magic.findOrPut` creates a fresh instance. This is the standard test isolation mechanism.
+- The controller's own `onInit()` runs once per instance lifetime, the first time it backs a view, not on every mount.
+- The view state's `onInit()` runs on every mount. When a view mounts, magic clears the controller's validation errors and turns an error status back to empty without notifying, so a failed attempt does not greet the next visit. A controller still holds its other state (a success value, `ValueNotifier` contents) between visits: reset what you need in the view's `onInit()`.
+- A controller that caches data of one signed-in user or team implements magic's `SessionScoped`, so a sign-out or a team switch resets it. The team, support, feedback, handoff and billing controllers do; see [Session Scope](../basics/session-scope.md).
+- `ValueNotifier` fields are disposed with the controller. In tests call `controller.dispose()` in `tearDown`.
+- `Magic.flush()` or `MagicApp.reset()` replaces the container; the next `findOrPut` builds a fresh instance. That is the test isolation mechanism.
 
 <a name="view-binding"></a>
 ## View Binding
 
-Every page-level view in magic_starter extends `MagicStatefulView<ControllerType>`. The base class resolves the controller via `Magic.findOrPut` and exposes it through the `controller` getter, available throughout the state class.
+Every page-level view extends `MagicStatefulView<ControllerType>`. The state class resolves the controller with `Magic.find<T>()`, so the controller has to be registered first: the starter's routes do it by calling `instance` (or `Magic.findOrPut`) in the route builder, before the view mounts. The controller is then available through the `controller` getter.
 
 ```dart
 class MagicStarterLoginView
@@ -133,7 +134,7 @@ class MagicStarterLoginView
 class _MagicStarterLoginViewState extends MagicStatefulViewState<
     MagicStarterAuthController, MagicStarterLoginView> {
   late final form = MagicFormData(
-    {'email': '', 'password': '', 'remember_me': false},
+    {'email': '', 'phone': '', 'password': '', 'remember_me': false},
     controller: controller,
   );
 
@@ -151,226 +152,42 @@ class _MagicStarterLoginViewState extends MagicStatefulViewState<
     return controller.renderState(
       (_) => _buildForm(),
       onEmpty: _buildForm(),
+      onLoading: _buildForm(),
       onError: (message) => _buildForm(errorMessage: message),
     );
   }
 }
 ```
 
-`MagicStatefulViewState` lifecycle hooks:
-
 | Hook | Called when | Typical use |
-|------|-------------|-------------|
-| `onInit()` | After `initState()` — view is mounted | Reset controller state, set initial empty state |
-| `onClose()` | In `dispose()` — view is removed | Dispose `MagicFormData`, cancel subscriptions |
+|:-----|:------------|:------------|
+| `onInit()` | After `initState()`, on every mount | Reset controller state, start the first load |
+| `onClose()` | In `dispose()` | Dispose a `MagicFormData`, cancel subscriptions |
 
-The view automatically subscribes to `controller` (via `ChangeNotifier`) and calls `setState` on every `notifyListeners`, so `renderState` always reflects the latest controller state without any manual subscription code.
-
-<a name="consumer-app-pattern"></a>
-## Consumer App Pattern
-
-Consumer apps building custom features should pick a registration strategy based on their initialization requirements.
-
-### Option 1 — Lazy Singleton (default recommendation)
-
-Use `Magic.findOrPut` for controllers that require no upfront initialization. The instance is created on first access and cached for the app session.
-
-```dart
-class ProjectController extends MagicController
-    with MagicStateMixin<bool> {
-  static ProjectController get instance =>
-      Magic.findOrPut(ProjectController.new);
-
-  Future<void> loadProjects() async {
-    setLoading();
-    clearErrors();
-
-    try {
-      final response = await Http.get('/projects');
-      if (!response.successful) {
-        setError('Failed to load projects.');
-        return;
-      }
-      setSuccess(true);
-    } catch (e, stackTrace) {
-      Log.error('[ProjectController.loadProjects] $e\n$stackTrace');
-      setError('An unexpected error occurred.');
-    }
-  }
-}
-```
-
-No registration in `AppServiceProvider` is needed. The first view that accesses `ProjectController.instance` initialises it.
-
-### Option 2 — Eager Registration in AppServiceProvider.boot()
-
-Register the controller explicitly when it needs to connect to a WebSocket, subscribe to an event, or perform auth-dependent work at startup — before any view has mounted.
-
-```dart
-// In AppServiceProvider.boot()
-@override
-Future<void> boot() async {
-  final controller = Magic.findOrPut(ProjectController.new);
-  await controller.connectRealtime();
-}
-```
-
-The explicit `Magic.findOrPut` call in `boot()` forces instantiation and stores the singleton. Later calls from views return the same already-initialised instance.
-
-### Option 3 — Per-View Instance (form / wizard state)
-
-When state should not persist across view visits — multi-step forms, wizards, ephemeral UI — use a plain `ChangeNotifier` created inside the `StatefulWidget`. No IoC container involvement.
-
-```dart
-class ProjectFormState extends ChangeNotifier {
-  String name = '';
-  bool isSubmitting = false;
-
-  void setName(String value) {
-    name = value;
-    notifyListeners();
-  }
-}
-
-class _ProjectCreateViewState extends State<ProjectCreateView> {
-  late final _state = ProjectFormState();
-
-  @override
-  void dispose() {
-    _state.dispose();
-    super.dispose();
-  }
-}
-```
-
-### Decision Table
-
-| Scenario | Strategy |
-|----------|----------|
-| Standard CRUD — loaded on demand | Lazy singleton (`Magic.findOrPut`) |
-| Needs WebSocket / boot-time init | Eager via `AppServiceProvider.boot()` |
-| Multi-step form — state should reset on dismiss | Per-view `ChangeNotifier` |
-| Shared state accessed from multiple screens | Lazy singleton |
-| Controller tied to a single, ephemeral modal | Per-view `ChangeNotifier` |
-
-<a name="view-integration-for-consumer-apps"></a>
-## View Integration for Consumer Apps
-
-Consumer apps have two options for wiring a controller to a view.
-
-### Option A — MagicStatefulView (auto-listens)
-
-Extend `MagicStatefulView<T>` to get the controller resolved and subscribed automatically. This matches the pattern used by every plugin view and is the recommended choice. `magic_notifications`'s `NotificationsListView` used to be the one exception, implemented as a plain `StatefulWidget` managing state locally; it now runs on `NotificationsListController` like the rest, so there is no longer a shipped counter-example for a new view to copy.
-
-```dart
-class ProjectListView extends MagicStatefulView<ProjectController> {
-  const ProjectListView({super.key});
-
-  @override
-  State<ProjectListView> createState() => _ProjectListViewState();
-}
-
-class _ProjectListViewState
-    extends MagicStatefulViewState<ProjectController, ProjectListView> {
-  @override
-  void onInit() => controller.loadProjects();
-
-  @override
-  Widget build(BuildContext context) {
-    return controller.renderState(
-      (_) => _buildList(),
-      onEmpty: const WText('No projects yet.'),
-      onError: (message) => WText(message),
-    );
-  }
-}
-```
-
-### Option B — StatefulWidget + Magic.find (more control)
-
-Use a plain `StatefulWidget` and resolve the controller manually when you need more control over subscription granularity or want to avoid the full `MagicStatefulView` lifecycle.
-
-```dart
-class _ProjectListViewState extends State<ProjectListView> {
-  late final ProjectController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = Magic.findOrPut(ProjectController.new);
-    _controller.addListener(_onControllerUpdate);
-    _controller.loadProjects();
-  }
-
-  @override
-  void dispose() {
-    _controller.removeListener(_onControllerUpdate);
-    super.dispose();
-  }
-
-  void _onControllerUpdate() => setState(() {});
-
-  @override
-  Widget build(BuildContext context) { /* ... */ }
-}
-```
-
-> [!NOTE]
-> Always use `removeListener` in `dispose()` when subscribing manually. Forgetting this causes the disposed widget to receive updates and triggers "called after dispose" Flutter errors.
+The view subscribes to the controller through `ChangeNotifier` and calls `setState` on every `notifyListeners`, so `renderState` always shows the latest state without manual subscription code. The login form renders itself in the loading state too (`onLoading`), because the form group must outlive the request.
 
 <a name="fine-grained-reactivity"></a>
 ## Fine-Grained Reactivity
 
-`MagicStateMixin` calls `notifyListeners()` on every state transition, which rebuilds the entire view tree listening to the controller. For complex views with multiple independent loading sections, this full-page rebuild can cause UI flicker.
-
-The solution is `ValueNotifier<T>` fields — one per independently-loading section. `magic_notifications`'s `NotificationPreferencesController` demonstrates this with a preference matrix; it lives in that package now, but the pattern it demonstrates is this package's own:
-
-```dart
-class NotificationPreferencesController extends MagicController
-    with MagicStateMixin<bool> {
-  static NotificationPreferencesController get instance =>
-      Magic.findOrPut(NotificationPreferencesController.new);
-
-  /// Preference matrix updated independently of the page-level state machine.
-  final matrixNotifier = ValueNotifier<Map<String, dynamic>>({});
-
-  Future<void> fetchPreferences() async {
-    setLoading();
-    try {
-      final response = await Http.get('/notification-preferences');
-      if (!response.successful) {
-        setError(trans('notifications.fetch_error'));
-        return;
-      }
-      matrixNotifier.value = _normalizeMap(response.data['data'] as Map);
-      setSuccess(true);
-    } catch (e, stackTrace) {
-      Log.error('[NotificationPreferencesController.fetchPreferences] $e\n$stackTrace');
-      setError(trans('errors.unexpected'));
-    }
-  }
-}
-```
-
-The team controller uses the same technique for member and invitation lists:
+`MagicStateMixin` notifies on every transition, which rebuilds the whole view listening to the controller. For a view with several independently loading sections that can flicker. The cure is one `ValueNotifier` per section. The team controller keeps its member and invitation lists that way:
 
 ```dart
 final ValueNotifier<List<Map<String, dynamic>>> members = ValueNotifier([]);
 final ValueNotifier<List<Map<String, dynamic>>> invitations = ValueNotifier([]);
 ```
 
-In the view, wrap only the section that depends on the notifier:
+and the team settings view wraps only the section that depends on one:
 
 ```dart
-ValueListenableBuilder<Map<String, dynamic>>(
-  valueListenable: controller.matrixNotifier,
-  builder: (_, matrix, __) => _buildPreferenceGrid(matrix),
+ValueListenableBuilder<List<Map<String, dynamic>>>(
+  valueListenable: controller.members,
+  builder: (context, members, _) => _buildMembers(members),
 )
 ```
 
-The `ValueListenableBuilder` rebuilds only its own subtree when `matrixNotifier.value` changes, leaving the rest of the view untouched.
+The builder rebuilds only its own subtree when `members.value` changes.
 
-`MagicStarterProfileController` uses `withoutNotifying()` to suppress full-page `notifyListeners` calls when a section-level operation is already driving its own loading indicator via `MagicFormData.process`:
+`MagicStarterProfileController` adds `withoutNotifying()`, which suppresses full-page notifications while a section-level action drives its own loading indicator through `MagicFormData.process`:
 
 ```dart
 await form.process(() => controller.withoutNotifying(
@@ -378,91 +195,19 @@ await form.process(() => controller.withoutNotifying(
 ));
 ```
 
-<a name="testing-controllers"></a>
-## Testing Controllers
+The suppression is a depth counter, so two overlapping actions do not un-suppress each other.
 
-Every controller test follows the same setup sequence: reset the IoC container, bind mock drivers, create a fresh controller instance.
+<a name="consumer-apps"></a>
+## Consumer Apps
 
-```dart
-void main() {
-  TestWidgetsFlutterBinding.ensureInitialized();
+An app building its own features on top of the starter follows the same conventions: a lazy `instance` accessor, `MagicStateMixin`, a view on `MagicStatefulView`. The registration options (lazy, eager in `boot()`, per-view `ChangeNotifier`), the view patterns and the test setup are in [State Management](../guides/state-management.md).
 
-  group('ProjectController', () {
-    late MockNetworkDriver mockDriver;
-    late ProjectController controller;
+<a name="related-documentation"></a>
+## Related Documentation
 
-    setUp(() {
-      // 1. Reset IoC container — clears all singletons from previous tests.
-      MagicApp.reset();
-      Magic.flush();
-
-      // 2. Bind mock network driver so Http facade is intercepted.
-      Magic.singleton('network', () => MockNetworkDriver());
-
-      // 3. Bind log service so Log.error() works inside catch blocks.
-      Magic.singleton('log', () => LogManager());
-      Config.set('logging', {
-        'default': 'console',
-        'channels': {
-          'console': {'driver': 'console', 'level': 'debug'},
-        },
-      });
-
-      // 4. Bind auth guard.
-      Auth.manager.forgetGuards();
-      Auth.manager.extend('mock', (_) => MockGuard());
-      Config.set('auth.defaults.guard', 'mock');
-      Config.set('auth.guards', {'mock': {'driver': 'mock'}});
-
-      // 5. Bind MagicStarterManager if the controller uses MagicStarter.*
-      Magic.singleton('magic_starter', () => MagicStarterManager());
-
-      // 6. Create a fresh controller — NOT via .instance (avoids cached state).
-      controller = ProjectController();
-
-      // 7. Resolve the mock driver reference for response setup.
-      mockDriver = Magic.make<NetworkDriver>('network') as MockNetworkDriver;
-    });
-
-    tearDown(() {
-      controller.dispose();
-      Auth.manager.forgetGuards();
-    });
-
-    test('loadProjects — success sets isSuccess true', () async {
-      mockDriver.mockResponse(statusCode: 200, data: {'data': []});
-
-      await controller.loadProjects();
-
-      expect(controller.isSuccess, isTrue);
-      expect(mockDriver.lastMethod, 'GET');
-      expect(mockDriver.lastUrl, contains('/projects'));
-    });
-
-    test('loadProjects — API error sets hasErrors true', () async {
-      mockDriver.mockResponse(statusCode: 422, data: {});
-
-      await controller.loadProjects();
-
-      expect(controller.hasErrors, isTrue);
-      expect(controller.isSuccess, isFalse);
-    });
-  });
-}
-```
-
-Key rules:
-
-- **Always use `controller = ProjectController()` in tests**, not `ProjectController.instance`. The `.instance` accessor uses `Magic.findOrPut`, which returns a cached singleton. After `Magic.flush()` the cache is empty, but using the accessor in tests couples test isolation to container state. Constructing directly is unambiguous.
-- **Dispose `ValueNotifier` fields** in `tearDown`. Forgetting causes "ValueNotifier used after dispose" errors in subsequent tests. Call `controller.dispose()` which triggers the `ChangeNotifier` disposal chain.
-- **Queue multiple responses** for multi-request flows (e.g., OTP send followed by verify) using `mockDriver.mockQueue(responses)` when available in the test driver, or call `mockDriver.mockResponse()` between the two actions.
-- **Feature flags** are set via `Config.set` in `setUp` before the controller is created: `Config.set('magic_starter.features.teams', true)`.
-
-<a name="related"></a>
-## Related
-
-- [MagicStarterServiceProvider](https://magic.fluttersdk.com/packages/starter/architecture/service-provider) — bootstrap entry point, IoC bindings, and Gate ability registration
-- [MagicStarterManager](https://magic.fluttersdk.com/packages/starter/architecture/manager) — central singleton holding all customization registrations
-- [Views and Layouts](https://magic.fluttersdk.com/packages/starter/basics/views-and-layouts) — MagicStatefulView lifecycle and Wind UI rendering conventions
-- [Magic Framework — IoC Container](https://magic.fluttersdk.com/getting-started/ioc-container) — singleton, factory, and findOrPut reference
-- [Magic Framework — Service Providers](https://magic.fluttersdk.com/getting-started/service-providers) — two-phase bootstrap lifecycle
+- [State Management](../guides/state-management.md): writing your own controller on the same pattern.
+- [Service Provider](service-provider.md): the bootstrap, IoC bindings and Gate abilities.
+- [Manager](manager.md): the singleton holding every customisation registration.
+- [Session Scope](../basics/session-scope.md): resetting session-scoped controllers.
+- [Views and Layouts](../basics/views-and-layouts.md): the `MagicStatefulView` lifecycle and rendering conventions.
+- [Magic controllers](https://anilcancakir.com/magic/docs/basics/controllers): `MagicController` and `MagicStateMixin` in core.

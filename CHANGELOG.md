@@ -15,8 +15,13 @@ All notable changes to this project will be documented in this file.
 
 - **First stable release: version 1.0.0 replaces the planned 0.1.0 and requires `magic ^1.0.0` and `dowel ^1.0.0`; no API change beyond what is listed below.**
 - **Now depends on `magic ^1.0.0`, `magic_picker` and `magic_socket`.** `Pick` (attachments, profile photo) comes from `package:magic_picker/magic_picker.dart` and `BroadcastListeners` (support sync) from `package:magic_socket/magic_socket.dart`, since core 1.0.0 no longer ships either. (`pubspec.yaml`, `lib/src/support/support_sync.dart`, `lib/src/ui/views/support/magic_starter_support_attachments.dart`, `lib/src/ui/views/profile/`)
+- **The package page and every documentation link name the new location under `https://anilcancakir.com/magic/starter`.** The pub.dev page carries it from the next release. (`pubspec.yaml`, `README.md`, `llms.txt`, `doc/`, `skills/`, `tool/check-docs.py`)
+- **Package metadata names the new owner.** The pub.dev description is rewritten, and the homepage, repository and issue tracker point at `anilcancakir`. (`pubspec.yaml`)
 - **`starter:configure` accepts `--no-<feature>` on a real command line.** dowel registers a signature flag as non-negatable, so `--no-teams` (the form the usage and the docs show) was rejected with "Could not find an option named"; the command now registers the eight feature flags as negatable. (`lib/src/cli/commands/magic_starter_configure_command.dart`)
 - **Direct dependencies raised to the latest release.** `path ^1.9.1`, `web ^1.1.2` and dev `test ^1.32.0`. (`pubspec.yaml`)
+- **The dashboard `starter:install` scaffolds links to the current Magic pages.** Its Documentation, GitHub and CLI Commands cards open `https://anilcancakir.com/magic/docs/getting-started/installation`, `https://github.com/anilcancakir/magic` and `https://anilcancakir.com/magic/docs/packages/magic-cli`, and the CLI card names `dart run magic:dowel list`. (`assets/stubs/install/dashboard_view.stub`)
+- **The `plugin:install` message says what the chained `starter:install` really does.** The chain runs non-interactively and writes every feature `false`, and a later `starter:install --features=...` skips the config file that exists by then unless `--force` is passed; the message now points at `starter:configure` or `--no-bootstrap`. (`install.yaml`)
+- **`starter:install` names the right command when the host is not a Magic app.** The error says to run `dart run magic:dowel magic:install`, not `magic install`. (`lib/src/cli/commands/magic_starter_install_command.dart`)
 
 ## [0.0.73] - 2026-11-08
 

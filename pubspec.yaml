@@ -1,16 +1,14 @@
 name: magic_starter
-description: Starter kit for Magic Framework. Auth, Profile, Teams, Notifications — 14 opt-in features with overridable views.
+description: "Ready-made Magic screens for sign-in, profile, teams, notifications, billing and support chat, each one overridable from your app through a view registry."
 version: 1.0.0
-homepage: https://magic.fluttersdk.com/starter
-documentation: https://magic.fluttersdk.com/packages/starter/getting-started/installation
-repository: https://github.com/fluttersdk/magic_starter
-issue_tracker: https://github.com/fluttersdk/magic_starter/issues
+homepage: https://anilcancakir.com/magic/starter
+repository: https://github.com/anilcancakir/magic_starter
+issue_tracker: https://github.com/anilcancakir/magic_starter/issues
 
 topics:
   - authentication
   - starter-kit
-  - magic
-  - flutter
+  - magic-framework
   - admin-panel
 
 # Inherited from `magic`, not chosen here: magic 1.0.0 declares

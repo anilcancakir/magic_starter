@@ -1,5 +1,7 @@
 # Support
 
+The support desk: screens, a chat popup and optional ratings, attachments and feedback that let a signed-in customer write to your team and follow the answer inside the app.
+
 - [Introduction](#introduction)
 - [Enabling the Desk](#enabling-the-desk)
 - [Screens](#screens)
@@ -16,11 +18,13 @@
 - [The Feedback Card](#the-feedback-card)
 - [Store Review](#store-review)
 - [Overriding a Screen](#overriding-a-screen)
+- [Gotchas](#gotchas)
+- [Related Documentation](#related-documentation)
 
 <a name="introduction"></a>
 ## Introduction
 
-The support desk lets a signed-in customer write to your team and follow the answer without leaving the app. It is the client of `magic-starter-laravel`'s support API (`support/conversations`), which scopes every conversation to the user who opened it: a teammate asking for someone else's thread gets the same 404 as a missing one. Staff answer from the backend's admin panel; nothing on this side reads or writes another user's conversation.
+The desk is the client of `magic-starter-laravel`'s support API (`support/conversations`), which scopes every conversation to the user who opened it: a teammate asking for someone else's thread gets the same 404 as a missing one. Staff answer from the backend's admin panel; nothing on this side reads or writes another user's conversation.
 
 <a name="enabling-the-desk"></a>
 ## Enabling the Desk
@@ -44,9 +48,9 @@ registerMagicStarterSupportRoutes();
 
 The profile dropdown shows its Support item whenever the feature is on, so a host that enables the feature without registering the routes ships a menu item that leads nowhere. A host that draws its own account menu instead of `MSUserProfileDropdown` adds its own entry pointing at `MagicStarterConfig.supportRoute()`.
 
-The backend has to enable the same feature (`Features::support()` in `config/magic-starter.php`); with it off the endpoints do not exist and the screens show their error state. The screens below need `magic-starter-laravel` with the AI desk columns (`topic`, `awaiting_ai`, `last_message` and the paginated list); an older backend still requires a `subject`, which the create form no longer sends.
+The backend has to enable the same feature (`Features::support()` in `config/magic-starter.php`); with it off the endpoints do not exist and the screens show their error state. The screens below need `magic-starter-laravel` with the AI desk columns (`topic`, `awaiting_ai`, `last_message` and the paginated list).
 
-Six further flags build on it. All default to `false`, and the first four need the backend to turn on the feature of the same name (`Features::supportCsat()`, `supportFeedback()`, `supportAttachments()`, `supportClientContext()`) because they call routes and fields it adds; `support_chat` and `store_review` are client only:
+Further flags build on it. All default to `false`. `support_csat`, `support_feedback`, `support_attachments` and `support_client_context` need the backend to turn on the feature of the same name (`Features::supportCsat()`, `supportFeedback()`, `supportAttachments()`, `supportClientContext()`) because they call routes and fields it adds; `support_chat` and `store_review` are client only:
 
 ```dart
 'features': {
@@ -61,7 +65,7 @@ Six further flags build on it. All default to `false`, and the first four need t
 ```
 
 | Flag | Adds |
-|------|------|
+|:-----|:-----|
 | `support_csat` | A thumbs rating under a resolved thread |
 | `support_feedback` | `MagicStarterFeedbackCard`, a "Send feedback" page and menu item |
 | `support_attachments` | Image and PDF files on a new conversation and on a reply, and in the thread |
@@ -75,14 +79,14 @@ Six further flags build on it. All default to `false`, and the first four need t
 ## Screens
 
 | Path | View key | What it shows |
-|------|----------|---------------|
+|:-----|:---------|:--------------|
 | `/support` | `support.index` | The user's conversations in an Open and a Resolved tab, newest activity first. Each row shows the sender and a preview of the last message, a status badge and an unread dot when staff or the AI wrote since the last read. A "Load more" button reads the next page (20 a page); a refresh rereads every page already loaded, so the poll never collapses them, and the Resolved tab offers "Load more" instead of an empty claim while pages remain |
 | `/support/new` | `support.create` | Topic chips and a message with a character counter, posted with source `in_app`. A "How it works" card sits beside the form on a wide screen and collapses to one line above it on a phone |
 | `/support/:id` | `support.thread` | Chat bubbles by who wrote them, activity lines for handoffs, and a composer docked at the bottom |
 
 `/support/new` and `/support/:id` are pushed (`.stacked()`), so the back gesture returns to the list. Opening a thread that has an unread reply sends a seen receipt and clears the dot; a thread with nothing unread sends none.
 
-All three screens share one `MagicStarterSupportController`. A thread read that answers after the reader has already opened another thread is dropped, so a slow response never puts one conversation's messages under another's composer. A page of the list that answers after the list was reloaded is dropped the same way, and a row already held is not added twice when new activity moves it between two page reads.
+All the screens share one `MagicStarterSupportController`. A thread read that answers after the reader has already opened another thread is dropped, so a slow response never puts one conversation's messages under another's composer. A page of the list that answers after the list was reloaded is dropped the same way, and a row already held is not added twice when new activity moves it between two reads.
 
 <a name="chat-popup"></a>
 ## Chat Popup
@@ -114,20 +118,11 @@ The panel floats at the bottom right of the screen, like a chat widget, wherever
 
 ### Sharing state with the pages
 
-The popup and the `/support` pages run side by side without conflict:
-
-- `MagicStarterSupportSync` owns the one 30 second poll, the one `magic_starter_support` broadcast listener and one refetch after a reconnect, for every open surface. A surface calls `retain()` and `release()`, asks for a thread with `watchThread()` and sends a seen receipt through `markSeenOnce()`. A closed launcher holds no poll.
-- `MagicStarterSupportController` keeps a thread per conversation id (`fetchThread`, `threadFor`, `threadStatusFor`), so the popup and the page can show different threads. A write locks per surface (`surface: 'page'` for the pages, `'chat'` for the panel): a reply on the page and a new conversation in the popup run together, a second tap on the same surface is refused.
-- `MagicStarterSupportChatState` holds whether the panel is open, its mode (list, thread, create) and the active thread, and resets when the session changes.
-- `MagicStarterSupportThreadBody`, `MagicStarterSupportThreadMessages`, `MagicStarterSupportComposer` and `MagicStarterSupportCreateForm` are the route-free parts both the pages and the panel render. They never read a route, never load a thread and never clear errors on mount. A host widget that listens to the controller mixes in `MagicStarterSupportControllerRebuild`.
-
-A host that replaces `support.chat_panel` takes over the shared-refresh retain and release, the thread watch and the seen receipt.
+The popup and the `/support` pages run side by side without conflict. `MagicStarterSupportSync` owns the one 30 second poll, the one broadcast listener and one refetch after a reconnect for every open surface, and a closed launcher holds no poll. The controller keeps a thread per conversation id, so the popup and a page can show different threads, and a write locks per surface (`'page'` for the pages, `'chat'` for the panel): a reply on the page and a new conversation in the popup run together, a second tap on the same surface is refused. A host that replaces `support.chat_panel` takes over the shared-refresh `retain()` and `release()`, the thread watch and the seen receipt.
 
 Limit: validation errors and write errors (`getError`, `writeError`) are still held once on the controller, not per surface, so an error one surface raised is visible to the other while both are open. The knowledge-base suggestions on the create form are shared the same way: there is one list, and `forgetArticleSuggestions` runs when a create form mounts, so opening the panel's form clears the suggestions of the form on the page. On native macOS the Escape key inside the composer may be consumed by the text field before it reaches the panel; the web is unaffected.
 
-The copy keys are `magic_starter.support.chat.close`, `.launcher`, `.open_full_page` and `.unread` (`:count unread`). The package ships no Turkish stub: a host adds the keys to each catalogue it ships, and an app with a published `en.json` merges them from `assets/stubs/install/en.stub`.
-
-Not built: a bottom sheet variant for a narrow screen, and a typing presence indicator (the AI typing bubble of the thread is shown). On a layout with no room for the launcher, the `/support` routes remain the way in.
+The copy lives under `magic_starter.support.chat.*`. The package ships English only: a host adds the keys to each catalogue it ships, and an app with a published `en.json` merges them from `assets/stubs/install/en.stub`. On a layout with no room for the launcher, the `/support` routes remain the way in.
 
 <a name="the-ai-desk"></a>
 ## The AI Desk
@@ -135,7 +130,7 @@ Not built: a bottom sheet variant for a narrow screen, and a typing presence ind
 When the backend has an AI responder bound, a verified customer's conversation starts with the AI answering. The screens read three fields the backend computes and never guess at them:
 
 | Field | Meaning | What the screen shows |
-|-------|---------|-----------------------|
+|:------|:--------|:----------------------|
 | `awaiting_ai` | Pending, and the newest customer message has no AI answer yet | An "AI answering" pill, a typing bubble in the thread and the line "Our AI answers right away and hands off to the team when needed" above the composer |
 | `waiting_on_team` | Open and waiting on a person | A "Team answering" pill and the line "Our team usually replies within a few hours" above the composer |
 | neither | Answered, or finished | The plain "Open" badge, or the "Resolved" pill |
@@ -151,7 +146,7 @@ The composer sits in the page scaffold's `footer`, above the keyboard. On web an
 <a name="knowledge-base-articles"></a>
 ## Knowledge Base Articles
 
-When the backend runs `magic-starter-laravel` with `support.articles.enabled`, two screens point the customer at its public knowledge-base articles:
+When the backend runs `magic-starter-laravel` with `support.articles.enabled`, the create form and AI answers point the customer at its public knowledge-base articles:
 
 - **While writing.** Once the new-conversation message has 12 characters and typing has paused for 600 ms, the form asks `GET support/articles?search=&locale=` (the message cut to 200 characters, the app's language code) and shows up to three articles, question and excerpt, under a "These may help" label above Start conversation. A slower earlier answer never replaces a newer one, falling under 12 characters clears them, and a failed or switched-off (404) lookup shows nothing.
 - **Under an AI answer.** An AI message parses `articles` (`slug`, `question`, `url`), and its bubble shows one `MagicStarterSupportArticleCard` per article. No other sender's message renders them.
@@ -178,7 +173,7 @@ On a phone the thread hides the bottom navigation, like a chat screen: `register
 <a name="live-updates"></a>
 ## Live Updates
 
-The list and the thread refetch when the backend broadcasts `support.conversation.updated` on the private channel `App.Models.User.{id}`. They subscribe through `BroadcastListeners`, which the notification bell shares, so neither listener replaces the other. With no broadcast driver configured, or while the socket is down, both screens poll every 30 seconds instead.
+The list and the thread refetch when the backend broadcasts `support.conversation.updated` on the private channel `App.Models.User.{id}`. They subscribe through `BroadcastListeners` from `magic_socket` (see [Listeners](https://anilcancakir.com/magic/docs/socket/basics/listeners)), which the notification bell shares, so neither listener replaces the other. With no broadcast connection configured, or while the socket is down, both screens poll every 30 seconds instead.
 
 <a name="contact-sales"></a>
 ## Contact Sales
@@ -290,6 +285,27 @@ Each screen resolves through the view registry, so a host replaces one the usual
 MagicStarter.view.register('support.thread', () => const MySupportThreadView());
 ```
 
-`support.feedback` joins the three screens above when `support_feedback` is on, and `support.chat` (the launcher) and `support.chat_panel` (the floating panel) when `support_chat` is on.
+`support.feedback` joins `support.index`, `support.create` and `support.thread` when `support_feedback` is on, and `support.chat` (the launcher) and `support.chat_panel` (the floating panel) when `support_chat` is on.
 
 Copy lives under `magic_starter.support.*`, `magic_starter.nav.support` and `magic_starter.titles.support*`. A host that published its own `en.json` adds those keys from `assets/stubs/install/en.stub`.
+
+<a name="gotchas"></a>
+## Gotchas
+
+| Mistake | Fix |
+|:--------|:----|
+| Enabling `support` without calling `registerMagicStarterSupportRoutes()` | The flag alone mounts no page, and the profile menu still shows its Support item. Call it from your route provider; `starter:doctor` warns when it is missing. |
+| Turning on `support_csat`, `support_feedback`, `support_attachments` or `support_client_context` on the client only | They call routes and fields the backend adds only with its feature of the same name. Turn on both sides. |
+| Mounting `MagicStarterSupportChatLauncher` more than once | A second launcher opens a second panel. Mount it once in the shell. |
+| Passing a `className` to the launcher that only tweaks the default | A value replaces the default trigger classes. Give it a full list, including `flex flex-row`. |
+| Adding a topic in `magic_starter.support.topics` the backend does not know | The keys are wire values the backend validates against its own `support.topics`. Add it on both sides. |
+| Calling `MagicStarterStoreReview.maybeRequest()` from a button | The platform decides whether a sheet appears and says nothing back. Call it from a milestone; use "Rate us" (`openStoreListing()`) for a button. |
+
+<a name="related-documentation"></a>
+## Related Documentation
+
+- [Profile](./profile.md): the settings hub and the profile menu that carries the Support item.
+- [Teams](./teams.md): the billing screen whose "Contact sales" opens a conversation.
+- [Views and Layouts](./views-and-layouts.md): the view registry the screens resolve through.
+- [Configuration](../getting-started/configuration.md): the feature flags and the `support` keys.
+- [Listeners](https://anilcancakir.com/magic/docs/socket/basics/listeners): the broadcast listeners the live updates share.

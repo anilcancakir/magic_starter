@@ -1,6 +1,9 @@
 # CLI Commands
 
+The `starter:*` commands that scaffold, configure, diagnose, publish and remove the starter inside a Magic application, run through `dart run magic:dowel`.
+
 - [Introduction](#introduction)
+- [Quick Reference](#quick-reference)
 - [Install Command](#install-command)
     - [What It Creates](#what-it-creates)
     - [What It Injects](#what-it-injects)
@@ -17,50 +20,64 @@
 - [Uninstall Command](#uninstall-command)
 - [Stub Templates](#stub-templates)
 - [Testing CLI Commands](#testing-cli-commands)
+- [Gotchas](#gotchas)
+- [Related Documentation](#related-documentation)
 
 <a name="introduction"></a>
 ## Introduction
 
-Magic Starter provides five CLI commands that manage the full lifecycle of the plugin inside a host Magic application, from initial scaffolding through configuration, diagnostics, customization, and removal. The commands surface through the host app's `dowel` dispatcher (run them as `dart run magic:dowel starter:<command>`): each extends `DowelCommand` (install extends `DowelInstallCommand`), declares a `signature` DSL string for its arguments and flags, and implements async `handle(DowelContext ctx)` for the execution logic.
+The package has no executable of its own. `MagicStarterDowelProvider` contributes its commands to the host app's `dowel` registry, so they run as `dart run magic:dowel starter:<command>`. `dart run magic:dowel plugin:install magic_starter` registers the provider and, unless you pass `--no-bootstrap`, chains `starter:install` as the plugin's bootstrap command. The chain always forwards `--non-interactive`, so it writes every feature as `false` and a later `starter:install --features=...` skips the config file that exists by then: pass `--no-bootstrap` and run `starter:install` yourself (see [Installation](../getting-started/installation.md#installing-the-package)).
 
-Every command resolves the host project root via `FileHelper.findProjectRoot()` and validates that the target is a Magic project before proceeding.
+Each command extends `DowelCommand` (install extends `DowelInstallCommand`), declares a `signature` DSL string for its arguments and flags, and implements `handle(DowelContext ctx)`. Every command resolves the host project root through `FileHelper.findProjectRoot()`.
+
+<a name="quick-reference"></a>
+## Quick Reference
+
+| Command | Purpose |
+|:--------|:--------|
+| `starter:install` | Scaffolds config, middleware, models, dashboard and routes, and injects the registrations into existing host files. |
+| `starter:configure` | Turns feature flags on in `lib/config/magic_starter.dart`; `--show` prints the current state. |
+| `starter:doctor` | Checks the installation; also exposed as the read-only MCP tool `starter_doctor`. |
+| `starter:publish` | Copies views, layouts, middleware, config or translations into the host for customisation. |
+| `starter:uninstall` | Removes the files and injections `starter:install` made. |
 
 <a name="install-command"></a>
 ## Install Command
 
 ```bash
-dart run magic_starter install
+dart run magic:dowel starter:install
 ```
 
-The installer is a multi-step scaffolding command that sets up Magic Starter in a host application. It validates the host project, prompts for feature selection, generates files from stubs, and injects registrations into existing config files.
+The installer validates the host project, asks which features to enable (one yes/no prompt per feature key, unless `--features` or `--non-interactive` is passed), generates files from stubs and injects registrations into existing files. It throws when `lib/config/app.dart` is missing, which means the host has not been scaffolded: run `dart run magic:dowel magic:install` first.
 
 <a name="what-it-creates"></a>
 ### What It Creates
 
-The installer generates the following files from stub templates:
+Each file is written only when it does not exist yet, or when `--force` is passed:
 
 | File | Purpose |
-|------|---------|
-| `lib/config/magic_starter.dart` | Feature toggle configuration with selected features enabled |
+|:-----|:--------|
+| `lib/config/magic_starter.dart` | Feature toggle configuration with the selected features enabled |
 | `lib/app/middleware/ensure_authenticated.dart` | Auth guard middleware |
 | `lib/app/middleware/redirect_if_authenticated.dart` | Guest redirect middleware |
-| `lib/app/models/user.dart` | User model with `Authenticatable` implementation |
-| `lib/app/models/team.dart` | Team model (only when teams feature is enabled) |
-| `lib/app/providers/app_service_provider.dart` | Service provider with facade setup |
+| `lib/app/models/user.dart` | User model |
+| `lib/app/models/team.dart` | Team model (only when `teams` is enabled) |
 | `lib/resources/views/dashboard_view.dart` | Dashboard view scaffold |
-| `lib/routes/app_routes.dart` | App routes file with starter route registrations |
-| `assets/lang/en.json` | Translation strings |
+| `lib/routes/app.dart` | App routes file with the dashboard inside the authenticated layout |
+| `lib/app/providers/app_service_provider.dart` | Created from a stub; an existing file is injected into instead, unless `--force` replaces it |
+| `assets/lang/en.json` | Translation strings, deep-merged into an existing file |
 
 <a name="what-it-injects"></a>
 ### What It Injects
 
-Beyond creating new files, the installer modifies existing host files:
+Beyond creating files, the installer modifies existing host files. Each injection checks for its own marker first, so a re-run adds nothing twice:
 
-- **`lib/config/app.dart`** — Adds `MagicStarterServiceProvider` to the providers list and its import
-- **`lib/main.dart`** — Adds `magicStarterConfig` factory to the config factories list and its import
-- **`lib/app/kernel.dart`** — Registers `EnsureAuthenticated` and `RedirectIfAuthenticated` middleware aliases
-- **`lib/app/providers/route_service_provider.dart`** — Adds starter route registration calls (`registerMagicStarterAuthRoutes`, etc.)
-- **`pubspec.yaml`** — Ensures `assets/lang/` is listed in the assets section
+- **`lib/config/app.dart`**: adds `MagicStarterServiceProvider` to the providers list (the `install.yaml` manifest step).
+- **`lib/main.dart`**: adds the `magicStarterConfig` factory to the config factories, a `WindThemeData` with a `primary` palette passed to `MagicApplication`, and the `config/magic_starter.dart` and `material_ui` imports.
+- **`lib/app/kernel.dart`**: registers the `auth` (`EnsureAuthenticated`) and `guest` (`RedirectIfAuthenticated`) middleware aliases.
+- **`lib/app/providers/route_service_provider.dart`**: adds `registerMagicStarterAuthRoutes()` and `registerMagicStarterProfileRoutes()`, plus the team, notification and support route registrations when those features are enabled.
+- **`lib/app/providers/app_service_provider.dart`**: injects `MagicStarter.bootstrap(...)` (and `MagicStarter.useNavigation(...)`) into `boot()` unless the provider already configures the starter.
+- **`pubspec.yaml`**: lists `assets/lang/en.json` under `flutter: assets:`, and adds `magic_notifications` when `notifications` is enabled.
 
 ```dart
 // Injected into lib/config/app.dart
@@ -70,81 +87,69 @@ MagicStarterServiceProvider(),
 () => magicStarterConfig,
 ```
 
-> [!NOTE]
-> The installer validates that `lib/config/app.dart` exists before proceeding. If Magic Framework is not installed, it throws an exception: _"Magic Framework not detected. Run `magic install` first."_
-
 <a name="install-flags"></a>
 ### Flags
 
 | Flag | Description |
-|------|-------------|
-| `--force`, `-f` | Overwrite existing generated files |
-| `--non-interactive` | Skip interactive prompts, use defaults or `--features` |
-| `--features` | Comma-separated feature keys for non-interactive mode |
+|:-----|:------------|
+| `--force` | Overwrite existing generated files and replace `app_service_provider.dart` instead of injecting into it |
+| `--dry-run` | Stages the transactional writes (config, middleware, models, dashboard, routes, provider registration) without writing them. The in-place edits of `main.dart`, `kernel.dart`, the route provider, `AppServiceProvider`, the translations and `pubspec.yaml` still run. |
+| `--non-interactive` | Skip the prompts; every feature stays off unless `--features` names it |
+| `--no-bootstrap` | Inherited from `DowelInstallCommand`; read by `plugin:install`, which is what chains this command |
+| `--features` | Comma-separated feature keys; passing it implies `--non-interactive` |
 
 ```bash
 # Interactive installation (prompts for each feature)
-dart run magic_starter install
+dart run magic:dowel starter:install
 
 # Non-interactive with specific features
-dart run magic_starter install --non-interactive --features teams,notifications,registration
+dart run magic:dowel starter:install --features=teams,notifications,registration
 
 # Force overwrite existing files
-dart run magic_starter install --force
+dart run magic:dowel starter:install --force
 ```
 
 > [!TIP]
-> When `--features notifications` is included, the installer automatically runs `dart run magic_notifications install --non-interactive` to set up the notifications package dependency.
+> With `notifications` enabled the installer does not run the `magic_notifications` installer. It adds the dependency to `pubspec.yaml` and prints `dart run magic:dowel notifications:install --app-id=<your-onesignal-app-id>`, because OneSignal needs an app id only you have.
 
 <a name="configure-command"></a>
 ## Configure Command
 
 ```bash
-dart run magic_starter configure
+dart run magic:dowel starter:configure
 ```
 
-Updates individual feature flags in `lib/config/magic_starter.dart` without modifying any other file. All I/O is delegated through `MagicStarterConfigHelper`.
+Updates individual feature flags in `lib/config/magic_starter.dart` without modifying any other file. It exits with an error when that file does not exist. With no flag it prints a warning and changes nothing.
 
 <a name="show-current-config"></a>
 ### Show Current Config
 
 ```bash
-dart run magic_starter configure --show
+dart run magic:dowel starter:configure --show
 ```
 
-Displays a formatted table of all feature toggles and their current status:
+Prints every feature key found in the config file with its status:
 
 ```
 Current Magic Starter Feature Configuration:
 
-Feature              Status
-teams                enabled
-social_login         disabled
-two_factor           disabled
-notifications        enabled
+Feature        Status
+-------------  --------
+teams          enabled
+social_login   disabled
 ...
 ```
 
 <a name="toggle-features"></a>
 ### Toggle Features
 
-Each feature has a boolean flag that can be enabled or disabled:
-
 ```bash
 # Enable teams and notifications
-dart run magic_starter configure --teams --notifications
-
-# Disable social login
-dart run magic_starter configure --no-social-login
-
-# Mix enable and disable
-dart run magic_starter configure --teams --no-social-login --notifications
+dart run magic:dowel starter:configure --teams --notifications
 ```
 
-Available feature flags:
-
 | CLI Flag | Config Key |
-|----------|------------|
+|:---------|:-----------|
 | `--teams` | `teams` |
 | `--social-login` | `social_login` |
 | `--two-factor` | `two_factor` |
@@ -155,66 +160,69 @@ Available feature flags:
 | `--email-verification` | `email_verification` |
 
 > [!NOTE]
-> Only flags explicitly provided on the command line are modified. Omitted flags remain untouched in the config file. The command modifies the Dart source file directly using string replacement via `MagicStarterConfigHelper.updateFeature()`.
+> Only flags you pass are touched; the rest stay as they are. The command rewrites the Dart source with a regular expression through `MagicStarterConfigHelper.updateFeature()`. Features without a flag here (registration, billing, support and the rest) are edited in the config file by hand.
+
+Each flag is negatable: `--teams` turns the feature on and `--no-teams` turns it off, for example `dart run magic:dowel starter:configure --no-teams`.
+Flipping a toggle edits the config file and nothing else. A feature that needs scaffolding (teams needs the `Team` model, the `User` team accessors, the `bootstrap()` team callbacks and `registerMagicStarterTeamRoutes()`) gets it only from `starter:install`.
 
 <a name="non-interactive-mode"></a>
 ### Non-Interactive Mode
 
-The configure command is non-interactive by design — it operates entirely through CLI flags. This makes it suitable for CI pipelines and automation scripts.
+The configure command never prompts: it works entirely through flags. That makes it safe for CI pipelines and scripts.
 
 <a name="doctor-command"></a>
 ## Doctor Command
 
 ```bash
-dart run magic_starter doctor
+dart run magic:dowel starter:doctor
 ```
 
-Runs a series of independent health checks to verify that Magic Starter was installed correctly. Each check reports pass or fail, and the command exits with code 0 (all pass) or code 1 (any failure).
+Runs independent checks that the starter was installed correctly. It exits with code 0 when every required check passes and code 1 otherwise. The same report is available to agents as the MCP tool `starter_doctor`, which takes an optional `verbose` boolean.
 
 <a name="health-checks"></a>
 ### Health Checks
 
 | Check | What It Verifies |
-|-------|-----------------|
+|:------|:-----------------|
 | Magic Framework | `lib/config/app.dart` exists |
 | Starter Config | `lib/config/magic_starter.dart` exists |
-| Provider | `MagicStarterServiceProvider` registered in `app.dart` |
-| Config Factory | `magicStarterConfig` wired in `main.dart` |
-| Middleware | `EnsureAuthenticated` registered in `kernel.dart` |
-| Routes | `registerMagicStarterAuthRoutes` called in `route_service_provider.dart` |
-| Facade | `MagicStarter.useNavigation` configured in `app_service_provider.dart` |
+| Provider | `MagicStarterServiceProvider` appears in `lib/config/app.dart` |
+| Config Factory | `magicStarterConfig` appears in `lib/main.dart` |
+| Middleware | `EnsureAuthenticated` appears in `lib/app/kernel.dart` |
+| Routes | `registerMagicStarterAuthRoutes` appears in `route_service_provider.dart` |
+| Facade | `app_service_provider.dart` calls `MagicStarter.bootstrap(` or one of the legacy `useUserModel`, `useLocaleOptions`, `useLogout` setters |
 | Translations | `assets/lang/en.json` exists |
+| Billing web origin | Reported and required only when `billing` is enabled: `billing.web_origin` must be set to a non-empty value |
+
+Three more lines appear only when relevant and never fail the command: a `Support routes: WARN` line when `support` is enabled but `registerMagicStarterSupportRoutes()` is not called, a `Push external id prefix` line when `notifications` is enabled (the prefix must equal the backend's `onesignal.external_id_prefix`), and a `Published Views` list that marks a published view `WARN` when `AppServiceProvider` does not register it.
 
 ```
-Magic Starter — Doctor Report
-==================================================
-
-Magic Framework: ✓
-Starter Config: ✓
-Provider: ✓
-Config Factory: ✓
-Middleware: ✓
-Routes: ✓
-Facade: ✗
-Translations: ✓
+Magic Framework: OK
+Starter Config: OK
+Provider: OK
+Config Factory: OK
+Middleware: OK
+Routes: OK
+Facade: FAIL
+Translations: OK
 
 Missing Requirements:
-  ✗ MagicStarter facade not configured in app_service_provider.dart
+  FAIL MagicStarter facade not configured in app_service_provider.dart
 
-1 check(s) failed. Run `dart run magic_starter install` to fix.
+1 check(s) failed. Run `dart run magic:dowel starter:install` to fix.
 ```
 
 <a name="verbose-mode"></a>
 ### Verbose Mode
 
 ```bash
-dart run magic_starter doctor --verbose
+dart run magic:dowel starter:doctor --verbose
 ```
 
-Shows the file path inspected for each check and the specific string searched for:
+Shows the file inspected for each check and the string searched for:
 
 ```
-Provider: ✓
+Provider: OK
     File: lib/config/app.dart
     Contains: MagicStarterServiceProvider
 ```
@@ -223,35 +231,43 @@ Provider: ✓
 ## Publish Command
 
 ```bash
-dart run magic_starter publish
+dart run magic:dowel starter:publish
 ```
 
-Copies plugin source files into the host application for customization — the Magic Starter equivalent of Laravel's `vendor:publish`. Published files can be edited freely; the view registry will pick up your custom versions when you re-register them.
+Copies plugin source files into the host application for customisation, the starter's equivalent of Laravel's `vendor:publish`. Without `--tag` it publishes every group. When views or layouts are published, the command registers them in `AppServiceProvider` (`MagicStarter.view.register(...)` and `registerLayout(...)`) so the registry serves your copy.
 
 <a name="publish-tags"></a>
 ### Publish Tags
 
 ```bash
 # Publish everything
-dart run magic_starter publish
+dart run magic:dowel starter:publish
 
 # Publish only views
-dart run magic_starter publish --tag views
+dart run magic:dowel starter:publish --tag=views
 
-# Publish with force overwrite
-dart run magic_starter publish --force
+# One module, one view, one layout
+dart run magic:dowel starter:publish --tag=views:auth
+dart run magic:dowel starter:publish --tag=views:auth.login
+dart run magic:dowel starter:publish --tag=layouts:app
+
+# Overwrite existing files
+dart run magic:dowel starter:publish --force
 ```
 
 | Tag | What It Publishes |
-|-----|-------------------|
+|:----|:------------------|
 | `config` | `lib/config/magic_starter.dart` |
-| `views` | All view files to `lib/resources/views/starter/` |
+| `views` | View files to `lib/resources/views/starter/` |
+| `layouts` | `app` and `guest` layouts to `lib/resources/layouts/starter/` |
 | `middleware` | Auth middleware files to `lib/app/middleware/` |
 | `lang` | Translation file to `assets/lang/en.json` |
 | `all` (default) | All of the above |
 
+A `views:<scope>` scope is either one registry key (`auth.login`) or a module prefix (`auth`) taken from the command's view map; an unknown scope prints an error. Views with no entry in that map, such as the handoff page, are published only by the unscoped `views` tag.
+
 > [!NOTE]
-> Without `--force`, existing files are skipped with a warning. The command reports the total number of published files at the end.
+> Without `--force`, existing files are skipped with a warning. The command reports the number of published files at the end.
 
 > [!NOTE]
 > A published file is a snapshot of the release that published it. A later release that changes a view or a layout does not reach your copy: read the CHANGELOG entry for the edits it names, or re-publish with `--force` and re-apply your own changes.
@@ -260,37 +276,37 @@ dart run magic_starter publish --force
 ## Uninstall Command
 
 ```bash
-dart run magic_starter uninstall
+dart run magic:dowel starter:uninstall
 ```
 
-Performs a safe reverse of the install command. It removes generated files and cleans up injected lines from host config files while keeping user code intact.
+Performs a reverse of the install command. It removes generated files and cleans up injected lines from host config files while keeping user code intact. It lists what it will remove and asks for confirmation first.
 
 What it removes:
 
 - `lib/config/magic_starter.dart`
-- `magic_starter` dependency from `pubspec.yaml`
-- `MagicStarterServiceProvider` import/registration from `lib/config/app.dart`
-- `magicStarterConfig` import/factory from `lib/main.dart`
-- Middleware aliases/imports from `lib/app/kernel.dart`
-- Route imports/registrations from `route_service_provider.dart`
+- The `magic_starter` dependency from `pubspec.yaml`
+- The `MagicStarterServiceProvider` import and registration from `lib/config/app.dart`
+- The `magicStarterConfig` import and factory from `lib/main.dart`
+- The middleware aliases and imports from `lib/app/kernel.dart`
+- The route imports and registrations from `route_service_provider.dart`
 
 ```bash
-# Skip confirmation prompt
-dart run magic_starter uninstall --force
+# Skip the confirmation prompt
+dart run magic:dowel starter:uninstall --force
 ```
 
-Each removal step is wrapped in error handling — already-clean projects and partial installations will not crash the command. After removal, `dart format .` is run automatically.
+Each removal step is wrapped in error handling, so already-clean projects and partial installations do not crash the command. Afterwards `dart format .` runs automatically.
 
 > [!TIP]
-> The uninstall command does not remove your custom AppServiceProvider integrations, middleware files, or translation entries. These are listed as manual cleanup recommendations after uninstall completes.
+> The uninstall command does not remove your `AppServiceProvider` integrations, the middleware files or the translation entries. It lists them as manual cleanup once it finishes.
 
 <a name="stub-templates"></a>
 ## Stub Templates
 
-All generated files are built from stub templates in the `assets/stubs/install/` directory:
+Generated files are built from stub templates in the `assets/stubs/install/` directory:
 
 | Stub | Output |
-|------|--------|
+|:-----|:-------|
 | `magic_starter_config.stub` | `lib/config/magic_starter.dart` |
 | `ensure_authenticated.stub` | `lib/app/middleware/ensure_authenticated.dart` |
 | `redirect_if_authenticated.stub` | `lib/app/middleware/redirect_if_authenticated.dart` |
@@ -298,27 +314,18 @@ All generated files are built from stub templates in the `assets/stubs/install/`
 | `team.stub` | `lib/app/models/team.dart` |
 | `app_service_provider.stub` | `lib/app/providers/app_service_provider.dart` |
 | `dashboard_view.stub` | `lib/resources/views/dashboard_view.dart` |
-| `app_routes.stub` | `lib/routes/app_routes.dart` |
+| `app_routes.stub` | `lib/routes/app.dart` |
 | `en.stub` | `assets/lang/en.json` |
 
-Stub paths are resolved relative to the plugin package at runtime. The installer searches multiple paths with fallback via `getStubSearchPaths()`:
-
-```dart
-List<String> getStubSearchPaths() {
-  return [
-    _resolvePluginStubsDir(),        // Package URI resolution
-    '${Directory.current.path}/assets/stubs', // Local fallback
-  ];
-}
-```
+Stub paths are resolved relative to the plugin package at runtime. The installer searches two locations through `getStubSearchPaths()`: the plugin's `assets/stubs` found through `.dart_tool/package_config.json`, then `assets/stubs` under the current directory.
 
 > [!NOTE]
-> Stubs are plain Dart/JSON files with placeholder tokens that the installer replaces based on the selected features. Never hardcode absolute stub paths — always resolve via the package URI mechanism.
+> Stubs are plain Dart and JSON files with placeholder tokens that the installer replaces based on the selected features. Never hardcode absolute stub paths; resolve them through the package config.
 
 <a name="testing-cli-commands"></a>
 ## Testing CLI Commands
 
-All CLI commands expose overridable methods for testability. Override these to isolate commands from the real filesystem:
+Commands expose overridable methods so a test can isolate them from the real filesystem:
 
 ```dart
 class TestableInstallCommand extends MagicStarterInstallCommand {
@@ -341,23 +348,33 @@ class TestableInstallCommand extends MagicStarterInstallCommand {
 }
 ```
 
-Key overridable methods across commands:
-
 | Method | Commands | Purpose |
-|--------|----------|---------|
-| `getProjectRoot()` | All | Redirect to temp directory |
+|:-------|:---------|:--------|
+| `getProjectRoot()` | All | Redirect to a temp directory |
 | `getStubSearchPaths()` | Install | Point to test stub fixtures |
+| `resolveManifestPath()` | Install | Point to a test `install.yaml` |
 | `runDartFormat()` | Install, Uninstall | Skip formatting in tests |
-| `runNotificationInstaller()` | Install | Skip notification package setup |
-| `getPluginSourceDir()` | Publish | Point to test plugin source |
+| `getPluginSourceDir()` | Publish | Point to a test plugin source |
 
 > [!TIP]
-> The doctor command's individual check methods (`checkConfigExists()`, `checkProviderRegistered()`, etc.) accept a root path parameter, making them directly testable without subclassing.
+> The doctor command's check methods (`checkConfigExists()`, `checkProviderRegistered()` and the rest) take a root path, so they are testable without subclassing.
 
----
+<a name="gotchas"></a>
+## Gotchas
 
-**Related Links:**
+| Mistake | Fix |
+|:--------|:----|
+| Running `dart run magic_starter install` | The package has no executable. Every command is `dart run magic:dowel starter:<command>`. |
+| Running `starter:configure --teams` on a host installed without teams | It only flips `'teams': true` in the config; the `Team` model, the `User` team accessors, the `bootstrap()` team callbacks and the team routes are not written, so the app throws on startup. Commit your changes, then re-run `dart run magic:dowel starter:install --features=teams --force`, adding every other feature you want on, since the config is rewritten from that list. `--force` also replaces `AppServiceProvider` and overwrites the translation file. |
+| Expecting `starter:configure` to toggle every feature | Only the flags in the table have one. `registration`, `billing`, `support` and the others are edited in the config file. |
+| Running `starter:install` before the host is scaffolded | It throws when `lib/config/app.dart` is missing. Run `dart run magic:dowel magic:install` first. |
+| Expecting `--features` to leave the prompts on | Passing `--features` skips them, and every key it does not name is written as `false`. |
+| Expecting `starter:uninstall` to remove everything | `AppServiceProvider` integrations, middleware files and translation entries stay; it prints them as manual cleanup. |
 
-- [Installation](https://magic.fluttersdk.com/packages/starter/getting-started/installation)
-- [Configuration](https://magic.fluttersdk.com/packages/starter/getting-started/configuration)
-- [Service Providers](https://magic.fluttersdk.com/packages/starter/architecture/providers)
+<a name="related-documentation"></a>
+## Related Documentation
+
+- [Installation](../getting-started/installation.md): adding the package and registering the plugin.
+- [Configuration](../getting-started/configuration.md): the feature keys the config file carries.
+- [Views and Layouts](./views-and-layouts.md): overriding a screen without publishing it.
+- [Service Provider](../architecture/service-provider.md): what `MagicStarterServiceProvider` registers.

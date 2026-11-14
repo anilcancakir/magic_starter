@@ -212,7 +212,6 @@ class _MagicStarterSessionsViewState
   }
 
   Future<void> _revokeSession(BuildContext context, String tokenId) async {
-    // ignore: use_build_context_synchronously
     if (!context.mounted) return;
 
     final success = await confirmAndRun(
@@ -231,7 +230,6 @@ class _MagicStarterSessionsViewState
   }
 
   Future<void> _revokeOtherSessions(BuildContext context) async {
-    // ignore: use_build_context_synchronously
     if (!context.mounted) return;
 
     final success = await confirmAndRun(

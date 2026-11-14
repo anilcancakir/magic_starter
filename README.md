@@ -1,746 +1,276 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/fluttersdk/magic/master/.github/magic-logo.svg" width="120" alt="Magic Logo" />
+  <img src="https://raw.githubusercontent.com/anilcancakir/magic_starter/master/.github/magic-logo.svg" width="120" alt="Magic Starter logo" />
 </p>
 
 <h1 align="center">Magic Starter</h1>
 
 <p align="center">
-  <strong>Pre-built Auth, Profile, Teams & Notifications for the Magic Framework.</strong><br/>
-  22 opt-in features, every screen overridable.
+  <strong>Ship sign-in, settings and teams without writing the screens.</strong><br/>
+  Ready-made Magic screens for authentication, profile and security settings, teams, notifications, billing and support, each behind an opt-in feature toggle and each replaceable from your app through a view registry. The screens are the client of <code>magic-starter-laravel</code>'s <code>api/v1</code> routes.
 </p>
 
 <p align="center">
-  <a href="https://pub.dev/packages/magic_starter"><img src="https://img.shields.io/pub/v/magic_starter.svg" alt="pub.dev version" /></a>
-  <a href="https://github.com/fluttersdk/magic_starter/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/fluttersdk/magic_starter/ci.yml?branch=main&label=CI" alt="CI Status" /></a>
-  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT" /></a>
-  <a href="https://pub.dev/packages/magic_starter/score"><img src="https://img.shields.io/pub/points/magic_starter" alt="pub points" /></a>
-  <a href="https://github.com/fluttersdk/magic_starter/stargazers"><img src="https://img.shields.io/github/stars/fluttersdk/magic_starter?style=flat" alt="GitHub Stars" /></a>
+  <a href="https://pub.dev/packages/magic_starter"><img src="https://img.shields.io/pub/v/magic_starter.svg" alt="pub package"></a>
+  <a href="https://github.com/anilcancakir/magic_starter/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/anilcancakir/magic_starter/ci.yml?branch=master&label=CI" alt="CI"></a>
+  <a href="https://codecov.io/gh/anilcancakir/magic_starter"><img src="https://codecov.io/gh/anilcancakir/magic_starter/graph/badge.svg" alt="codecov"></a>
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT"></a>
+  <a href="https://pub.dev/packages/magic_starter/score"><img src="https://img.shields.io/pub/points/magic_starter" alt="pub points"></a>
 </p>
 
 <p align="center">
-  <a href="https://magic.fluttersdk.com/starter">Website</a> ·
-  <a href="https://magic.fluttersdk.com/packages/starter/getting-started/installation">Docs</a> ·
+  <a href="https://anilcancakir.com/magic/docs/starter">Documentation</a> ·
   <a href="https://pub.dev/packages/magic_starter">pub.dev</a> ·
-  <a href="https://github.com/fluttersdk/magic_starter/issues">Issues</a> ·
-  <a href="https://github.com/fluttersdk/magic_starter/discussions">Discussions</a>
+  <a href="https://github.com/anilcancakir/magic_starter/issues">Issues</a>
 </p>
 
----
+## At a glance
 
-## Why Magic Starter?
+| Fact | Value |
+|---|---|
+| Package | [`magic_starter`](https://pub.dev/packages/magic_starter) |
+| Install | `flutter pub add magic_starter`, then `dart run magic:dowel plugin:install magic_starter --no-bootstrap` and `dart run magic:dowel starter:install --features=...` |
+| Import | `package:magic_starter/magic_starter.dart`; `package:magic_starter/cli.dart` for the dowel provider alone; `package:magic_starter/previews.dart` for dev-only component previews |
+| Entry points | `MagicStarterServiceProvider` (wiring), `MagicStarter` (facade: `bootstrap`, `view`, theme setters), `MagicStarterConfig` (toggles and routes), `registerMagicStarter*Routes()`, `EnsureAuthenticated`, `RedirectIfAuthenticated`; the `starter:*` commands |
+| Platforms | Pure Dart, no native code: every platform Flutter and `magic` run on. Billing checks out through Stripe on the web and through the store on mobile (`magic_payments`); the store review prompt and the web update banner are platform-specific (see [Features](#features)). |
+| Requires | Dart >=3.13, Flutter >=3.47, `magic` ^1.0.0, and a backend serving `magic-starter-laravel`'s `api/v1` routes for anything that signs in |
+| Dependencies | `magic`, `magic_notifications`, `magic_payments`, `magic_picker`, `magic_socket`, `wind_kit`, `material_ui`, `dowel`, `in_app_review`, `package_info_plus`, `web`, `args`, `path` |
+| License | MIT |
 
-Stop rebuilding authentication, profile management, and team features from scratch in every project. The same screens, the same API calls, the same state management — over and over.
+## Install
 
-**Magic Starter** gives you production-ready screens for auth, profile, teams, and notifications out of the box. Everything is config-driven with 20 opt-in feature toggles. Every view is overridable via the view registry: swap any screen or layout from your host app without touching the package.
+```bash
+flutter pub add magic_starter
+dart run magic:dowel plugin:install magic_starter --no-bootstrap
+dart run magic:dowel starter:install --features=registration,teams,notifications
+```
 
-> **Config-driven starter kit.** Enable only what you need. Override any screen. Ship faster.
+`plugin:install` registers `MagicStarterDowelProvider` under `.dowel/plugins.json` and injects `MagicStarterServiceProvider` into `lib/config/app.dart`. Pass `--no-bootstrap`: without it, `plugin:install` chains `starter:install` and always forwards `--non-interactive`, so the chained run asks nothing and writes every feature as `false`. A later `starter:install --features=...` then skips the config file that now exists (and `lib/app/models/user.dart`) and still reports success, so the features stay off. Run `starter:install` yourself, with `--features=` naming the keys you want (a key you leave out is written as `false`) or without it to answer one yes/no question per feature. If you already ran the chain, turn features on with `dart run magic:dowel starter:configure --teams`, edit `lib/config/magic_starter.dart`, or re-run `starter:install --features=... --force`, which overwrites the files it generated and replaces `app_service_provider.dart` instead of injecting into it.
 
----
+`starter:install` writes `lib/config/magic_starter.dart`, the `auth` and `guest` middleware, a `User` model (and `Team` with `teams` on), a dashboard and `lib/routes/app.dart`, and injects the config factory into `lib/main.dart`, the middleware aliases into `lib/app/kernel.dart`, the route registrations into the route service provider, a `MagicStarter.bootstrap(...)` call into `AppServiceProvider` and the starter's English strings into `assets/lang/en.json`. The app must already be a Magic app: run `dart run magic:dowel magic:install` first. `dart run magic:dowel starter:doctor` checks the result.
+
+## Bootstrap
+
+Tell the starter how to build your user, how to sign out and which languages to offer, from `AppServiceProvider.boot()`. The installer writes this call for you.
+
+```dart
+import 'package:magic/magic.dart';
+import 'package:magic_starter/magic_starter.dart';
+
+class AppServiceProvider extends ServiceProvider {
+  AppServiceProvider(super.app);
+
+  @override
+  void register() {}
+
+  @override
+  Future<void> boot() async {
+    MagicStarter.bootstrap(
+      // Your own model; `User` is the host's class.
+      userFactory: (data) => User.fromMap(data),
+      onLogout: () async {
+        await Auth.logout();
+        MagicRoute.to(MagicStarterConfig.loginRoute());
+      },
+      locales: {
+        'en': 'English',
+        'tr': 'Türkçe',
+      },
+    );
+  }
+}
+```
+
+| Member | Meaning |
+|--------|---------|
+| `MagicStarter.bootstrap(userFactory:, onLogout:, locales:)` | The identity contract in one call. Optional: `onLogin`, `onGuestClaimed`, and the team trio `currentTeam`, `allTeams`, `onSwitch`. |
+| `MagicStarter.switchTeam(id)` | Switches the current team on the backend and re-identifies the store billing rail; route the `onSwitch` callback through it. |
+| `MagicStarter.beforeLogout(hook)` | Runs before the sign-out, while the token still works. |
+| `MagicStarter.isReady` | `false` while `teams` is on and no team resolver is registered. |
+
+Failure modes:
+
+| Situation | What happens |
+|-----------|--------------|
+| Some but not all three team callbacks | `bootstrap()` throws `ArgumentError` before it changes anything. |
+| `teams` on and no team callbacks | `bootstrap()` throws `StateError` naming the flag. |
+| No `bootstrap()` or `useUserModel()` at all | Every screen reads the starter's own `MagicStarterAuthUser` instead of your model, silently. |
+| `MagicStarterServiceProvider` not registered | `MagicStarter` falls back to a default manager and prints one debug warning; the auth listeners, the push identity and the `starter.*` Gate abilities are never wired. |
 
 ## Features
 
-| | Feature | Description |
-|---|---------|-------------|
-| :key: | **Authentication** | Login, register, forgot/reset password, remember me |
-| :shield: | **Two-Factor Auth** | Enable/disable 2FA with QR code, OTP confirm, recovery codes |
-| :bust_in_silhouette: | **Profile Management** | Photo upload, email/password change, email verification, sessions |
-| :busts_in_silhouette: | **Teams** | Create, switch, invite members, manage roles |
-| :bell: | **Notifications** | Real-time polling, mark read/unread, preference matrix |
-| :iphone: | **OTP Login** | Phone-based guest authentication with send/verify flow |
-| :inbox_tray: | **Guest Claim** | A guest's data moves to the account they sign in to next, with an `onGuestClaimed` hook |
-| :speech_balloon: | **Support Desk** | Customer conversations with staff, realtime replies, and a Contact sales handoff from billing |
-| :art: | **Wind UI** | Tailwind-like className system — no Material widgets, dark mode built-in |
-| :package: | **Design-System Components** | 39 atomic components (MSButton, MSInput, MSBadge, MSDialog, MSToast, MSTabs, MSAccordion, MSDataTable, and more) plus `MagicStarterTokens` semantic alias layer |
-| :gear: | **20 Feature Toggles** | All opt-in, configure only what you need |
-| :jigsaw: | **View Registry** | Override any screen or layout from the host app |
-| :hammer_and_wrench: | **CLI Tools** | install, configure, doctor, publish, uninstall |
+Every toggle in `lib/config/magic_starter.dart` defaults to `false`. A toggle that is off registers no route and no view key and shows no UI.
 
----
+| Toggle | Turns on |
+|--------|----------|
+| `registration` | The register route. |
+| `email_verification` | The verify-email page and resend. |
+| `two_factor` | Two-factor setup, the challenge screen and recovery codes. |
+| `phone_otp` | The phone one-time code sign-in. |
+| `guest_auth` | "Continue as guest" on login, and claiming the guest's data at the next sign-in. |
+| `social_login` | Provider buttons, the Connected accounts page and provider confirmation. Needs a bridge from `MagicStarter.useSocialAuth(...)`; `magic_social_auth` publishes one. |
+| `handoff` | `/auth/handoff?code=&next=`: a one-time code from another surface becomes a session after a "Sign in as ...?" question. |
+| `extended_profile`, `profile_photos`, `timezones` | Phone, language and timezone fields, the photo upload, the timezone search. |
+| `sessions`, `newsletter` | The sessions list with revoke, the newsletter toggle. |
+| `teams` | Team create, settings, invitations and switching. Needs the team callbacks. |
+| `notifications` | `magic_notifications`' list, bell and preferences in the app shell, and the push identity of a signed-in device. |
+| `billing` | The `teams.billing` view over `magic_payments`. Needs `billing.web_origin`. |
+| `support`, `support_csat`, `support_feedback`, `support_attachments`, `support_client_context`, `support_chat` | The support desk and its options; every option needs `support`. |
+| `store_review` | The native review prompt and the Rate us item; Android, iOS and macOS, never on the web. |
+| `releases`, `app_update` | A "What's new" page and version caption; an update banner (a new web deploy from `version.json`, a newer store build). |
 
-## Quick Start
+Failure modes:
 
-### 1. Add the dependency
+| Situation | What happens |
+|-----------|--------------|
+| `MagicStarter.view.make(key)` for a feature that is off | Throws `StateError`; check `MagicStarterConfig.has<Feature>Features()` first. |
+| `social_login` on, no bridge | No provider buttons and no hub row render. The flag alone does nothing visible. |
+| `billing` on, `billing.web_origin` unset or relative | Checkout fails at Stripe and the error is only logged: the button does nothing. `starter:doctor` reports the missing key. |
+| `billing` on | `lib/` registers the `teams.billing` view key and no route. Register a page of yours at `MagicStarterConfig.billingRoute()` (`routes.billing`, default `/teams/billing`) that builds `MagicStarter.view.make('teams.billing')`, or the upgrade prompts lead nowhere. |
+| `notifications.external_id_prefix` differs from the backend's `MAGIC_STARTER_EXTERNAL_ID_PREFIX` | OneSignal accepts the id and delivers to nobody. Both default to `user_`. |
+| `support` turned on after install | Call `registerMagicStarterSupportRoutes()` yourself, or the Support menu item leads nowhere. |
 
-```yaml
-dependencies:
-  magic_starter: ^1.0.0
-```
+The full key list, the route prefixes and the billing, push, handoff and legal keys: [Configuration](https://anilcancakir.com/magic/docs/starter/getting-started/configuration).
 
-### 2. Install configuration
+## Routes and middleware
 
-```bash
-dart run magic:dowel starter:install
-```
-
-This generates `lib/config/magic_starter.dart`, injects `MagicStarterServiceProvider` into `lib/config/app.dart`, and wires the `magicStarterConfig` factory into `lib/main.dart`.
-
-(If `magic_starter` is not yet registered as a provider in your host app, run `dart run magic:dowel plugin:install magic_starter` first; it registers `MagicStarterDowelProvider` under `.dowel/plugins.json`.)
-
-### 3. Boot the provider
-
-The `MagicStarterServiceProvider` is automatically registered during install. On app boot, it:
-
-- Registers the singleton manager with all customization hooks
-- Defines 9 Gate abilities for section visibility
-- Registers feature-gated routes for auth, profile, teams, and notifications
-- Boots the view registry with default screens and layouts
-
-That's it — auth, profile, teams, and notifications are ready to use.
-
----
-
-## Configuration
-
-After running the install command, edit `lib/config/magic_starter.dart`:
+The route groups ask for the `auth` and `guest` middleware by alias, and each registration function returns early when its feature is off.
 
 ```dart
-Map<String, dynamic> get magicStarterConfig => {
-  'magic_starter': {
-    'features': {
-      'teams': false,
-      'profile_photos': false,
-      'registration': true,
-      'two_factor': false,
-      'sessions': false,
-      'guest_auth': false,
-      'phone_otp': false,
-      'newsletter': false,
-      'email_verification': false,
-      'extended_profile': true,
-      'social_login': true,
-      'notifications': true,
-      'timezones': false,
-      'billing': false,
-    },
-    'auth': {
-      'email': true,
-      'phone': false,
-    },
-    'defaults': {
-      'locale': 'en',
-      'timezone': 'UTC',
-    },
-    'routes': {
-      'home': '/',
-      'login': '/auth/login',
-      'auth_prefix': '/auth',
-      'teams_prefix': '/teams',
-      'profile_prefix': '/settings',
-      'notifications_prefix': '/notifications',
-    },
-  },
-};
+import 'package:magic/magic.dart';
+import 'package:magic_starter/magic_starter.dart';
+
+void registerStarter() {
+  Kernel.registerAll({
+    'auth': () => EnsureAuthenticated(),
+    'guest': () => RedirectIfAuthenticated(),
+  });
+
+  registerMagicStarterAuthRoutes();
+  registerMagicStarterProfileRoutes();
+  registerMagicStarterTeamRoutes();
+  registerMagicStarterNotificationRoutes();
+  registerMagicStarterSupportRoutes();
+}
 ```
 
-All values are read at runtime via `ConfigRepository` — no hardcoded strings scattered across your codebase.
-
----
-
-## Feature Toggles
-
-All 24 features default to `false` (opt-in). Enable only what your app needs:
-
-| Toggle | Description |
-|--------|-------------|
-| `teams` | Team creation, switching, member invitations, role management |
-| `profile_photos` | Profile photo upload and display |
-| `registration` | User registration screen and flow |
-| `two_factor` | Two-factor authentication with QR code, OTP, and recovery codes |
-| `sessions` | Active session listing and revocation |
-| `guest_auth` | "Continue as guest" on the login screen, plus guest record and claim on a later sign-in; no routes of its own |
-| `phone_otp` | Phone-based OTP send/verify login flow |
-| `newsletter` | Newsletter subscribe/unsubscribe toggle |
-| `email_verification` | Email verification notice and resend flow |
-| `extended_profile` | Extended profile fields: phone, timezone, language |
-| `social_login` | Social login buttons on login and register (Google, Apple, GitHub, Microsoft), the Connected accounts page, and provider confirmation for sensitive actions. Needs a bridge registered with `MagicStarter.useSocialAuth(...)`; `magic_social_auth` publishes one |
-| `notifications` | Real-time notification polling, read/unread, preference matrix. Also declares and releases the push external id as sessions begin and end, prefixed by `notifications.external_id_prefix` (default `user_`, matching the backend) |
-| `timezones` | Timezone selection via async API search |
-| `billing` | Subscription and billing screen over `magic_payments`. Also needs `billing.web_origin`, an absolute url Stripe can return to |
-| `support` | Support desk screens, the Support profile-menu item and the Contact sales conversation, over `magic-starter-laravel`'s support API, with knowledge-base article suggestions while writing and article cards under AI answers when the backend's articles are on. The host registers the routes with `registerMagicStarterSupportRoutes()`; see [Support](doc/basics/support.md) |
-| `support_csat` | A thumbs up or down, with an optional comment, on a resolved conversation; asked again after each new resolution. Needs `support` |
-| `support_feedback` | The occasional 0 to 10 card (`MagicStarterFeedbackCard`, placed by the host) and the "Send feedback" page and menu item. Needs `support` |
-| `support_attachments` | Images and PDFs on customer messages (jpg, png, webp, pdf; 3 files, 5 MB each by default). Needs `support` |
-| `support_client_context` | Client info (app version, build, platform, OS version, locale, timezone) sent with a new conversation, shown to staff only. Needs `support` |
-| `support_chat` | `MagicStarterSupportChatLauncher` (view key `support.chat`), a host-mounted button with an unread badge that opens a floating, non-modal chat panel (`support.chat_panel`) at the bottom right of the screen. Mount it once; client only. Needs `support` |
-| `store_review` | The native store review prompt (`MagicStarterStoreReview.maybeRequest()` at a host milestone, never on the web) and the "Rate us" menu item |
-| `releases` | A "What's new" changelog page at `/settings/changelog` (view key `settings.changelog`), its settings hub row and the `MagicStarterAppVersion` caption, over `magic-starter-laravel`'s `GET releases`. Needs `Features::releases()` on the backend; see [Releases](doc/basics/releases.md) |
-| `app_update` | `MagicStarterAppUpdateBanner`, mounted by the shipped app layout: on the web it offers Reload when a new deploy appears in `version.json`, on a store-installed release build it offers Update when the backend's latest build is higher. The web banner reads only `version.json`; the store banner reads `GET releases` and needs `Features::releases()` on the backend; see [Releases](doc/basics/releases.md) |
-| `handoff` | The sign-in handoff page `/auth/handoff?code=&next=` (view key `auth.handoff`): trades a one-time code from `magic-starter-laravel`'s `POST auth/handoff` for a session, asks "Sign in as ...?" first (also with no session open, unless `handoff.confirm_without_session` is `false`), then opens `next`; see [Sign-in handoff](doc/basics/authentication.md#handoff) |
-
-The login and register screens also honour `?next=<path>` with every feature set: a valid in-app path becomes where the sign-in or sign-up lands.
-
----
-
-## View Customization
-
-Override any screen or layout from your host app using the view registry:
-
-```dart
-MagicStarter.view.register('auth.login', () {
-  return const MyCustomLoginView();
-});
-
-MagicStarter.view.registerLayout('layout.guest', (child) {
-  return MyCustomGuestLayout(child: child);
-});
-```
-
-All views are resolved through `MagicStarter.view.make('auth.login')` — the registry always wins over defaults.
-
-### Layout Customization
-
-```dart
-// Custom header — replaces the default mobile header
-MagicStarter.useHeader((context, isDesktop) {
-  return MyCustomHeader(showMenuButton: !isDesktop);
-});
-
-// Sidebar footer — custom widget between nav items and user menu
-MagicStarter.useSidebarFooter((context) {
-  return MyVersionBadge();
-});
-```
-
----
-
-## Design-System Components
-
-Magic Starter ships a full atomic design-system component library exported from `package:magic_starter/magic_starter.dart`. Every component lives in a canonical 4-file atomic folder (`<name>.dart`, `<name>.recipe.dart`, `<name>.preview.dart`, `index.dart`) under `lib/src/ui/components/` and is driven by a `WindRecipe` that reads from `MagicStarterTokens.defaultAliases`.
-
-### MagicStarterTokens
-
-`MagicStarterTokens.defaultAliases` is a map of 17 semantic roles to light+dark Wind className pairs:
-
-| Role | Example className pair |
-|------|----------------------|
-| `surface` | `bg-white dark:bg-gray-950` |
-| `fg` | `text-gray-900 dark:text-gray-50` |
-| `primary` | `bg-primary-600 dark:bg-primary-500` |
-| `destructive` | `bg-red-600 dark:bg-red-500` |
-| `border` | `border-gray-200 dark:border-gray-800` |
-
-Pass the map when configuring your Wind theme so all components resolve against semantic roles rather than raw palette utilities:
-
-```dart
-WindApp(
-  theme: WindThemeData(
-    aliases: MagicStarterTokens.defaultAliases,
-  ),
-  child: const MyApp(),
-)
-```
-
-> **`MS` prefix (breaking)**: every design-system component now carries an `MS` prefix (`MSButton`, `MSDialog`, `MSSwitch`, ...). This removes the Material collision entirely, so importing both `package:material_ui/material_ui.dart` and `package:magic_starter/magic_starter.dart` no longer needs a `hide` clause. See the [migration table](#migration-ms-prefix) below to update from the pre-`MS` names.
-
-### Component families
-
-| Family | Components |
-|--------|-----------|
-| Form controls | `MSButton`, `MSInput`, `MSTextarea`, `MSCheckbox`, `MSSwitch`, `MSRadio`, `MSSelect`, `MSCombobox` |
-| Display | `MSBadge`, `MSTypography`, `MSSkeleton`, `MSToast`, `MSTooltip`, `MSEmptyState`, `MSErrorState`, `MSDataTable` |
-| Selection / navigation | `MSSegmentedControl`, `MSTabs`, `MSAccordion`, `MSNavbar`, `MSDropdownMenu` |
-| Overlay | `MSDialog`, `MSBottomSheet`, `MSConfirmDialog` |
-| Composition | `MSAvatar`, `MSFormField`, `MSCard`, `MSPageHeader`, `MSSocialDivider` |
-| Page geometry | `MSPageContainer`, `MSPageScaffold`, `MSMasterDetail` |
-| Settings surface | `MSSettingsSection`, `MSSettingsRow`, `MSSettingsNavRow` |
-| Billing surface | `MSUsageMeter`, `MSUpgradeDialog`, `MSUpgradeNudge` |
-| App chrome | `MSUserProfileDropdown`, `MSTeamSelector` |
-
-`MSDataTable` has two constructors, and the choice is about the collection rather than the styling. The default renders every row you pass, which is right for a short and complete list. `MSDataTable.paginated` hands the body to magic's `MagicPaginatedListView` inside a bounded box, so a long collection costs the viewport instead of the whole result and reaching the tail asks the paginator for its next page. The header stays outside the scrolling body either way.
-
-All components accept Wind `className` strings and resolve colors through the semantic alias layer when configured. `MSButton`, `MSInput`, and `MSTextarea` also accept a `bool fullWidth = false` prop; setting it to `true` fills the parent width (wraps the rendered widget in a `SizedBox(width: double.infinity)` rather than a `className` token, since Material widgets ignore cross-axis stretch — see [flutter/flutter#19399](https://github.com/flutter/flutter/issues/19399)).
-
-<a name="migration-ms-prefix"></a>
-### Migration: the `MS` prefix
-
-Earlier previews exported these components under bare names. They now carry an
-`MS` prefix (and the old names are gone, no compat shim). Replace each old name
-with its `MS` counterpart and drop any `hide` clause you added for the Material
-collision:
-
-| Old | New | Old | New |
-|-----|-----|-----|-----|
-| `Button` | `MSButton` | `DropdownMenu` | `MSDropdownMenu` |
-| `Input` | `MSInput` | `DropdownMenuItem` | `MSDropdownMenuItem` |
-| `Textarea` | `MSTextarea` | `MagicFormField` | `MSFormField` |
-| `Checkbox` | `MSCheckbox` | `Navbar` | `MSNavbar` |
-| `Switch` | `MSSwitch` | `EmptyState` | `MSEmptyState` |
-| `Radio` | `MSRadio` | `ErrorState` | `MSErrorState` |
-| `Badge` | `MSBadge` | `SettingsSection` | `MSSettingsSection` |
-| `Typography` | `MSTypography` | `SettingsRow` | `MSSettingsRow` |
-| `Skeleton` | `MSSkeleton` | `SettingsNavRow` | `MSSettingsNavRow` |
-| `Select` | `MSSelect` | `SettingsScaffold` | `MSPageScaffold` |
-| `Combobox` | `MSCombobox` | `Card` | `MSCard` |
-| `SegmentedControl` | `MSSegmentedControl` | `PageHeader` | `MSPageHeader` |
-| `Tabs` | `MSTabs` | `SocialDivider` | `MSSocialDivider` |
-| `Accordion` | `MSAccordion` | `NotificationDropdown` | removed; see [Notifications](doc/basics/notifications.md) |
-| `AccordionItem` | `MSAccordionItem` | `UserProfileDropdown` | `MSUserProfileDropdown` |
-| `Dialog` | `MSDialog` | `TeamSelector` | `MSTeamSelector` |
-| `BottomSheet` | `MSBottomSheet` | `ConfirmDialog` | `MSConfirmDialog` |
-| `Toast` | `MSToast` | `Tooltip` | `MSTooltip` |
-
-The per-axis enums (`ButtonIntent`, `InputState`, ...) are unchanged.
-
-Two later changes go beyond that table. The six alias widgets are gone: use `MSCard`, `MSPageHeader`, `MSSocialDivider`, `MSTeamSelector` and `MSUserProfileDropdown` directly (the sixth, `MSNotificationDropdown`, is gone too, but for a different reason: see below). The remaining `MagicStarter*` widgets (`MagicStarterConfirmDialog`, `MagicStarterDialogShell`, `MagicStarterTimezoneSelect`, ...) keep their names. And the settings scaffold became the page scaffold, which renamed its recipes:
-
-| Before | After |
-|--------|-------|
-| `MSSettingsScaffold` | `MSPageScaffold` |
-| `settingsScaffoldScrollableRecipe()` | `pageScaffoldSurfaceRecipe()` |
-| `settingsScaffoldChildrenAreaRecipe()` | `pageScaffoldChildrenAreaRecipe()` |
-| `settingsScaffoldContainerRecipe()` | removed; render `MSPageContainer`, or call `pageContainerRecipe()` for the className alone |
-
-Every other recipe function is unchanged.
-
----
-
-## Reusable Widgets
-
-Magic Starter also exports a set of standalone UI widgets that consumer apps can use directly. No internal controller coupling required.
-
-### MSPageHeader
-
-Full-width page header with title, optional subtitle, optional leading widget, and an `actions` list. Renders `sm:flex-row` responsive layout with a `border-b` divider:
-
-```dart
-MSPageHeader(
-  title: trans('projects.title'),
-  subtitle: trans('projects.manage_subtitle'),
-  leading: BackButton(),
-  actions: [
-    PrimaryButton(label: trans('projects.new'), onTap: _onCreate),
-  ],
-)
-```
-
-`size: MSPageHeaderSize.large` renders a large title, and `MSPageScaffold(largeTitle: true)` collapses it into a compact bar (`MSPageHeaderSize.compact`) pinned over the page once it scrolls away. `MagicStarterPageHeaderTheme(largeTitle: true)` turns it on for every page, the starter's own included.
-
-#### Host-owned page chrome
-
-A host whose own bar shows the page title and back control (a phone top bar, say) claims them with `MagicStarter.useHostPageChrome`. Wherever the predicate answers true, every `MSPageHeader` and `MSPageScaffold`, the starter's pages included (the notification inbox and preferences too, whose headers the starter draws as `MSPageHeader` through `magic_notifications`' `headerBuilder`), draws only its actions and reports a `MagicStarterPageChromeEntry` (title, subtitle, back label and fallback) to `MagicStarter.pageChrome`; a large title does not collapse there, as there is no title to collapse. Only the page whose route is current reports, so `current` is the page on top, and null when that page has no `MSPageHeader`. Register nothing and every page is unchanged.
-
-```dart
-// In a service provider's boot():
-MagicStarter.useHostPageChrome((context) => MediaQuery.sizeOf(context).width < 768);
-
-// In the host's top bar:
-ListenableBuilder(listenable: MagicStarter.pageChrome, builder: (context, _) {
-  final entry = MagicStarter.pageChrome.current;
-  return TopBar(title: entry?.title, onBack: entry?.backFallback == null ? null : () => MagicRoute.back(fallback: entry!.backFallback));
-});
-```
-
-The chrome notifies after the frame in which the current entry changed, never during a build, and keeps the newer page's entry while two pages are briefly mounted together.
-
-### MSMasterDetail
-
-A list beside its selected item from `lg` up, and one of the two below it. Keep the selection in the route and a row tap is push navigation on a phone:
-
-```dart
-MSPageScaffold(
-  title: 'Stock',
-  children: [
-    MSMasterDetail(
-      master: StockList(selectedId: productId),
-      detail: productId == null ? null : ProductDetail(id: productId),
-      placeholder: const MSEmptyState(title: 'Pick a product'),
-    ),
-  ],
-)
-```
-
-`MSBottomSheet.show(context, ..., dialogBreakpoint: 'lg')` follows the same idea for overlays: a sheet on a phone, an `MSDialog` from `lg`, from one call. A modal theme with `presentation: MagicStarterModalPresentation.sheet` ignores the breakpoint and keeps the sheet at every width.
-
-A sheet holding unsaved input passes `canDismiss` (a `ValueListenable<bool>`, read when the gesture lands) and `onDismissBlocked`: while the value is false a drag down is off, and a scrim tap (or a screen reader's dismiss on it), Back and Escape leave the sheet (or its dialog) open and call `onDismissBlocked` with the sheet's own context, where the app asks whether to discard. The handle stays drawn but does not drag while the guard refuses. The sheet sits on the root navigator, so once the person confirms, close it with `Navigator.of(sheetContext).pop()`: a `pop` skips the guard, so it need not be flipped, while a `maybePop` stays refused. The opener's `context` would pop the wrong navigator. The footer's own `Navigator.pop` closes it too.
-
-```dart
-final canDismiss = ValueNotifier<bool>(true);
-
-await MSBottomSheet.show(
-  context,
-  title: 'Edit item',
-  body: WFormInput(onChanged: (_) => canDismiss.value = false),
-  canDismiss: canDismiss,
-  onDismissBlocked: (sheetContext) async {
-    if (await askToDiscard(sheetContext) && sheetContext.mounted) {
-      Navigator.of(sheetContext).pop();
-    }
-  },
-);
-```
-
-### MSCard
-
-Card wrapper with optional `title` slot, `noPadding` mode for full-bleed content, and three visual `variant` styles:
-
-| Variant | Appearance |
-|---------|-----------|
-| `CardVariant.surface` _(default)_ | White background, subtle border |
-| `CardVariant.inset` | Gray-50 recessed background, border |
-| `CardVariant.elevated` | White background, drop shadow — no border |
-
-```dart
-// Default surface card with title
-MSCard(
-  title: 'Team Members',
-  child: memberList,
-)
-
-// Full-bleed elevated card
-MSCard(
-  variant: CardVariant.elevated,
-  noPadding: true,
-  child: dataTable,
-)
-
-// Inset section card
-MSCard(
-  variant: CardVariant.inset,
-  title: 'Danger Zone',
-  child: deleteAccountButton,
-)
-```
-
-### MagicStarterPasswordConfirmDialog
-
-Standalone password-confirmation dialog. Pass an `onConfirm` callback that returns `null` on success or an error string to show inline. Works independently of any controller:
-
-```dart
-final confirmed = await MagicStarterPasswordConfirmDialog.show(
-  context,
-  title: trans('projects.delete_confirm_title'),
-  description: trans('projects.delete_confirm_description'),
-  onConfirm: (password) async {
-    final error = await ProjectService.deleteProject(id, password: password);
-    return error; // null = success, string = show error inline
-  },
-);
-
-if (confirmed) _removeProject();
-```
-
-### MagicStarterTwoFactorModal
-
-Multi-step 2FA wizard modal. Pass `setupData` (from the enable-2FA endpoint) and an `onConfirm` callback. Works for both initial setup and standalone re-authentication flows:
-
-```dart
-final success = await MagicStarterTwoFactorModal.show(
-  context,
-  setupData: response.data, // {secret, qr_svg, recovery_codes}
-  onConfirm: (code) async {
-    return await TwoFactorService.verify(code);
-  },
-);
-```
-
-### Other Exported Widgets
-
-| Widget | Purpose |
+| Member | Meaning |
 |--------|---------|
-| `MagicStarterAuthFormCard` | Centered card wrapper for auth-adjacent screens (invite accept, onboarding) |
-| `MagicStarterTimezoneSelect` | Searchable timezone dropdown backed by `GET /timezones` |
-| `MagicStarterFeedbackCard` | The occasional 0 to 10 feedback card behind `support_feedback`; renders nothing until the backend says the account is due |
-| `MagicStarterSettingsAccountGroup`, `MagicStarterSettingsSecurityGroup`, `MagicStarterSettingsPreferencesGroup` | The settings hub's three sections with their feature and ability checks, for a host that composes its own settings page (see [Composing a settings page](doc/architecture/view-registry.md#composing-a-settings-page)) |
-| `MSTeamSelector` | Current-team switcher dropdown with create/settings links |
-| `MSAvatar` | Photo with an initials or glyph fallback, clipped to the shape you pass |
-| `MSUserProfileDropdown` | User avatar menu with profile links, theme toggle, and logout |
-| `MSSocialDivider` | "Or continue with" divider for auth forms |
+| `registerMagicStarterAuthRoutes()` | Login, forgot and reset password always; register, two-factor challenge, OTP, verify email and handoff behind their toggles. Under `routes.auth_prefix`. |
+| `registerMagicStarterProfileRoutes()` | The settings hub and its sub-pages under `routes.profile_prefix`. |
+| `registerMagicStarterTeamRoutes()`, `registerMagicStarterNotificationRoutes()`, `registerMagicStarterSupportRoutes()` | No-ops while `teams`, `notifications` or `support` is off. |
+| `EnsureAuthenticated` | Sends a signed-out visitor to `routes.login` and remembers where they were going. |
+| `RedirectIfAuthenticated` | Sends a signed-in visitor to `routes.home`; a guest session is let through. |
 
-All widgets are exported from `package:magic_starter/magic_starter.dart`. The bell-icon dropdown moved out of this list: it now ships as `NotificationDropdown` from `magic_notifications`, see [Notifications](doc/basics/notifications.md).
+Failure mode: an `auth` or `guest` alias nobody registered is unresolvable, and magic's `Kernel.resolveAll` throws `StateError` for it. `starter:install` writes both into `lib/app/kernel.dart`.
 
----
+## View registry
+
+Replace a screen, a layout or a modal by key, or add a widget to a named slot of a shipped screen, from a provider's `boot()`. Defaults register only when a key is still free, so the order of providers does not matter.
+
+```dart
+import 'package:magic/magic.dart';
+import 'package:magic_starter/magic_starter.dart';
+
+void customiseStarter() {
+  // Your own screen; `MyLoginView` is the host's widget.
+  MagicStarter.view.register('auth.login', () => const MyLoginView());
+
+  MagicStarter.view.slot('auth.login', 'header', (context) {
+    return WText('Welcome back', className: 'text-2xl font-bold text-fg');
+  });
+}
+```
+
+| Member | Meaning |
+|--------|---------|
+| `register(key, builder)`, `registerLayout(key, builder)`, `registerModal(key, builder)` | Replace a view, a layout (`layout.app`, `layout.guest`) or a modal (`modal.confirm`, `modal.password_confirm`, `modal.two_factor`). |
+| `make(key)`, `makeLayout(key, child:)`, `makeModal(key)` | Build one; throws `StateError` for a key nobody registered. |
+| `has(key)`, `hasLayout(key)`, `hasModal(key)` | Whether a key is registered. |
+| `slot(viewKey, slotName, builder)`, `buildSlot(...)` | A widget inside a shipped view; a slot name the view does not read is inert. |
+
+The settings surface is `settings.hub` plus drill-down keys (`profile.profile`, `settings.appearance`, `settings.security.*`, ...). The notification screens are not on this registry: override them on `magic_notifications`' `Notify.view`. Every key and slot: [View Registry](https://anilcancakir.com/magic/docs/starter/architecture/view-registry). To own a screen's source instead, `dart run magic:dowel starter:publish --tag=views:auth.login` copies it into `lib/resources/views/starter/` and registers it; a published copy does not follow later releases.
 
 ## Theming
 
-### Navigation Theme
-
-Customize navigation colors, the brand/logo, and avatar styles without overriding any screens:
+The screens are built with Wind and the `MS`-prefixed components. Adopt your Wind palette in one call, then set the button and field standards, which that call resets.
 
 ```dart
-MagicStarter.useNavigationTheme(
-  MagicStarterNavigationTheme(
-    // Active nav item — supports independent light/dark tokens
-    activeItemClassName:
-        'active:text-amber-500 active:bg-amber-500/10 dark:active:text-amber-400 dark:active:bg-amber-400/10',
+import 'package:magic/magic.dart';
+import 'package:magic_starter/magic_starter.dart';
 
-    // Brand: text. Gradient text needs brandBuilder and a ShaderMask:
-    // Wind has no bg-clip-text, so text-transparent hides the label.
-    brandClassName: 'text-lg font-bold text-amber-500 dark:text-amber-400',
+void themeStarter(WindThemeData windTheme) {
+  MagicStarter.useWindTheme(windTheme);
 
-    // Brand: image/SVG logo (overrides brandClassName when set)
-    brandBuilder: (context) => Image.asset('assets/logo.png', height: 28),
+  MagicStarter.useButtonTheme(
+    const MagicStarterButtonTheme(shapeClassName: 'rounded-full'),
+  );
 
-    // Brand: a glyph for the compact, icon-only sidebar (falls back to brandBuilder)
-    compactBrandBuilder: (context) => Image.asset('assets/logo-mark.png', height: 28),
-
-    // Bottom nav active color
-    bottomNavActiveClassName: 'active:text-amber-500 dark:active:text-amber-400',
-
-    // Sidebar user menu avatar
-    avatarClassName: 'bg-amber-500/10 dark:bg-amber-400/10',
-    avatarTextClassName: 'text-sm font-bold text-amber-600 dark:text-amber-400',
-
-    // Profile dropdown trigger avatar
-    dropdownAvatarClassName: 'bg-gradient-to-tr from-amber-500 to-amber-300',
-    dropdownAvatarTextClassName: 'text-sm font-bold text-white',
-  ),
-);
+  MagicStarter.manager.pageContainerClassName =
+      'max-w-6xl px-4 lg:px-8 pt-6 pb-16';
+}
 ```
 
-### Modal Theme
+| Member | Meaning |
+|--------|---------|
+| `useWindTheme(WindThemeData)` | Derives every colour-bearing sub-theme from the palette's semantic aliases (`bg-surface`, `text-fg`, `bg-primary`, ...). |
+| `useTheme(MagicStarterTheme)` | Sets every sub-theme at once. |
+| `useNavigationTheme`, `useModalTheme`, `useFormTheme`, `useAuthTheme`, `useCardTheme`, `usePageHeaderTheme`, `useLayoutTheme`, `useDropdownTheme`, `useButtonTheme`, `useFieldTheme` | Set one sub-theme. |
+| `MagicStarter.manager.pageContainerClassName` | The width cap and padding every page shares; set it from your own pages' string. |
+| `MagicStarterTokens.defaultAliases` | The semantic aliases the components resolve; pass them as `WindThemeData(aliases: ...)`. |
 
-Customize dialog and modal styles — confirmation dialogs, password prompts, and two-factor modals all read from this theme:
+Failure modes:
 
-```dart
-MagicStarter.useModalTheme(
-  MagicStarterModalTheme(
-    containerClassName: 'rounded-2xl bg-white dark:bg-gray-900',
-    titleClassName: 'text-lg font-semibold text-gray-900 dark:text-white',
-    primaryButtonClassName: 'bg-primary hover:bg-primary/90 text-white',
-    dangerButtonClassName: 'bg-red-600 hover:bg-red-700 text-white',
-    maxWidth: 480,
-  ),
-);
-```
+| Situation | What happens |
+|-----------|--------------|
+| `useButtonTheme()` or `useFieldTheme()` before `useWindTheme()` or `useTheme()` | The later call resets them to their defaults, without an error. |
+| `useFormTheme(MagicStarterFormTheme(inputClassName: ...))` | Every field you left out goes back to its default; change one with `MagicStarter.formTheme.copyWith(...)` (the modal theme has `copyWith` too). |
+| A Wind alias the palette lacks | Wind drops it silently and the class paints nothing. |
 
-All theme fields are optional — omitted fields fall back to sensible defaults. Call both `useNavigationTheme()` and `useModalTheme()` in `AppServiceProvider.boot()` before any UI is painted.
+The derivation table: [wind_kit Theme Adoption](https://anilcancakir.com/magic/docs/starter/guides/wind-theme-adoption).
 
-`presentation: MagicStarterModalPresentation.adaptive` is the sheet below `dialogBreakpoint` (a Wind breakpoint, `'lg'` by default) and the centered dialog from it, for the starter's modals, `MSBottomSheet.show` and (with magic's overlay presentation seam) overlay routes alike, so one setting serves a phone and a desktop window. `presentation: MagicStarterModalPresentation.sheet` opens the starter's modals (`MSDialog.show`, `MSConfirmDialog.show`, the password confirm, step up and two factor dialogs) as the same bottom sheet at every width instead of a centered dialog, with the same return values. The plan upgrade prompt is the exception: it opens through magic's `MagicFeedback.showCustomDialog` and stays a dialog. The default, `dialog`, keeps a centered dialog, now drawn by one shared shell: the footer stays fixed and the header stays pinned above the scrolling body while it takes at most half of the room the body scrolls in, and scrolls away with the body when it would take more (a landscape phone, the keyboard up, a large text size), and the two factor wizard's actions sit in the shell's footer band. See [Modal Theme](doc/architecture/manager.md#modal-theme).
+## The backend
 
----
+The controllers call `magic-starter-laravel`'s `api/v1` routes one to one through magic's `Http` facade, with the base URL from `network.drivers.api.base_url`: `POST /auth/login`, `POST /auth/register`, `POST /auth/two-factor-challenge`, `PUT /user/profile`, `GET /teams/{team}/members`, `PUT /user/current-team`, and the rest. A feature you turn on here needs its feature on the backend too (`config/magic-starter.php` there), or its routes answer 404. The billing screen buys through `magic_payments` and the notification screens read through `magic_notifications`, both against the same backend. Without a backend the screens render and every submit shows the request's error.
 
-## Customization
+## CLI
 
-Magic Starter supports five levels of customization. Each level is independent — use only what your app requires.
+| Command | Does |
+|---------|------|
+| `dart run magic:dowel starter:install` | Scaffolds and injects the starter; `--features=`, `--non-interactive`, `--force`, `--dry-run`. `--dry-run` is not a full preview: it stages the file writes without writing them, but the in-place edits of `main.dart`, `kernel.dart`, the route provider, `AppServiceProvider`, the translations and `pubspec.yaml` still run. |
+| `dart run magic:dowel starter:configure` | `--show` prints the toggles; `--teams`, `--two-factor`, ... turn a toggle on and `--no-teams` and its siblings turn it off. It edits the config only, not the scaffolding a feature needs. |
+| `dart run magic:dowel starter:doctor` | Checks the install; also the read-only MCP tool `starter_doctor`. |
+| `dart run magic:dowel starter:publish` | `--tag=config`, `views`, `layouts`, `middleware`, `lang` or `all`, with a scope such as `views:auth`. |
+| `dart run magic:dowel starter:uninstall` | Removes the config file, the dependency and the injected registrations; lists the `AppServiceProvider` code, middleware files and strings to remove by hand. `--force` skips the prompt. |
 
-### Level 1: Config (Feature Toggles)
+## For AI coding agents
 
-Enable or disable entire modules via `lib/config/magic_starter.dart`. No code changes required:
+| Do | Because |
+|----|---------|
+| Import only `package:magic_starter/magic_starter.dart` (or `cli.dart` from a pure Dart dispatcher) | Everything under `src/` is private. |
+| Call `MagicStarter.bootstrap(...)` with the host's own `userFactory` | Without it every screen reads `MagicStarterAuthUser` and nothing fails. |
+| Pass all three team callbacks or none, and route `onSwitch` through `MagicStarter.switchTeam('$id')` | A partial set throws; a direct controller call skips the store rail re-identify. |
+| Check `MagicStarterConfig.has<Feature>Features()` before linking to or building a gated view | A key of a feature that is off is not registered and `make()` throws. |
+| Override a screen with `MagicStarter.view.register` and a notification screen with `Notify.view.register` | The notification screens live on `magic_notifications`' registry. |
+| Use `settings.hub` and the `settings.*` and `profile.profile` keys for the settings surface | `profile.settings` is not a registered default key. |
+| Call `useButtonTheme()` and `useFieldTheme()` after `useWindTheme()` or `useTheme()` | The unified calls reset them. |
+| Set `billing.web_origin` to an absolute URL with `billing` on | Stripe rejects a relative return URL and the failure is only logged. |
+| Keep `notifications.external_id_prefix` equal to the backend's `MAGIC_STARTER_EXTERNAL_ID_PREFIX` | A mismatch delivers pushes to nobody. |
+| Run commands as `dart run magic:dowel starter:<command>` | The package has no executable of its own. |
+| Never fake a sign-in in a test or a demo; bind a fake `NetworkDriver` and assert the request | Every flow concludes through the backend's answer. |
 
-```dart
-'features': {
-  'teams': true,
-  'two_factor': true,
-  'notifications': true,
-  // all others remain false
-},
-```
+## Dependencies
 
-### Level 2: Theme Tokens
+`magic` for the container, routing, `Auth`, `Http` and Wind (through `wind_kit` and `material_ui`); `magic_notifications` for the notification screens, polling and push; `magic_payments` for the billing rails; `magic_picker` for photo and attachment picking; `magic_socket` for the support desk's live refresh; `dowel` for the `starter:*` commands; `in_app_review` for the store review prompt; `package_info_plus` for the build number in the version caption and support context; `web` for the web update banner; `args` and `path` for the CLI.
 
-Apply Wind UI className overrides across all built-in screens at once using `MagicStarter.useTheme()`:
+## Links
 
-```dart
-MagicStarter.useTheme(
-  MagicStarterTheme(
-    form: MagicStarterFormTheme(
-      inputClassName: 'w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700',
-      primaryButtonClassName: 'w-full bg-primary hover:bg-primary/80 text-white font-semibold',
-    ),
-    card: MagicStarterCardTheme(
-      surfaceClassName: 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700',
-    ),
-  ),
-);
-```
-
-`MagicStarterTheme` has 10 sub-themes: `form`, `card`, `navigation`, `modal`, `layout`, `pageHeader`, `auth`, `dropdown`, `button`, `field`. All fields are optional.
-
-#### One-call adoption from a `WindThemeData`
-
-If your app already defines a Wind semantic palette (the 17 alias roles, e.g. via `MagicStarterTokens.defaultAliases` or a `design:sync`-generated map), skip building sub-theme structs entirely and adopt the whole palette in one call:
-
-```dart
-MagicStarter.useWindTheme(
-  WindThemeData(
-    colors: {'primary': myBrandColor},
-    aliases: MagicStarterTokens.defaultAliases, // or a design:sync map
-  ),
-);
-```
-
-`useWindTheme()` derives the 8 colour-bearing sub-themes from the theme's semantic roles (`bg-surface`, `text-fg`, `bg-primary`, `border-color-border`, `bg-destructive`, ...) and delegates to `useTheme()`. Each alias carries its own `dark:` pair, so one token re-skins both light and dark. It is additive: `useTheme()` and any `use*Theme()` setter still override afterward. A role you do not define keeps the shipped default (never an invisible surface). See [doc/guides/wind-theme-adoption.md](doc/guides/wind-theme-adoption.md) for the full alias-to-property mapping.
-
-#### One button standard
-
-`MSButton` reads its corner radius, the padding, minimum height and label type of each size, and the secondary border from `MagicStarterButtonTheme`. It is not derived by `useWindTheme()` (shape and size are the host's call), and `useWindTheme()` and `useTheme()` reset it, so set it after them:
-
-```dart
-const standard = 'px-5 py-[11px] text-[17px] leading-[22px] font-semibold';
-
-MagicStarter.useButtonTheme(
-  MagicStarterButtonTheme(
-    shapeClassName: 'rounded-full',
-    smClassName: standard,
-    mdClassName: standard,
-    lgClassName: standard,
-    secondaryBorderClassName: '',
-  ),
-);
-```
-
-The defaults are the previous `rounded-lg`, 32 / 36 / 47 px sizes and bordered secondary. Reach 44 px with vertical padding around a fixed line height, not `min-h-11`, which leaves the label at the top of the box. The auth screens follow this theme too: their submit buttons are `lg` and the social, guest and step-up provider buttons are `secondary` and `md`, and the form and auth themes' button strings (stock and derived by `useWindTheme()`) carry only the full width, the colours and the label weight, so the shape, the vertical padding, the label size and the secondary border are the button theme's. A `className` passed to a button is appended after the theme and wins, so two things never follow it. The first is your own button strings: a `useFormTheme()` or `useAuthTheme()` call that sets `primaryButtonClassName`, `secondaryButtonClassName` or `guestButtonClassName` keeps whatever shape, padding and label size you wrote in them, so leave those out (`MagicStarter.useFormTheme(MagicStarter.formTheme.copyWith(primaryButtonClassName: ...))` changes one string and keeps the other seven). The second is the dialogs, and the invite button of the team settings page, which draw raw `WButton`s on the modal theme's strings and ignore the button theme.
-
-#### One control standard
-
-`MSInput`, `MSSelect`, `MSCombobox` and `MSSegmentedControl` read their padding, minimum height and text type from `MagicStarterFieldTheme`: `inputSizeClassName` (the text, the placeholder and the typed value), `selectSizeClassName` (the trigger of the select, the combobox and the timezone select), `segmentedSmClassName` and `segmentedMdClassName` (the pill) and `segmentedPaddingClassName` (the root around the pills). Like the button theme it is not derived by `useWindTheme()`, and `useWindTheme()` and `useTheme()` reset it, so set it after them:
-
-```dart
-MagicStarter.useFieldTheme(
-  MagicStarterFieldTheme(
-    inputSizeClassName: 'py-[11px] text-[17px] leading-[22px]',
-    selectSizeClassName: 'py-2.5 text-[17px] leading-[22px]',
-    segmentedSmClassName: 'py-[7px] text-[17px] leading-[22px]',
-    segmentedMdClassName: 'py-[7px] text-[17px] leading-[22px]',
-    segmentedPaddingClassName: 'px-1 py-0 lg:py-1',
-  ),
-);
-```
-
-The defaults are the previous classes: an input and a select trigger 44 px tall below `lg` and 40 px from `lg` up, a 32 px (`md`) or 28 px (`sm`) pill in a root with 4 px of padding. Each control reaches 44 px with its own arithmetic: a text input paints its border inside its padding (11 + 22 + 11), a select trigger adds the border to its size (10 + 22 + 10 + 2), and a segmented pill is 36 px (7 + 22 + 7) in a root that keeps 4 px around it from `lg` up while the 44 px hit cell supplies them below it. A `className` passed to a control is appended after the theme and wins. The auth, profile and settings forms draw `WFormInput`s on `MagicStarterFormTheme.inputClassName` (which carries `py-3`), and the starter's own `WFormSelect`s (the team role select, the profile and preference language selects) read the same string for their trigger, so they follow only a string you write into that theme: `MagicStarter.useFormTheme(MagicStarter.formTheme.copyWith(inputClassName: ...))`. An input paints its border inside its padding and a select trigger adds it, so one `py-*` cannot make both 44 px; `py-[10px] min-h-11 text-[17px] leading-[22px]` does (see [doc/guides/wind-theme-adoption.md](doc/guides/wind-theme-adoption.md)).
-
-### Level 3: Builder Slots
-
-Override specific sections of a screen without replacing the full view. Use `MagicStarter.view.slot()` to register a partial builder for a named slot:
-
-```dart
-// Replace only the header section inside the profile view
-MagicStarter.view.slot('profile.settings', 'header', (context) {
-  return MyCustomProfileHeader();
-});
-```
-
-Slots let you inject custom widgets into predefined regions — useful when you need brand-specific visuals in one area but want the rest of the screen untouched.
-
-### Level 4: View Override
-
-Replace an entire screen with your own implementation. The host app always wins over package defaults:
-
-```dart
-MagicStarter.view.register('auth.login', () {
-  return const MyBrandedLoginView();
-});
-
-MagicStarter.view.registerLayout('layout.guest', (child) {
-  return MyCustomGuestLayout(child: child);
-});
-```
-
-All overridable `MagicStarter.view` keys: `auth.login`, `auth.register`, `auth.forgot_password`, `auth.reset_password`, `auth.verify_email`, `auth.two_factor_challenge`, `auth.otp_verify`, `auth.handoff`, `profile.settings`, `teams.create`, `teams.settings`, `teams.invitation_accept`, `layout.app`, `layout.guest`.
-
-The two notification screens moved to `magic_notifications`, which owns the data path they render, so they are overridden through **`Notify.view`** rather than through `MagicStarter.view`. The keys are unchanged (`notifications.list`, `notifications.preferences`) and this package still owns the routes and the shell they mount into:
-
-```dart
-Notify.view.register('notifications.list', () {
-  return const MyBrandedNotificationsView();
-});
-```
-
-The order does not matter: this package installs its own wrapped screens only when nobody has chosen one for that key, so a host registration lands whether it runs before or after the routes are mapped. Note the wording, because it is load-bearing: the key is never *absent*, since reading `Notify.view` seeds `magic_notifications`' own defaults into it. The question is `hasOverride`, not `has`.
-
-### Level 5: Publish and Own
-
-Copy a view file directly into your host app for complete control. Changes are permanent and tracked by `git`:
-
-```bash
-# Publish a single view
-dart run magic:dowel starter:publish --tag=views:auth.login
-
-# Publish all auth views
-dart run magic:dowel starter:publish --tag=views:auth
-
-# Run doctor to verify wiring
-dart run magic:dowel starter:doctor
-```
-
-The publish command copies the view to `lib/resources/views/starter/` and auto-wires it into `AppServiceProvider` so it takes effect immediately. Use `dart run magic:dowel starter:doctor` to confirm registration status.
-
-A published copy is a snapshot: a later release that changes a view does not reach it. When a release changes the view you published, its CHANGELOG entry names the edits to make by hand, or you re-publish with `--force` and re-apply yours.
-
----
-
-## CLI Tools
-
-Run any of these commands via your host app's dowel dispatcher:
-
-| Command | Description |
-|---------|-------------|
-| `dart run magic:dowel starter:install` | Scaffold config, provider, and routes into your Magic project |
-| `dart run magic:dowel starter:configure` | Interactively toggle features and update config |
-| `dart run magic:dowel starter:doctor` | Verify installation, check dependencies, diagnose issues |
-| `dart run magic:dowel starter:publish --tag=views:auth.login` | Publish a specific view/layout for full customization |
-| `dart run magic:dowel starter:uninstall` | Remove starter config, provider, and routes from your project |
-
----
-
-## Architecture
-
-```
-App launch → MagicStarterServiceProvider.boot()
-  → registers MagicStarterManager singleton
-  → defines 9 Gate abilities (starter.profile, starter.teams, etc.)
-  → reads feature toggles via ConfigRepository
-  → registers feature-gated routes (auth, profile, teams, notifications)
-  → boots view registry with default screens and layouts
-  → views resolve controllers via Magic.findOrPut()
-  → controllers use MagicStateMixin for state flow
-  → Wind UI renders all screens — no Material widgets
-```
-
-**Key patterns:**
-
-| Pattern | Implementation |
-|---------|---------------|
-| Singleton Manager | `MagicStarterManager` — central customization registry |
-| View Registry | `MagicStarterViewRegistry` — string-keyed view builders, host app overrides |
-| Feature Toggles | `MagicStarterConfig`, 20 opt-in flags via `ConfigRepository` |
-| Service Provider | Two-phase bootstrap: `register()` (sync) → `boot()` (async) |
-| IoC Container | All bindings via `Magic.singleton()` / `Magic.findOrPut()` |
-
----
-
-## Documentation
-
-| Document | Description |
-|----------|-------------|
-| [Installation](https://magic.fluttersdk.com/packages/starter/getting-started/installation) | Adding the package and running the installer |
-| [Configuration](https://magic.fluttersdk.com/packages/starter/getting-started/configuration) | Config file reference and feature toggles |
-| [Authentication](https://magic.fluttersdk.com/packages/starter/basics/authentication) | Login, register, forgot/reset password, 2FA, OTP |
-| [Profile](https://magic.fluttersdk.com/packages/starter/basics/profile) | Profile management, photo upload, sessions |
-| [Teams](https://magic.fluttersdk.com/packages/starter/basics/teams) | Team creation, switching, invitations, roles |
-| [Connected Accounts](https://magic.fluttersdk.com/packages/starter/basics/connected-accounts) | Link and unlink social providers |
-| [Confirming Identity](https://magic.fluttersdk.com/packages/starter/basics/identity-confirmation) | The step-up proof sensitive actions ask for |
-| [Set a Password](https://magic.fluttersdk.com/packages/starter/basics/set-password) | First password for a social-only account |
-| [Notifications](https://magic.fluttersdk.com/packages/starter/basics/notifications) | Real-time polling, preferences, read/unread |
-| [Views & Layouts](https://magic.fluttersdk.com/packages/starter/basics/views-and-layouts) | View registry, layout system, overriding screens |
-| [CLI Tools](https://magic.fluttersdk.com/packages/starter/basics/cli) | Install, configure, doctor, publish, uninstall |
-| [Manager](https://magic.fluttersdk.com/packages/starter/architecture/manager) | Singleton manager and customization hooks |
-| [Service Provider](https://magic.fluttersdk.com/packages/starter/architecture/service-provider) | Bootstrap lifecycle, Gate abilities, IoC bindings |
-| [View Registry](https://magic.fluttersdk.com/packages/starter/architecture/view-registry) | String-keyed builders and host app overrides |
-| [Controllers & State Registration](https://magic.fluttersdk.com/packages/starter/architecture/controllers) | Recommended state/controller registration pattern for consumer apps |
-| [State Management Guide](https://magic.fluttersdk.com/packages/starter/guides/state-management) | State management best practices and patterns |
-
----
-
-## Contributing
-
-Contributions are welcome! Please see the [issues page](https://github.com/fluttersdk/magic_starter/issues) for open tasks or to report bugs.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Write tests following the [TDD flow](#) — red, green, refactor
-4. Ensure all checks pass: `flutter test`, `dart analyze`, `dart format .`
-5. Submit a pull request
-
----
+- [Documentation](https://anilcancakir.com/magic/docs/starter/getting-started/installation): installation, configuration, every feature, the view registry, theming and the CLI
+- [API reference](https://pub.dev/documentation/magic_starter/latest/)
+- [llms.txt](llms.txt) and the [agent skill](skills/magic-starter/SKILL.md) for AI coding agents: `npx skills add anilcancakir/magic_starter`
+- [Changelog](CHANGELOG.md)
+- [Report an issue](https://github.com/anilcancakir/magic_starter/issues)
+- [Security policy](SECURITY.md)
 
 ## License
 
-Magic Starter is open-sourced software licensed under the [MIT License](LICENSE).
-
----
-
-<p align="center">
-  Built with care by <a href="https://github.com/fluttersdk">FlutterSDK</a><br/>
-  <sub>If Magic Starter helps your project, consider giving it a <a href="https://github.com/fluttersdk/magic_starter">star on GitHub</a>.</sub>
-</p>
+MIT, see [LICENSE](LICENSE). Built by [Anılcan Çakır](https://anilcancakir.com).

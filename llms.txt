@@ -1,0 +1,111 @@
+# magic_starter
+
+> Ready-made Magic screens for sign-in, profile and security settings, teams, notifications, billing and support. Each feature is an opt-in toggle in `lib/config/magic_starter.dart` (all default `false`), every screen, layout and modal is replaceable by key through `MagicStarter.view`, and the screens are the client of `magic-starter-laravel`'s `api/v1` routes.
+
+**Stack**: Flutter >=3.47.0 · Dart >=3.13.0 · Requires `magic` ^1.0.0 · Runtime deps: `magic`, `magic_notifications`, `magic_payments`, `magic_picker`, `magic_socket`, `wind_kit`, `material_ui`, `dowel`, `in_app_review`, `package_info_plus`, `web`, `args`, `path` · Pure Dart, no native code · A `magic-starter-laravel` backend (or one serving the same routes) for anything that signs in.
+
+**Setup**:
+
+```bash
+flutter pub add magic_starter
+dart run magic:dowel plugin:install magic_starter --no-bootstrap
+dart run magic:dowel starter:install --features=registration,teams,notifications
+```
+
+`plugin:install` registers `MagicStarterDowelProvider` and injects `MagicStarterServiceProvider` into `lib/config/app.dart`. Pass `--no-bootstrap`: the chained `starter:install` always gets `--non-interactive`, so it writes every feature `false`, and a later `starter:install --features=...` skips the config file that exists by then and still reports success (recover with `starter:configure`, a hand edit, or `--force`). Run `starter:install` yourself; an unlisted key is written `false`. `starter:install` writes the config, middleware, models, dashboard, routes, the `MagicStarter.bootstrap(...)` call and `assets/lang/en.json`.
+
+```dart
+import 'package:magic/magic.dart';
+import 'package:magic_starter/magic_starter.dart';
+
+class AppServiceProvider extends ServiceProvider {
+  AppServiceProvider(super.app);
+
+  @override
+  void register() {}
+
+  @override
+  Future<void> boot() async {
+    MagicStarter.bootstrap(
+      // `User` is the host's model.
+      userFactory: (data) => User.fromMap(data),
+      onLogout: () async {
+        await Auth.logout();
+        MagicRoute.to(MagicStarterConfig.loginRoute());
+      },
+      locales: {
+        'en': 'English',
+      },
+    );
+  }
+}
+```
+
+## API
+
+- `MagicStarterServiceProvider`: binds the `MagicStarterManager` singleton under `'magic_starter'` (its constructor registers the default view keys for the toggles that are on), wires the auth listeners (reload after a changed restore, `onLogin`, guest claim, push identity, saved locale, token revoke before logout) and defines the `starter.*` Gate abilities, which deny a guest. Not auto-registered.
+- `MagicStarter` (facade): `bootstrap(userFactory:, onLogout:, locales:, onLogin:, onGuestClaimed:, currentTeam:, allTeams:, onSwitch:)`; the setters it composes (`useUserModel`, `useLogout`, `useLocaleOptions`, `useLogin`, `useGuestClaimed`, `useTeamResolver`); `switchTeam(id)`, `currentTeamId()`, `beforeLogout(hook)`; `useNavigation(mainItems:, systemItems:, bottomItems:, profileMenuItems:)`, `useHeader`, `useSidebarFooter`, `useSocialAuth(MagicStarterSocialAuth)`, `useHostPageChrome`, `usePageContext`; the theme setters `useWindTheme`, `useTheme`, `useNavigationTheme`, `useModalTheme`, `useFormTheme`, `useAuthTheme`, `useCardTheme`, `usePageHeaderTheme`, `useLayoutTheme`, `useDropdownTheme`, `useButtonTheme`, `useFieldTheme`; `view`, `manager`, `isReady`.
+- `MagicStarterViewRegistry` (`MagicStarter.view`): `register`, `registerLayout`, `registerModal`, `has`, `hasLayout`, `hasModal`, `make`, `makeLayout(key, child:)`, `makeModal`, `slot(viewKey, slotName, builder)`, `hasSlot`, `buildSlot`, `clear`. `make*` throws `StateError` for an unregistered key.
+- `MagicStarterConfig`: `has<Feature>Features()` per toggle, the route builders (`loginRoute`, `homeRoute`, `profileRoute`, `settingsHubRoute`, `teamCreateRoute`, `billingRoute`, `supportRoute`, ...), `emailIdentity`, `phoneIdentity`, `pushExternalIdPrefix`, `billingWebOrigin`, `billable`.
+- Routes: `registerMagicStarterAuthRoutes()`, `registerMagicStarterProfileRoutes()`, `registerMagicStarterTeamRoutes()`, `registerMagicStarterNotificationRoutes()`, `registerMagicStarterSupportRoutes()`; each team, notification and support function returns early while its toggle is off. Middleware `EnsureAuthenticated` (alias `auth`) and `RedirectIfAuthenticated` (alias `guest`).
+- Controllers (`.instance` through `Magic.findOrPut`): `MagicStarterAuthController`, `MagicStarterProfileController`, `MagicStarterTeamController`, `MagicStarterOtpController`, `MagicStarterGuestAuthController`, `MagicStarterHandoffController`, `MagicStarterNewsletterController`, `MagicStarterSupportController`, `MagicStarterReleasesController`, `MagicStarterFeedbackController`. `MagicStarterBillingController` is constructed by the host with its copy and formatters.
+- UI: the layouts `MagicStarterAppLayout` and `MagicStarterGuestLayout`; the `MS`-prefixed components (`MSButton`, `MSInput`, `MSCard`, `MSPageScaffold`, `MSPageHeader`, `MSDialog`, `MSBottomSheet`, `MSDataTable`, ...); `MagicStarterTokens.defaultAliases`; `confirmIdentity`, `confirmAndRun` and `MagicStarterStepUpDialog` for step-up proof; `PlanUpgradeRequirement` and `UpgradePrompt` for a plan-gated `403`.
+- Testing: `setUpMagicStarterForTests({manager})` binds a manager into the container.
+- CLI (`package:magic_starter/cli.dart`, `dart run magic:dowel ...`): `starter:install`, `starter:configure`, `starter:doctor` (also the read-only MCP tool `starter_doctor`), `starter:publish --tag=<config|views|layouts|middleware|lang|all>[:scope]`, `starter:uninstall`.
+
+## Platforms
+
+- Every platform Flutter and `magic` run on; no native code of its own.
+- Billing checks out through Stripe on the web and through the App Store or Google Play on mobile, via `magic_payments`.
+- `store_review` (native review prompt, Rate us) runs on Android, iOS and macOS and is hidden on the web.
+- `app_update`: on the web the banner offers Reload when `version.json` names a new deploy; on a store-installed release build it offers Update when the backend's latest build is higher.
+
+## Rules for agents
+
+- Import only `package:magic_starter/magic_starter.dart`, or `package:magic_starter/cli.dart` from a pure Dart dispatcher; everything under `src/` is private.
+- Register `MagicStarterServiceProvider` after the auth provider and call `MagicStarter.bootstrap(...)` with the host's own `userFactory`. Without one every screen reads `MagicStarterAuthUser`, silently. Without the provider the facade falls back to a default manager and prints one debug warning.
+- Team callbacks: all three or none. A partial set throws `ArgumentError`; `teams` on without them throws `StateError`. Route `onSwitch` through `MagicStarter.switchTeam('$id')`, which also re-identifies the store billing rail.
+- A toggle that is off registers no route and no view key, so `MagicStarter.view.make(key)` throws `StateError`; read `MagicStarterConfig.has<Feature>Features()` before linking to a gated page.
+- The settings surface is `settings.hub` plus `profile.profile`, `settings.appearance`, `settings.language`, `settings.timezone`, `settings.newsletter`, `settings.changelog` and `settings.security.*`. `profile.settings` is not a registered default key.
+- `notifications.list` and `notifications.preferences` live on `magic_notifications`' `Notify.view`, not on `MagicStarter.view`.
+- `social_login` renders nothing until a bridge is registered with `MagicStarter.useSocialAuth(...)`; `magic_social_auth` publishes one. The starter never calls the bridge's `signOut()`.
+- `billing` needs `billing.web_origin`, an absolute URL with no trailing slash: unset, checkout fails at Stripe and the error is only logged. `billing.billable` is `'user'` or `'team'` and must match the backend; anything else throws `StateError`. `lib/` registers the `teams.billing` view key and no route: the host registers a page at `routes.billing` that builds it.
+- With `notifications` on, the provider declares `<notifications.external_id_prefix><user id>` as the push identity on every `Auth.stateNotifier` change and releases it on sign-out. The prefix defaults to `user_` and must equal the backend's `MAGIC_STARTER_EXTERNAL_ID_PREFIX`, or pushes are delivered to nobody.
+- `support` turned on after install needs `registerMagicStarterSupportRoutes()` in the route provider, or the Support menu item leads nowhere.
+- Gated profile actions (two-factor, recovery codes, session revoke, account deletion, provider link, first password) take `proof:` (`{'password': ...}`, `{'code': ...}`, `{'confirmation_token': ...}`, or `{}` for a guest); get it from `confirmIdentity` or `confirmAndRun`.
+- `useWindTheme()` and `useTheme()` reset the button and field themes: call `useButtonTheme()` and `useFieldTheme()` after them. `useFormTheme()` and `useModalTheme()` replace the whole struct; change one field with `MagicStarter.formTheme.copyWith(...)`.
+- A `Gate.define()` on a `starter.*` ability is replaced if this provider boots after it; define overrides after `MagicStarterServiceProvider`.
+- `MagicStarterConfig.requestTimeoutSeconds()` and `maxRetries()` are read by nothing; `useGuestAuthEntry()` is stored and no screen reads it. `useNewsletterLabel()` is read by the register view alone (the checkbox label when `newsletter` is on), not by the profile newsletter page.
+- Commands are `dart run magic:dowel starter:<command>`; the package has no executable.
+
+## Docs
+
+- [Installation](https://anilcancakir.com/magic/docs/starter/getting-started/installation.md): add the package, register its dowel commands and let `starter:install` scaffold the features you choose.
+- [Configuration](https://anilcancakir.com/magic/docs/starter/getting-started/configuration.md): the config file, feature toggles, route prefixes, and the billing, push, handoff and legal keys.
+- [Authentication](https://anilcancakir.com/magic/docs/starter/basics/authentication.md): login, registration, password reset, email verification, two-factor, social, phone OTP, guest and handoff.
+- [Profile](https://anilcancakir.com/magic/docs/starter/basics/profile.md): the settings hub and its sub-pages through `MagicStarterProfileController`.
+- [Confirming Identity](https://anilcancakir.com/magic/docs/starter/basics/identity-confirmation.md): the proof each kind of account gives before a sensitive action.
+- [Set a Password](https://anilcancakir.com/magic/docs/starter/basics/set-password.md): a first password for an account created through a provider.
+- [Connected Accounts](https://anilcancakir.com/magic/docs/starter/basics/connected-accounts.md): linking and removing a social provider.
+- [Teams](https://anilcancakir.com/magic/docs/starter/basics/teams.md): create, switch, invite and the team resolver.
+- [Notifications](https://anilcancakir.com/magic/docs/starter/basics/notifications.md): the `magic_notifications` screens and bell, polling and the push identity.
+- [Support](https://anilcancakir.com/magic/docs/starter/basics/support.md): the support desk, chat popup, ratings, attachments and feedback.
+- [Releases](https://anilcancakir.com/magic/docs/starter/basics/releases.md): the "What's new" page, the build caption and the update banner.
+- [Session Scope](https://anilcancakir.com/magic/docs/starter/basics/session-scope.md): resetting cached per-user and per-team state when the identity changes.
+- [Middleware](https://anilcancakir.com/magic/docs/starter/basics/middleware.md): `EnsureAuthenticated`, `RedirectIfAuthenticated` and their aliases.
+- [Views and Layouts](https://anilcancakir.com/magic/docs/starter/basics/views-and-layouts.md): views, the app and guest shells, and replacing them.
+- [Design-System Components](https://anilcancakir.com/magic/docs/starter/basics/components.md): the `MS` components and their semantic tokens.
+- [CLI Commands](https://anilcancakir.com/magic/docs/starter/basics/cli.md): every `starter:*` command and flag.
+- [Manager](https://anilcancakir.com/magic/docs/starter/architecture/manager.md): the singleton behind the facade, its hooks and sub-themes.
+- [Service Provider](https://anilcancakir.com/magic/docs/starter/architecture/service-provider.md): the bindings, listeners and Gate abilities.
+- [View Registry](https://anilcancakir.com/magic/docs/starter/architecture/view-registry.md): every view, layout and modal key and slot.
+- [Controllers](https://anilcancakir.com/magic/docs/starter/architecture/controllers.md): the controllers behind each screen.
+- [State Management](https://anilcancakir.com/magic/docs/starter/guides/state-management.md): writing your own controller on the same pattern.
+- [wind_kit Theme Adoption](https://anilcancakir.com/magic/docs/starter/guides/wind-theme-adoption.md): `MagicStarter.useWindTheme` and the alias mapping.
+
+## Links
+
+- [README](https://github.com/anilcancakir/magic_starter/blob/master/README.md): install, every capability with its failure modes, the agent rules table.
+- [API reference](https://pub.dev/documentation/magic_starter/latest/): generated from the doc comments.
+- [Changelog](https://github.com/anilcancakir/magic_starter/blob/master/CHANGELOG.md): what changed in each version.
+- [Source](https://github.com/anilcancakir/magic_starter): issues and pull requests.

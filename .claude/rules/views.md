@@ -18,7 +18,7 @@ paths:
   ```
 - Extract state checks at method top: `final isLoading = controller.isLoading;`
 - Form submission flow: validate form -> call controller method -> controller handles navigation
-- Wind UI exclusively — no Material widgets:
+- Wind UI exclusively: no Material widgets:
   - Layout: `WDiv(className: 'flex flex-col gap-4 p-6')`
   - Text: `WText('label', className: 'text-sm font-medium text-gray-700 dark:text-gray-300')`
   - Input: `WFormInput(form: form, name: 'email')`
@@ -32,17 +32,17 @@ paths:
   ```
 - Dark mode: always pair light/dark classes: `text-gray-900 dark:text-white`
 - Conditional rendering via spreads: `if (condition) ...[widget1, widget2]`
-- Password toggle: local `setState(() => _obscurePassword = !_obscurePassword)` — not controller state
-- `ValueListenableBuilder` for controller's `ValueNotifier` state (matrixNotifier, team members):
+- Password toggle: local `setState(() => _obscurePassword = !_obscurePassword)`: not controller state
+- `ValueListenableBuilder` for controller's `ValueNotifier` state (team members, invitations):
   ```dart
-  ValueListenableBuilder<Map<String, dynamic>>(
-    valueListenable: controller.matrixNotifier,
-    builder: (_, matrix, __) => _buildGrid(matrix),
+  ValueListenableBuilder<List<Map<String, dynamic>>>(
+    valueListenable: controller.members,
+    builder: (_, members, __) => _buildMembers(members),
   )
   ```
 - Section-level loading: multiple local `ValueNotifier<bool>` fields (_photoLoading, _emailVerificationLoading) for independent section spinners
-- Multi-form: complex views hold multiple `MagicFormData` instances — field names MUST NOT collide across forms
-- Type-safe form extraction: `form.value<bool>('remember_me')` — not `form.get()` for non-string fields
+- Multi-form: complex views hold multiple `MagicFormData` instances: field names MUST NOT collide across forms
+- Type-safe form extraction: `form.value<bool>('remember_me')`: not `form.get()` for non-string fields
 - Route value extraction in view (before calling controller): read once in `didChangeDependencies` with `MagicRouter.instance.queryParameterOf(context, 'token')` or `pathParameterOf(context, ...)`; never the static `queryParameter`/`pathParameter`, which answer for the page built last and break across layout shells
 - Feature-gated spreads at build time: `if (MagicStarterConfig.hasGuestAuthFeatures()) ...[...]`
-- Zero business logic in views — all async/state decisions live in controllers
+- Zero business logic in views: all async/state decisions live in controllers

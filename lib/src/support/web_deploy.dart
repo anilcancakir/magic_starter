@@ -4,8 +4,9 @@
 /// reloads the page through `package:web`; every other platform gets a stub
 /// that does nothing, so no `dart:js_interop` reaches a mobile build.
 ///
-/// Both implementations expose `Future<String?> fetchDeployedBuildNumber({Uri?
-/// url})` and `void reloadPage()`.
+/// Both implementations expose
+/// `Future<String?> fetchDeployedBuildNumber({Uri? url})` and
+/// `void reloadPage()`.
 library;
 
 export 'web_deploy_stub.dart'

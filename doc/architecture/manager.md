@@ -1,5 +1,7 @@
 # MagicStarterManager
 
+`MagicStarterManager` is the singleton behind the `MagicStarter` facade: it holds the host's user model, team resolver, navigation, callbacks, sub-themes and the view registry.
+
 - [Introduction](#introduction)
 - [Singleton Pattern](#singleton-pattern)
 - [Unbound Fallback and Testing](#unbound-fallback-and-testing)
@@ -19,19 +21,20 @@
 - [Auth Theme](#auth-theme)
 - [Card Theme](#card-theme)
 - [Page Header Theme](#page-header-theme)
+    - [Host-owned page chrome](#host-page-chrome)
 - [Layout Theme](#layout-theme)
 - [Page Geometry](#page-geometry)
 - [View Registry Integration](#view-registry-integration)
 - [Default Views](#default-views)
 - [MagicStarter Facade](#magicstarter-facade)
-- [Related](#related)
+- [Related Documentation](#related-documentation)
 
 <a name="introduction"></a>
 ## Introduction
 
-`MagicStarterManager` is the central singleton that holds all customization registrations for the magic_starter plugin. It acts as a configuration hub where host apps register custom user models, team resolvers, navigation items, header builders, logout callbacks, and view overrides. Saying what a notification type looks like is not one of its seams anymore; that lives on `magic_notifications`'s own `NotificationViewRegistry` now (see [Notifications](../basics/notifications.md)).
+The manager is the configuration hub where host apps register custom user models, team resolvers, navigation items, header builders, logout callbacks and view overrides. What a notification type looks like is not one of its seams: that lives on `magic_notifications`'s own `NotificationViewRegistry` (see [Notifications](../basics/notifications.md)).
 
-The manager lives at `lib/src/magic_starter_manager.dart` and is instantiated once by `MagicStarterServiceProvider` during the register phase.
+The manager lives at `lib/src/magic_starter_manager.dart`. `MagicStarterServiceProvider` binds it as a container singleton in its register phase.
 
 <a name="singleton-pattern"></a>
 ## Singleton Pattern
@@ -55,14 +58,14 @@ static MagicStarterManager get manager {
 ```
 
 > [!NOTE]
-> The constructor calls `registerDefaultViews()` immediately. This means all default views and layouts are available as soon as the manager is instantiated — before `boot()` runs.
+> The constructor calls `registerDefaultViews()`, so the default views and layouts are available as soon as the manager is built.
 
 <a name="unbound-fallback-and-testing"></a>
 ## Unbound Fallback and Testing
 
-Every accessor on the `MagicStarter` facade delegates through `manager`, so any code that reads a theme (e.g. `MSCard` via `MagicStarter.cardTheme`) previously threw `"Service [magic_starter] is not registered"` when rendered without `MagicStarterServiceProvider` bound — for instance, in a standalone widget test or a `/preview` catalog entry.
+Every accessor on the `MagicStarter` facade delegates through `manager`, so any code that reads a theme (for example `MSCard` through `MagicStarter.cardTheme`) would fail when rendered without `MagicStarterServiceProvider` bound, in a standalone widget test or a preview catalogue entry.
 
-`MagicStarter.manager` now checks `Magic.bound('magic_starter')` first. When unbound it falls back to a shared, lazily-created default `MagicStarterManager()` (its 10 sub-themes already hold `const` defaults, so every theme accessor resolves) instead of throwing. The fallback also emits a **one-time** `kDebugMode` warning — `"MagicStarterManager not bound; using defaults. Call MagicStarter... to configure."` — so a genuine forgot-to-bind bug in a real app still surfaces during development. A manager bound via the container always wins over the fallback.
+`MagicStarter.manager` checks `Magic.bound('magic_starter')` first. When unbound it falls back to a shared, lazily created default `MagicStarterManager()`, whose sub-themes all hold `const` defaults, instead of throwing. The fallback also prints a one-time `kDebugMode` warning (`MagicStarterManager not bound; using defaults. Call MagicStarter... to configure.`), so a forgot-to-bind bug in a real app still surfaces during development. A manager bound in the container always wins over the fallback.
 
 For tests that need a specific manager configuration (custom theme, team resolver, etc.), bind one explicitly with `setUpMagicStarterForTests()`:
 
@@ -80,11 +83,12 @@ Pass a pre-configured instance to bind it instead:
 
 ```dart
 setUpMagicStarterForTests(
-  manager: MagicStarterManager()..useCardTheme(...),
+  manager: MagicStarterManager()
+    ..cardTheme = const MagicStarterCardTheme(surfaceClassName: 'bg-white'),
 );
 ```
 
-`setUpMagicStarterForTests()` wraps the same `Magic.singleton('magic_starter', () => ...)` idiom used throughout the test suite; tests that only rely on default theme values can now skip binding altogether and rely on the fallback.
+`setUpMagicStarterForTests()` is `Magic.singleton('magic_starter', () => manager ?? MagicStarterManager())` in one call. A test that only relies on default theme values can skip binding altogether and use the fallback. In a test that exercises the fallback itself, call `MagicStarter.resetFallbackManagerForTests()` in `setUp`, because `Magic.flush()` does not clear it.
 
 <a name="user-model-registration"></a>
 ## User Model Registration
@@ -95,7 +99,7 @@ By default the manager creates `MagicStarterAuthUser` instances from API data. H
 MagicStarter.useUserModel((data) => User.fromMap(data));
 ```
 
-Internally the manager stores a `UserModelFactory` — a function that takes `Map<String, dynamic>` and returns `Authenticatable`:
+Internally the manager stores a `UserModelFactory`, a function that takes `Map<String, dynamic>` and returns `Authenticatable`:
 
 ```dart
 UserModelFactory userFactory = (data) => MagicStarterAuthUser.fromMap(data);
@@ -104,7 +108,7 @@ UserModelFactory userFactory = (data) => MagicStarterAuthUser.fromMap(data);
 The factory is invoked via `MagicStarter.createUser(data)` whenever the plugin needs to hydrate a user model from an API response.
 
 > [!TIP]
-> Register your user model factory early — ideally in your `AppServiceProvider.boot()` — so all auth flows use the correct model from the start.
+> Register your user model factory in your `AppServiceProvider.boot()`, so all auth flows use the correct model from the start. `MagicStarter.bootstrap()` takes it as a required argument; see [Installation](../getting-started/installation.md#bootstrapping-the-starter).
 
 <a name="team-resolver"></a>
 ## Team Resolver
@@ -117,25 +121,27 @@ MagicStarter.useTeamResolver(
   allTeams: () => User.current.allTeams
       .map((t) => t.toMagicStarterTeam())
       .toList(),
-  onSwitch: (id) => TeamController.instance.switchTeam(id),
+  onSwitch: (id) => MagicStarter.switchTeam('$id'),
 );
 ```
 
 The callbacks are wrapped in `MagicStarterTeamResolverConfig`:
 
 | Callback | Signature | Purpose |
-|----------|-----------|---------|
+|:---------|:----------|:--------|
 | `currentTeam` | `MagicStarterTeam? Function()` | Returns the active team (null if none) |
 | `allTeams` | `List<MagicStarterTeam> Function()` | Returns all teams the user belongs to |
 | `onSwitch` | `Future<void> Function(dynamic teamId)` | Handles team switching logic |
 
 > [!NOTE]
-> If the `magic_starter.features.teams` config flag is enabled but no team resolver is configured, the service provider logs a warning at boot time. The `manager.isReady` getter also returns `false` in this state.
+> If the `magic_starter.features.teams` config flag is enabled but no team resolver is configured, the service provider logs a warning at boot time, `manager.isReady` returns `false` and `MagicStarter.bootstrap()` throws a `StateError`.
+
+`MagicStarter.switchTeam(teamId)` asks the backend to switch and answers whether it accepted; on success it re-identifies the store rail as the paying subject, so a purchase after the switch is not attributed to the team that was left. A refused switch changes nothing. A failure of that re-identification is logged and does not turn the answer into `false`, because the switch already happened. `MagicStarter.currentTeamId()` answers the active team's id as a string, or `null` without a resolver or an active team.
 
 <a name="navigation-configuration"></a>
 ## Navigation Configuration
 
-Host apps register navigation items for the authenticated app layout — sidebar, bottom bar, and profile dropdown:
+Host apps register navigation items for the authenticated app layout (sidebar, bottom bar and profile dropdown):
 
 ```dart
 MagicStarter.useNavigation(
@@ -173,7 +179,7 @@ MagicStarter.useNavigation(
 The items are stored in `MagicStarterNavigationConfig`:
 
 | Property | Required | Description |
-|----------|----------|-------------|
+|:---------|:---------|:------------|
 | `mainItems` | Yes | Primary sidebar/drawer items (Dashboard, Monitors, etc.) |
 | `systemItems` | No | Secondary items below the main group (Settings, Members) |
 | `bottomItems` | No | Mobile bottom navigation bar items (subset of main) |
@@ -182,15 +188,15 @@ The items are stored in `MagicStarterNavigationConfig`:
 Each `MagicStarterNavItem` takes `icon`, `labelKey` and `path`, plus these optional fields:
 
 | Property | Default | Description |
-|----------|---------|-------------|
+|:---------|:--------|:------------|
 | `activeIcon` | `icon` | Icon drawn on the bottom bar while the item is active |
-| `badgeCount` | `null` | A `ValueListenable<int?>` drawn as a count badge on the item; see [A live count on a destination](https://magic.fluttersdk.com/packages/starter/basics/views-and-layouts#a-live-count-on-a-destination) |
+| `badgeCount` | `null` | A `ValueListenable<int?>` drawn as a count badge on the item; see [A live count on a destination](../basics/views-and-layouts.md#a-live-count-on-a-destination) |
 | `badgeLabelKey` | `'nav.badge_count'` | Translation key of the sentence a screen reader gets for the badge |
 
 <a name="navigation-theme"></a>
 ## Navigation Theme
 
-`MagicStarterNavigationTheme` overrides the default Wind UI `text-primary` tokens used for active nav items, the brand/logo, bottom navigation, and user avatar colors — without requiring any view overrides.
+`MagicStarterNavigationTheme` overrides the default `text-primary` tokens used for active nav items, the brand/logo, bottom navigation and user avatar colours, without requiring any view override.
 
 ```dart
 MagicStarter.useNavigationTheme(
@@ -209,14 +215,14 @@ MagicStarter.useNavigationTheme(
 );
 ```
 
-All fields are optional — omitted fields fall back to the current defaults.
+All fields are optional; an omitted field keeps its default.
 
 | Field | Default | Controls |
-|-------|---------|---------|
+|:------|:--------|:--------|
 | `activeItemClassName` | `active:text-primary active:bg-primary/10 dark:active:bg-primary/10` | Sidebar/drawer active nav item |
 | `hoverItemClassName` | `hover:bg-gray-100 dark:hover:bg-gray-800` | Sidebar/drawer hover state |
 | `brandClassName` | `text-lg font-bold text-primary` | Brand/logo text style (supports gradient tokens) |
-| `brandBuilder` | `null` | Custom brand widget builder (image, SVG, etc.) — overrides `brandClassName` when set |
+| `brandBuilder` | `null` | Custom brand widget builder (image, SVG, etc.); overrides `brandClassName` when set |
 | `compactBrandBuilder` | `null` | Brand builder for the compact, icon-only sidebar; falls back to `brandBuilder` when unset |
 | `bottomNavActiveClassName` | `active:text-primary` | Bottom nav active icon and label |
 | `avatarClassName` | `bg-primary/10 dark:bg-primary/10` | Sidebar user menu avatar background |
@@ -229,12 +235,12 @@ Both avatars draw the account's photo when `profile_photo_url` carries one, the 
 The theme is stored on `MagicStarterManager` as `navigationTheme` and reset to defaults by `manager.reset()`. The active theme is read at widget build time, so `useNavigationTheme()` can be called at any point before the layout is first painted.
 
 > [!NOTE]
-> When `brandBuilder` is set, `brandClassName` is ignored. The builder receives the current `BuildContext` and should return any widget — `Image.asset`, `SvgPicture.asset`, a styled `WText`, etc.
+> When `brandBuilder` is set, `brandClassName` is ignored. The builder receives the current `BuildContext` and should return any widget: `Image.asset`, `SvgPicture.asset`, a styled `WText`, etc.
 
 <a name="modal-theme"></a>
 ## Modal Theme
 
-`MagicStarterModalTheme` overrides the default Wind UI tokens used for all modal dialogs — confirmation dialogs, password prompts, and two-factor modals. Works the same way as `NavigationTheme`: register once, all modals pick up the tokens at build time.
+`MagicStarterModalTheme` overrides the default tokens used for every modal dialog: confirmation dialogs, password prompts and two-factor modals. Works the same way as `NavigationTheme`: register once, all modals pick up the tokens at build time.
 
 ```dart
 MagicStarter.useModalTheme(
@@ -251,10 +257,10 @@ MagicStarter.useModalTheme(
 );
 ```
 
-All fields are optional — omitted fields fall back to the current defaults.
+All fields are optional; an omitted field keeps its default.
 
 | Field | Default | Controls |
-|-------|---------|---------|
+|:------|:--------|:--------|
 | `containerClassName` | Default dialog container | Outer dialog container background, border-radius, border |
 | `headerClassName` | Default header | Dialog header section (sticky top) |
 | `bodyClassName` | Default body | Scrollable body section |
@@ -269,14 +275,14 @@ All fields are optional — omitted fields fall back to the current defaults.
 | `inputClassName` | Default input | Text input fields inside dialogs |
 | `maxWidth` | `448.0` | Maximum dialog width in logical pixels (a dialog only) |
 | `presentation` | `MagicStarterModalPresentation.dialog` | Whether the starter's modals open as a dialog, as a bottom sheet, or as a sheet below `dialogBreakpoint` and a dialog from it (`adaptive`) |
-| `dialogBreakpoint` | `'lg'` | The Wind breakpoint `adaptive` swaps to a dialog from; read by `adaptive` only |
+| `dialogBreakpoint` | `'lg'` | The `wind_kit` breakpoint `adaptive` swaps to a dialog from; read by `adaptive` only |
 | `headlessBodyClassName` | `'pt-6'` | Top padding of the body of an `MSBottomSheet` drawn as a dialog with no title and no description (an overlay route under `adaptive`), where the sheet had its drag handle |
 
 ### Presentation
 
 `presentation: MagicStarterModalPresentation.adaptive` opens every modal the starter opens, and every `MSBottomSheet.show`, as a bottom sheet below `dialogBreakpoint` and as a centered `MSDialog` (at most `maxWidth`) from it: a phone gets the sheet, a desktop window the dialog, from one setting. The screen width is read when a modal opens, so one that is already open keeps its form through a resize; `MSBottomSheet.show(dialogBreakpoint:)` is ignored, and a breakpoint the Wind theme does not carry throws a `StateError` naming `MagicStarterModalTheme.dialogBreakpoint`. Overlay routes (`RouteDefinition.overlay`) follow too: the provider installs a resolver on magic's router (`MagicRoute.useOverlayPresentation`), an `MSBottomSheet` built in a dialog route draws the dialog shell, and under `dialog` or `sheet` an overlay route stays the sheet it has always been.
 
-`presentation: MagicStarterModalPresentation.sheet` opens the starter's modals as the same bottom sheet `MSBottomSheet` draws, at every width (the plan upgrade prompt, which opens through magic's `MagicFeedback.showCustomDialog`, stays a dialog): `MSDialog.show`, `MSConfirmDialog.show` (and its `MagicStarterConfirmDialog` alias), `MagicStarterPasswordConfirmDialog.show`, `MagicStarterStepUpDialog.show` and `MagicStarterTwoFactorModal.show`, so the sessions, team settings, two factor, step up and support attachment flows too. `MSBottomSheet.show(dialogBreakpoint:)` then ignores its breakpoint and stays a sheet.
+`presentation: MagicStarterModalPresentation.sheet` opens the starter's modals as the same bottom sheet `MSBottomSheet` draws, at every width (the plan upgrade prompt, which opens through magic's `MagicFeedback.showCustomDialog`, stays a dialog): `MSDialog.show`, `MSConfirmDialog.show` (and its `MagicStarterConfirmDialog` alias), `MagicStarterPasswordConfirmDialog.show`, `MagicStarterStepUpDialog.show` and `MagicStarterTwoFactorModal.show`. `MSBottomSheet.show(dialogBreakpoint:)` then ignores its breakpoint and stays a sheet.
 
 ```dart
 MagicStarter.useModalTheme(
@@ -286,17 +292,15 @@ MagicStarter.useModalTheme(
 );
 ```
 
-- Return values do not change: `true` / `false` from a confirm, the proof map or `null` from the step up. The two factor wizard resolves `true` once a code was accepted, however it is closed, and `false` when closed before that; closed while a code is being checked, it resolves only when that `onConfirm` call settles, with no time limit. Cancel, a scrim tap and back are off during the check.
-- The confirm, password confirm and step up modals cannot be closed by a scrim tap, as their dialogs cannot, and as sheets they refuse a drag down too and draw no drag handle. Back cancels them while idle; while the password confirm or step up request is in flight, back is off like their Cancel button. `MSDialog.show` and the two factor wizard close on a scrim tap or a drag.
-- A sheet is full width on a phone. On a wide screen it is capped at 640 px by Flutter's Material 3 default, which holds only with `useMaterial3` and no `bottomSheetTheme.constraints` of the host's; `maxWidth` applies to the dialog only. The sheet lifts clear of the keyboard and the home indicator.
-- In both presentations the footer, with the actions, stays fixed. The header stays pinned above the scrolling body while it takes at most half of the room the body scrolls in, measured at layout, and scrolls away with the body when it would take more (a landscape phone, where a sheet already has about 313 px, the keyboard up, a large text size). Crossing that line rebuilds nothing, so a focused field keeps its focus and the body its scroll offset. A body passed with `scrollable: false` keeps the header fixed and gets the height left between header and footer. A pinned header holds still while the body bounces or stretches under it; a header past the half mark moves with the body, overscroll included. On a sheet whose content overflows, a drag that starts on the header scrolls the content, so only the handle and the footer drag the sheet down; when the content fits, a drag anywhere on the sheet drags it.
-- The setting is read when a modal opens. An `MSDialog` widget draws the sheet panel when it is built inside a bottom sheet route, and its dialog shell otherwise: a dialog a host opens with its own `showDialog` keeps the shell, and its own `showModalBottomSheet(builder: (_) => MSDialog(...))` gets the sheet panel.
+- Return values do not change: `true` or `false` from a confirm, the proof map or `null` from the step up.
+- A sheet is full width on a phone. On a wide screen Flutter's Material 3 default caps it at 640 px; `maxWidth` applies to the dialog only.
+- The setting is read when a modal opens. An `MSDialog` widget draws the sheet panel when it is built inside a bottom sheet route, and its dialog shell otherwise, so a dialog a host opens with its own `showDialog` keeps the shell.
 - `useWindTheme()` and `useTheme()` reset the modal theme, `presentation` included, so set it after them.
 
 The theme is stored on `MagicStarterManager` as `modalTheme` and reset to defaults by `manager.reset()`. The active theme is read at widget build time, so `useModalTheme()` can be called at any point before a dialog is shown.
 
 > [!TIP]
-> Register your modal theme in `AppServiceProvider.boot()` alongside `useNavigationTheme()`. Both follow the same pattern — register once, all widgets read the tokens at build time.
+> Register your modal theme in `AppServiceProvider.boot()` alongside `useNavigationTheme()`. Both follow the same pattern: register once, and every widget reads the tokens at build time.
 
 <a name="sidebar-footer-builder"></a>
 ## Sidebar Footer Builder
@@ -309,7 +313,7 @@ MagicStarter.useSidebarFooter((context) {
 });
 ```
 
-The builder receives the current `BuildContext` and should return any widget — a version badge, environment indicator, support link, etc.
+The builder receives the current `BuildContext` and should return any widget: a version badge, environment indicator, support link, etc.
 
 When `sidebarFooterBuilder` is `null` (the default), no extra content is rendered between navigation and the user menu.
 
@@ -326,12 +330,12 @@ MagicStarter.useHeader((context, isDesktop) {
 
 The builder receives the current `BuildContext` and a `bool isDesktop` flag so the header can adapt between desktop sidebar and mobile drawer layouts.
 
-When `headerBuilder` is `null`, the app layout renders its built-in header with team selector, notification badge, and user profile dropdown.
+When `headerBuilder` is `null`, the app layout renders its built-in header with the team selector, the notification bell and the user profile dropdown.
 
 <a name="logout-callback"></a>
 ## Logout Callback
 
-Override the default logout behavior to add custom cleanup steps:
+Override the default logout behaviour to add custom cleanup steps:
 
 ```dart
 MagicStarter.useLogout(() async {
@@ -342,7 +346,15 @@ MagicStarter.useLogout(() async {
 });
 ```
 
-When set, the app layout's logout button calls this callback instead of `MagicStarterAuthController.instance.logout()`. This is useful for apps that need to unregister push tokens, sign out of social providers, or perform other cleanup before navigating to the login screen.
+When set, the profile dropdown's logout item calls this callback instead of `MagicStarterAuthController.instance.logout()`. This is useful for apps that need to unregister push tokens, sign out of social providers, or perform other cleanup before navigating to the login screen.
+
+Work that has to happen while the session token still works belongs in a before-logout hook, which runs ahead of both sign-out paths (the profile dropdown, ahead of a custom `onLogout`, and `MagicStarterAuthController.logout()`, ahead of `Auth.logout()`):
+
+```dart
+MagicStarter.beforeLogout(() => SocialAuth.signOut());
+```
+
+Hooks run in registration order, each isolated and bounded to five seconds (`MagicStarterManager.beforeLogoutTimeout`); one that throws or times out is logged and the next still runs, because a sign-out the user asked for has to happen whatever a hook's network does. The same hook is not added twice. `MagicStarterServiceProvider` registers its token-revoke hook in `boot()`, so a hook your own provider registers after that runs on a revoked token: list the provider whose hook needs the session token before `MagicStarterServiceProvider` in `providers`. A host with its own sign-out button calls `MagicStarter.manager.runBeforeLogoutHooks()` before its own `Auth.logout()`. A sign-out the app performs on its own, such as magic's `AuthInterceptor` after a failed token refresh, does not run them: the token is already dead. The provider registers two of its own, see [Before-Logout Hooks](service-provider.md#before-logout-hooks).
 
 <a name="login-callback"></a>
 ## Login Callback
@@ -370,7 +382,7 @@ MagicStarter.useGuestClaimed((GuestClaimOutcome outcome) async {
 });
 ```
 
-Also accepted as the `onGuestClaimed` argument of `MagicStarter.bootstrap()`. With the `guest_auth` feature on, the provider's `AuthLogin` and `AuthRestored` listeners run `MagicStarterGuestClaim.instance.claimIfPending()` for a non-guest user and call this callback with every outcome but `none` (`claimed`, `refused`, `promoted`), each of which marks the first sign-in to a real account after a guest session on this device. It runs unawaited and a failure is logged, not rethrown; a sign-in and a restore that share one claim call it once. See [Guest Claim](../basics/authentication.md#guest-claim) for the flow.
+Also accepted as the `onGuestClaimed` argument of `MagicStarter.bootstrap()`. With the `guest_auth` feature on, the provider's `AuthLogin` and `AuthRestored` listeners claim a pending guest record for a non-guest user and call this callback with every outcome but `none` (`claimed`, `refused`, `promoted`), each of which marks the first sign-in to a real account after a guest session on this device. It runs unawaited and a failure is logged, not rethrown; a sign-in and a restore that share one claim call it once. See [Guest Claim](../basics/authentication.md#guest-claim) for the flow.
 
 When `onGuestClaimed` is `null` (the default), nothing runs.
 
@@ -388,14 +400,14 @@ Map<String, dynamic> get magicStarterConfig => {
 };
 ```
 
-A named static listener on `Auth.stateNotifier`, plus one immediate "once, now" read in `boot()` for the ordinary cold-boot case, reads `Auth.user()?.get<String>('locale')` and hands any non-empty value to `MagicStarterManager.applyLocale()`, the same method [`_applySavedLanguage`](../basics/profile.md#updating-profile-information) calls after a profile save. `applyLocale()` holds a single pending target: whichever call reaches it first for a given locale wins, and a same-frame second call for the same target is a no-op, so a profile save (which itself calls `Auth.restore()` and so wakes this listener too) still issues exactly one `Lang.setLocale()` call however long the catalogue load takes.
+A named static listener on `Auth.stateNotifier`, plus one immediate "once, now" read in `boot()` for the ordinary cold-boot case, reads `Auth.user()?.get<String>('locale')` and hands any non-empty value to `MagicStarterManager.applyLocale()`, the same method a [profile save](../basics/profile.md) calls once it changed the language. `applyLocale()` holds a single pending target: whichever call reaches it first for a given locale wins, and a same-frame second call for the same target is a no-op, so a profile save (which itself calls `Auth.restore()` and so wakes this listener too) still issues exactly one `Lang.setLocale()` call however long the catalogue load takes.
 
 When `Auth.check()` is `false`, the user carries no `locale`, or the toggle is off, nothing happens.
 
 <a name="unified-theme"></a>
 ## Unified Theme
 
-`MagicStarterTheme` wraps all 10 sub-theme objects into a single configuration. Host apps can set the entire visual identity in one call, then selectively override individual sub-themes afterward:
+`MagicStarterTheme` wraps every sub-theme object into a single configuration. Host apps can set the entire visual identity in one call, then selectively override individual sub-themes afterward:
 
 ```dart
 MagicStarter.useTheme(
@@ -427,10 +439,10 @@ final customTheme = MagicStarter.theme.copyWith(
 MagicStarter.useTheme(customTheme);
 ```
 
-The manager maintains bidirectional sync: the `theme` getter constructs a `MagicStarterTheme` from all 10 individual fields, while the `theme` setter distributes each sub-theme to its respective field. Both `useTheme()` and individual `use*Theme()` methods work together seamlessly.
+The manager maintains bidirectional sync: the `theme` getter constructs a `MagicStarterTheme` from the individual fields, while the `theme` setter distributes each sub-theme to its respective field, so `useTheme()` and the individual `use*Theme()` methods work together. Call the unified one first: a later `use*Theme()` replaces only its own sub-theme.
 
 | Sub-theme | Class | Facade getter/setter |
-|-----------|-------|---------------------|
+|:----------|:------|:--------------------|
 | Navigation | `MagicStarterNavigationTheme` | `useNavigationTheme()` / `navigationTheme` |
 | Modal | `MagicStarterModalTheme` | `useModalTheme()` / `modalTheme` |
 | Form | `MagicStarterFormTheme` | `useFormTheme()` / `formTheme` |
@@ -447,7 +459,7 @@ All sub-theme classes live in `lib/src/configuration/magic_starter_theme.dart`.
 <a name="form-theme"></a>
 ## Form Theme
 
-`MagicStarterFormTheme` overrides Wind UI tokens for form inputs, labels, placeholders, buttons, links, and checkboxes across all auth and profile forms.
+`MagicStarterFormTheme` overrides the class names for form inputs, labels, placeholders, buttons, links, and checkboxes across all auth and profile forms.
 
 ```dart
 MagicStarter.useFormTheme(
@@ -472,7 +484,7 @@ MagicStarter.useModalTheme(
 <a name="auth-theme"></a>
 ## Auth Theme
 
-`MagicStarterAuthTheme` overrides Wind UI tokens for the auth form card, title, subtitle, error banner, social divider, and link styles on login/register/forgot/reset pages.
+`MagicStarterAuthTheme` overrides the class names for the auth form card, title, subtitle, error banner, social divider, and link styles on login/register/forgot/reset pages.
 
 ```dart
 MagicStarter.useAuthTheme(
@@ -486,7 +498,7 @@ MagicStarter.useAuthTheme(
 <a name="card-theme"></a>
 ## Card Theme
 
-`MagicStarterCardTheme` overrides Wind UI tokens for `MSCard` variant backgrounds, border radius, padding, and title styles.
+`MagicStarterCardTheme` overrides the class names for `MSCard` variant backgrounds, border radius, padding, and title styles.
 
 ```dart
 MagicStarter.useCardTheme(
@@ -500,7 +512,7 @@ MagicStarter.useCardTheme(
 <a name="page-header-theme"></a>
 ## Page Header Theme
 
-`MagicStarterPageHeaderTheme` overrides Wind UI tokens for the `MSPageHeader` container, title, subtitle, action container and compact bar, plus two layout switches.
+`MagicStarterPageHeaderTheme` overrides the class names for the `MSPageHeader` container, title, subtitle, action container and compact bar, plus two layout switches.
 
 ```dart
 MagicStarter.usePageHeaderTheme(
@@ -596,7 +608,7 @@ so the inbox reports its title and keeps its mark-all-as-read action, and the
 preferences report the settings hub as their `backFallback`.
 
 | Member | Contract |
-|--------|----------|
+|:-------|:---------|
 | `hostOwns(context)` | The predicate's answer; `false` while none is registered |
 | `current` | The entry of the owner whose first report is the most recent; an update keeps its place, so the older of two pages mounted together under an instant swap neither takes over nor clears the newer one when it withdraws |
 | `report(owner, entry)` / `withdraw(owner)` | Called by the header from `didChangeDependencies`, `didUpdateWidget` and `dispose`, and `withdraw` also when its route is popped; it reports only while its route is current |
@@ -614,7 +626,7 @@ ListenableBuilder(listenable: MagicStarter.pageChrome, builder: (context, _) {
 <a name="layout-theme"></a>
 ## Layout Theme
 
-`MagicStarterLayoutTheme` overrides Wind UI class names and dimensions for the app layout shell: sidebar, header, the content area and its background, drawer background, brand bar, and bottom navigation. It also carries the two breakpoints and the compact width that decide when the sidebar appears and when it renders as an icon rail.
+`MagicStarterLayoutTheme` overrides `wind_kit` class names and dimensions for the app layout shell: sidebar, header, the content area and its background, drawer background, brand bar, and bottom navigation. It also carries the two breakpoints and the compact width that decide when the sidebar appears and when it renders as an icon rail.
 
 ```dart
 MagicStarter.useLayoutTheme(
@@ -630,7 +642,7 @@ MagicStarter.useLayoutTheme(
 <a name="page-geometry"></a>
 ## Page Geometry
 
-`pageContainerClassName` is the Wind geometry every page in the app shares: the width cap, the horizontal edge margins, and the vertical rhythm. `MSPageContainer` reads it, and `MSPageScaffold` composes `MSPageContainer`, so every page in this package and every page in the host app resolve to the same numbers.
+`pageContainerClassName` is the `wind_kit` geometry every page in the app shares: the width cap, the horizontal edge margins, and the vertical rhythm. `MSPageContainer` reads it, and `MSPageScaffold` composes `MSPageContainer`, so every page in this package and every page in the host app resolve to the same numbers.
 
 ```dart
 // In AppServiceProvider.boot()
@@ -638,7 +650,7 @@ MagicStarter.manager.pageContainerClassName =
     'max-w-6xl px-4 sm:px-5 lg:px-8 pt-6 sm:pt-8 pb-24';
 ```
 
-The geometry belongs to the host, not to this package. Magic Starter's account pages render inside the host's own shell (see [Layout Theme](#layout-theme) and the `layout.app` view key), so a width chosen here is a guess about someone else's layout. While each surface carried its own answer, the settings pages centred 64px further out per side than the host's pages and the team pages capped at nothing at all, all inside identical chrome.
+The geometry belongs to the host, not to this package. Magic Starter's account pages render inside the host's own shell (see [Layout Theme](#layout-theme) and the `layout.app` view key), so a width chosen here is a guess about someone else's layout. Set one geometry and every page, starter-owned or host-owned, lines up by construction.
 
 Carry the whole geometry in the one string. A cap that agrees while the padding does not still reads as two different pages.
 
@@ -670,58 +682,51 @@ MagicStarterViewRegistry get view => _viewRegistry;
 The facade provides a shortcut: `MagicStarter.view` delegates to `manager.view`. All view and layout registration, lookup, and building flows through this single registry instance.
 
 > [!TIP]
-> Override views **before** the manager is instantiated (i.e., before `MagicStarterServiceProvider.register()` runs) if you want to prevent default views from being registered at all. In practice, registering overrides in your `AppServiceProvider.boot()` works because `registerDefaultViews()` uses a "register if absent" strategy — it skips keys that already exist.
+> Register overrides in your `AppServiceProvider.boot()`. `register()` on the registry replaces a key, and `registerDefaultViews()` skips keys that already exist, so an override wins in either order. The registry API is in [View Registry](view-registry.md).
 
 <a name="default-views"></a>
 ## Default Views
 
-`registerDefaultViews()` is called in the constructor and populates the registry with plugin-provided views. It uses a "register if absent" pattern — existing keys are never overwritten:
+`registerDefaultViews()` runs in the constructor and fills the registry with the package's views, layouts and modals. It registers a key only when it is absent, so an override registered earlier is never replaced. A view whose feature is off is not registered:
 
-```dart
-void _registerDefault(String key, Widget Function() builder) {
-  if (!_viewRegistry.has(key)) {
-    _viewRegistry.register(key, builder);
-  }
-}
-```
-
-The following default views are registered:
-
-| Key | View | Condition |
-|-----|------|-----------|
-| `auth.login` | `MagicStarterLoginView` | Always |
-| `auth.register` | `MagicStarterRegisterView` | Always |
-| `auth.forgot_password` | `MagicStarterForgotPasswordView` | Always |
-| `auth.reset_password` | `MagicStarterResetPasswordView` | Always |
+| Key | View | Registered when |
+|:----|:-----|:----------------|
+| `auth.login`, `auth.register`, `auth.forgot_password`, `auth.reset_password` | `MagicStarterLoginView`, `MagicStarterRegisterView`, `MagicStarterForgotPasswordView`, `MagicStarterResetPasswordView` | Always |
 | `auth.verify_email` | `MagicStarterVerifyEmailView` | `hasEmailVerificationFeatures()` |
 | `auth.two_factor_challenge` | `MagicStarterTwoFactorChallengeView` | `hasTwoFactorFeatures()` |
+| `auth.handoff` | `MagicStarterHandoffView` | `hasHandoffFeatures()` |
 | `auth.otp_verify` | `MagicStarterOtpVerifyView` | `hasPhoneOtpFeatures()` |
-| `profile.settings` | `MagicStarterProfileSettingsView` | Always |
-| `teams.create` | `MagicStarterTeamCreateView` | `hasTeamFeatures()` |
-| `teams.settings` | `MagicStarterTeamSettingsView` | `hasTeamFeatures()` |
-| `teams.invitation_accept` | `MagicStarterTeamInvitationAcceptView` | `hasTeamFeatures()` |
+| `settings.hub`, `profile.profile`, `settings.appearance`, `settings.security.password` | `MagicStarterSettingsHubView`, `MagicStarterProfileSubPageView`, `MagicStarterAppearanceView`, `MagicStarterPasswordView` | Always |
+| `settings.language` | `MagicStarterLanguageView` | `hasExtendedProfileFeatures()` |
+| `settings.timezone` | `MagicStarterTimezoneView` | `hasTimezoneFeatures()` |
+| `settings.newsletter` | `MagicStarterNewsletterView` | `hasNewsletterFeatures()` |
+| `settings.changelog` | `MagicStarterChangelogView` | `hasReleasesFeatures()` |
+| `settings.security.two_factor` | `MagicStarterTwoFactorView` | `hasTwoFactorFeatures()` |
+| `settings.security.sessions` | `MagicStarterSessionsView` | `hasSessionsFeatures()` |
+| `settings.security.connected_accounts` | `MagicStarterConnectedAccountsView` | `hasSocialLoginFeatures()` |
+| `teams.create`, `teams.settings`, `teams.invitation_accept` | `MagicStarterTeamCreateView`, `MagicStarterTeamSettingsView`, `MagicStarterTeamInvitationAcceptView` | `hasTeamFeatures()` |
+| `teams.billing` | `MagicStarterBillingView` | `hasBillingFeatures()` |
+| `support.index`, `support.create`, `support.thread` | `MagicStarterSupportIndexView`, `MagicStarterSupportCreateView`, `MagicStarterSupportThreadView` | `hasSupportFeatures()` |
+| `support.feedback` | `MagicStarterFeedbackView` | `hasSupportFeatures()` and `hasSupportFeedbackFeatures()` |
+| `support.chat`, `support.chat_panel` | `MagicStarterSupportChatLauncher`, `MagicStarterSupportChatPanel` | `hasSupportFeatures()` and `hasSupportChatFeatures()` |
 
-`notifications.list` and `notifications.preferences` are NOT among them: `registerDefaultViews()` no longer registers them, because there is no field left to guard with `hasNotificationFeatures()`. Those two keys live on `magic_notifications`'s own `Notify.view`, which `registerMagicStarterNotificationRoutes()` re-registers wrapped in this package's page geometry; see [Notifications](../basics/notifications.md).
-
-Default layouts:
-
-| Key | Layout |
-|-----|--------|
-| `layout.guest` | `MagicStarterGuestLayout` |
-| `layout.app` | `MagicStarterAppLayout` |
+`notifications.list` and `notifications.preferences` are not among them. Both screens live on `magic_notifications`'s own `Notify.view`, which `registerMagicStarterNotificationRoutes()` re-registers wrapped in this package's page geometry; see [Notifications](../basics/notifications.md). The default layout and modal keys are in [View Registry](view-registry.md).
 
 <a name="magicstarter-facade"></a>
 ## MagicStarter Facade
 
-`MagicStarter` is a static utility class (private constructor `MagicStarter._()`) that delegates every call to the manager singleton. It provides the public API that host apps interact with:
+`MagicStarter` is a static class (private constructor `MagicStarter._()`) that delegates every call to the manager singleton. It is the API host apps use:
 
-| Facade Method | Manager Property |
-|---------------|-----------------|
+| Facade method | Does |
+|:--------------|:-----|
+| `MagicStarter.bootstrap(...)` | Registers the identity contract (user factory, logout, locales, optional login and guest-claim callbacks, optional team trio) in one call |
 | `MagicStarter.useUserModel(factory)` | `manager.userFactory = factory` |
 | `MagicStarter.createUser(data)` | `manager.userFactory(data)` |
 | `MagicStarter.useTeamResolver(...)` | `manager.teamResolver = config` |
+| `MagicStarter.switchTeam(id)`, `MagicStarter.currentTeamId()` | Switch the active team, read its id |
 | `MagicStarter.useNavigation(...)` | `manager.navigationConfig = config` |
-| `MagicStarter.useTheme(theme)` | `manager.theme = theme` (sets all 10 sub-themes) |
+| `MagicStarter.useTheme(theme)` | `manager.theme = theme` (sets every sub-theme) |
+| `MagicStarter.useWindTheme(windTheme)` | Derives the colour-bearing sub-themes from a `WindThemeData` and delegates to `useTheme()`; see [wind_kit Theme Adoption](../guides/wind-theme-adoption.md) |
 | `MagicStarter.useNavigationTheme(theme)` | `manager.navigationTheme = theme` |
 | `MagicStarter.useModalTheme(theme)` | `manager.modalTheme = theme` |
 | `MagicStarter.useFormTheme(theme)` | `manager.formTheme = theme` |
@@ -737,20 +742,24 @@ Default layouts:
 | `MagicStarter.useSidebarFooter(builder)` | `manager.sidebarFooterBuilder = builder` |
 | `MagicStarter.useHeader(builder)` | `manager.headerBuilder = builder` |
 | `MagicStarter.useLogout(callback)` | `manager.onLogout = callback` |
+| `MagicStarter.beforeLogout(hook)` | Adds a before-logout hook |
 | `MagicStarter.useLogin(callback)` | `manager.onLogin = callback` |
 | `MagicStarter.useGuestClaimed(callback)` | `manager.onGuestClaimed = callback` |
 | `MagicStarter.useSocialAuth(socialAuth)` | `manager.socialAuth = socialAuth` |
+| `MagicStarter.usePageContext(provider)` | `manager.pageContextProvider = provider`: what the customer is looking at, sent with each support message (see [Support](../basics/support.md)) |
 | `MagicStarter.useLocaleOptions(locales)` | `manager.localeOptions = options` |
-| `MagicStarter.useGuestAuthEntry(builder)` | `manager.guestAuthEntryBuilder = builder` (stored only: no starter screen reads it yet) |
-| `MagicStarter.useNewsletterLabel(label)` | `manager.newsletterLabel = label` |
+| `MagicStarter.useGuestAuthEntry(builder)` | `manager.guestAuthEntryBuilder = builder` (stored only: no starter screen reads it) |
+| `MagicStarter.useNewsletterLabel(label)` | `manager.newsletterLabel = label` (read by the register view as its newsletter checkbox label, not by the profile newsletter page) |
 | `MagicStarter.view` | `manager.view` |
 | `MagicStarter.isReady` | `manager.isReady` |
 
-The `reset()` method on the manager restores all properties to their defaults, clears the view registry, and re-registers default views — used in test `setUp()` blocks for isolation.
+The `reset()` method on the manager restores every property to its default, clears the view registry and registers the default views again. Tests call it in `setUp()` for isolation.
 
-<a name="related"></a>
-## Related
+<a name="related-documentation"></a>
+## Related Documentation
 
-- [MagicStarterServiceProvider](https://magic.fluttersdk.com/packages/starter/architecture/service-provider) — bootstrap entry point that binds the manager and registers Gate abilities
-- [View Registry](https://magic.fluttersdk.com/packages/starter/architecture/view-registry) — string-keyed view factory for overridable UI
-- [Magic Framework — IoC Container](https://magic.fluttersdk.com/getting-started/ioc-container) — singleton and factory binding reference
+- [Service Provider](service-provider.md): binds the manager and registers the Gate abilities.
+- [View Registry](view-registry.md): the string-keyed view factory the manager holds.
+- [Installation](../getting-started/installation.md): `MagicStarter.bootstrap()` in the host's `AppServiceProvider`.
+- [Views and Layouts](../basics/views-and-layouts.md): the app shell the layout theme styles.
+- [Magic service container](https://anilcancakir.com/magic/docs/architecture/service-container): singleton and factory bindings.

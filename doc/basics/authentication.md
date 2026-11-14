@@ -1,9 +1,14 @@
 # Authentication
 
+The feature-gated sign-in surface of the starter: login, registration, password reset, email verification, two-factor, social, phone OTP, guest and handoff, and the controllers behind them.
+
 - [Introduction](#introduction)
 - [Login Flow](#login-flow)
 - [Registration](#registration)
 - [Forgot Password](#forgot-password)
+- [Verify Email](#verify-email)
+- [Landing After Sign-In](#next)
+- [Sign-In Handoff](#handoff)
 - [Reset Password](#reset-password)
 - [Two-Factor Authentication](#two-factor-authentication)
     - [Two-Factor Challenge](#two-factor-challenge)
@@ -23,21 +28,23 @@
 - [Feature Gates](#feature-gates)
 - [Controllers](#controllers)
 - [Views](#views)
+- [Gotchas](#gotchas)
+- [Related Documentation](#related-documentation)
 
 <a name="introduction"></a>
 ## Introduction
 
-The Magic Starter authentication module provides a complete, feature-gated authentication system built on top of the Magic Framework. It covers login, registration, password reset, two-factor authentication, social login, phone OTP, and guest authentication — all driven by opt-in configuration flags.
+The authentication module is built on the Magic framework and driven by opt-in configuration flags. It covers login, registration, password reset, email verification, two-factor authentication, social login, phone OTP, guest authentication and sign-in handoff.
 
-Three controllers split the responsibilities:
+These controllers split the responsibilities (the handoff controller is covered under [Sign-In Handoff](#handoff)):
 
 | Controller | Scope |
 |-----------|-------|
-| `MagicStarterAuthController` | Login, register, forgot/reset password, two-factor challenge, logout |
+| `MagicStarterAuthController` | Login, register, forgot/reset password, email verification, social sign-in, two-factor challenge, logout |
 | `MagicStarterGuestAuthController` | Device-ID-based guest login |
 | `MagicStarterOtpController` | Phone OTP send and verify |
 
-Every controller follows the Magic singleton pattern (`static T get instance => Magic.findOrPut(T.new)`) and mixes in `MagicStateMixin`, `ValidatesRequests`, and `NavigatesRoutes`.
+Every controller follows the Magic singleton pattern (`static T get instance => Magic.findOrPut(T.new)`) and mixes in `NavigatesRoutes` and `CompletesSignIn`; the auth, guest and OTP controllers add `MagicStateMixin` and `ValidatesRequests`.
 
 > [!NOTE]
 > All auth routes are registered under the configurable prefix `MagicStarterConfig.authPrefix()` (default `/auth`). Guest-facing routes use `GuestLayout`; post-login routes use `AppLayout`.
@@ -59,13 +66,13 @@ await MagicStarterAuthController.instance.doLogin(
 The login flow has three possible outcomes:
 
 1. **Success**: the controller hands the body to `CompletesSignIn.completeSignIn()`, the one path every token takes (password, social, two-factor challenge, OTP and guest): it extracts `token` and `user` from the nested `data` key, calls `Auth.login()`, shows the `social.deletion_cancelled` toast when `data.deletion_cancelled` is `true` (a sign-in during the grace period of a scheduled account deletion cancels it), sets success state, and calls `navigateHome()`. That is the intended url a bounced deep link recorded, read once through `MagicRouter.pullIntendedUrl()`, and `MagicStarterConfig.homeRoute()` only as the fallback when nothing was recorded or the recorded value is not an in-app path. An intent belongs to the session that asked for it: `MagicStarterServiceProvider` listens to `Auth.stateNotifier` and discards it whenever the state goes to signed-out, so it never reaches the next person on the device. That covers the sign-out a user asks for, the account deletion, and the one the app performs on its own when a token refresh fails, since all three go through the same notifier. No host wiring is needed; the provider boots in every starter app.
-2. **Two-factor required** — the controller detects the challenge flag and navigates to `MagicStarterConfig.twoFactorChallengeRoute()` with the encrypted token as a query parameter. No login occurs yet.
-3. **Failure** — `handleApiError()` sets the error state with a localized fallback message.
+2. **Two-factor required**: the controller detects the challenge flag and navigates to `MagicStarterConfig.twoFactorChallengeRoute()` with the encrypted token as a query parameter. No login occurs yet.
+3. **Failure**: `handleApiError()` sets the error state with a localized fallback message.
 
 > [!IMPORTANT]
 > Two-factor detection checks **both** `response['two_factor']` and `response['data']['two_factor']`. Some backends nest the flag differently, and the controller handles both variants.
 
-A `_isSubmitting` guard prevents double-submit — concurrent calls to `doLogin()` are silently discarded.
+A `_isSubmitting` guard prevents double-submit: concurrent calls to `doLogin()` are silently discarded.
 
 The login, register, forgot-password and reset-password views hint their fields (`username`/`email`, `password`, `newPassword`, `telephoneNumber`) so a password manager or the OS keychain can fill them. The login, register and reset-password forms sit in an `AutofillGroup` that cancels on dispose, and the login and register forms stay mounted while the request is in flight; the context is committed (`TextInput.finishAutofillContext(shouldSave: true)`) only after an email and password sign-in or a registration has logged a session in and is about to navigate (`completeSignIn(saveCredentials: true)`), so a failed attempt, a provider or one-time-code sign-in, and a background guest session are never offered for saving.
 
@@ -91,8 +98,8 @@ When the `newsletter` feature is active and `subscribeNewsletter` is `true`, the
 
 The response determines the post-registration flow:
 
-- **Auto-login** — when the server returns `token` + `user` in `data`, the controller calls `Auth.login()` and navigates home.
-- **Email verification required** — when no credentials are returned, the controller navigates to the login page so the user can verify their email first.
+- **Auto-login**: when the server returns `token` + `user` in `data`, the controller calls `Auth.login()` and navigates home.
+- **Email verification required**: when no credentials are returned, the controller navigates to the login page so the user can verify their email first.
 
 > [!TIP]
 > Registration is gated by `MagicStarterConfig.hasRegistrationFeatures()`. When disabled, the registration route is not registered and the view is inaccessible.
@@ -108,12 +115,12 @@ await MagicStarterAuthController.instance.doForgotPassword(
 );
 ```
 
-On success, the controller sets success state. The view should display a confirmation message. No navigation occurs — the user stays on the same page.
+On success, the controller sets success state. The view should display a confirmation message. No navigation occurs; the user stays on the same page.
 
 <a name="verify-email"></a>
 ## Verify Email
 
-Registered with `features.email_verification`. The verification mail of `magic-starter-laravel` 0.0.41 and later opens `/auth/verify-email?id=...&hash=...&expires=...&signature=...`. `MagicStarterVerifyEmailView` reads the four query parameters once in `didChangeDependencies` and calls `doVerifyEmail`, which replays them as `GET /email/verify/{id}/{hash}?expires=...&signature=...`; the API's `signed` middleware checks them against its own host. On success a signed-in user is restored so `email_verified_at` lands, and the page offers Continue (home) or Back to Sign In. Any refusal (a bad or expired signature, a changed address), and any link whose `id` is not key-shaped or whose `hash` is not a sha1, shows `magic_starter.email_verification.verify_failed`; the malformed link is never sent. A reader signed in as a different user sees `verify_success_other` instead of the second-person copy.
+Registered with `magic_starter.features.email_verification`. The verification mail of `magic-starter-laravel` opens `/auth/verify-email?id=...&hash=...&expires=...&signature=...`. `MagicStarterVerifyEmailView` reads the four query parameters once in `didChangeDependencies` and calls `doVerifyEmail`, which replays them as `GET /email/verify/{id}/{hash}?expires=...&signature=...`; the API's `signed` middleware checks them against its own host. On success a signed-in user is restored so `email_verified_at` lands, and the page offers Continue (home) or Back to Sign In. Any refusal (a bad or expired signature, a changed address), and any link whose `id` is not key-shaped or whose `hash` is not a sha1, shows `magic_starter.email_verification.verify_failed`; the malformed link is never sent. A reader signed in as a different user sees `verify_success_other` instead of the second-person copy.
 
 The route sits outside the `guest` group: the link is opened signed in as often as signed out, and `guest` would send a signed-in reader home before the link was replayed.
 
@@ -127,7 +134,7 @@ A valid `next` has exactly one leading `/` (`//host` is another origin), at most
 <a name="handoff"></a>
 ## Sign-In Handoff
 
-Registered with `features.handoff`. Another surface that has already authenticated the visitor (a landing page, a mail) asks `magic-starter-laravel` for a one-time code (`POST auth/handoff`, authenticated) and opens the app at `/auth/handoff?code=<code>&next=<path>`, on the web or through a Universal Link or App Link that resolves to the same route. No bearer token travels in a url.
+Registered with `magic_starter.features.handoff`. Another surface that has already authenticated the visitor (a landing page, a mail) asks `magic-starter-laravel` for a one-time code (`POST auth/handoff`, authenticated) and opens the app at `/auth/handoff?code=<code>&next=<path>`, on the web or through a Universal Link or App Link that resolves to the same route. No bearer token travels in a url.
 
 `MagicStarterHandoffView` reads `code` and `next` once and calls `MagicStarterHandoffController.handOff`:
 
@@ -189,7 +196,7 @@ await MagicStarterAuthController.instance.doTwoFactorChallenge(
 );
 ```
 
-Exactly one of `code` or `recoveryCode` must be provided — the controller asserts this invariant. On success, the flow completes the same as a normal login: `Auth.login()` followed by navigation to home.
+Exactly one of `code` or `recoveryCode` must be provided; the controller asserts this invariant in debug builds. On success, the flow completes the same as a normal login: `Auth.login()` followed by navigation to home.
 
 <a name="enabling-two-factor"></a>
 ### Enabling Two-Factor
@@ -197,7 +204,7 @@ Exactly one of `code` or `recoveryCode` must be provided — the controller asse
 Enabling 2FA is a multi-step process managed by `MagicStarterProfileController`:
 
 1. **Enable**: `doEnableTwoFactor(proof:)` calls `POST /two-factor-authentication`. Returns a map containing `secret`, `qr_url`, `qr_svg`, and `recovery_codes`.
-2. **Confirm** — `doConfirmTwoFactor(code:)` calls `POST /two-factor-authentication/confirm` with the TOTP code from the authenticator app.
+2. **Confirm**: `doConfirmTwoFactor(code:)` calls `POST /two-factor-authentication/confirm` with the TOTP code from the authenticator app.
 3. **Disable**: `doDisableTwoFactor(proof:)` uses Laravel method spoofing (`{'_method': 'DELETE'}`) via `Http.post()`.
 
 > [!NOTE]
@@ -229,7 +236,7 @@ MagicStarter.useSocialAuth(AppSocialAuth());
 
 While a bridge is registered and the feature is on, login and register render one button per provider the bridge offers, and the Connected accounts page is reachable from the settings hub. Without a bridge the buttons and the hub row are absent: the feature flag alone renders nothing. The page's route is registered on the feature alone, since the bridge is set after the routes are.
 
-`magic_social_auth` installs the bridge for you: `social:install` publishes `lib/app/providers/social_auth_starter_service_provider.dart`, which implements the contract below over `SocialAuth` and calls `MagicStarter.useSocialAuth`. See its installation guide.
+`magic_social_auth` installs the bridge for you: `social:install` publishes `lib/app/providers/social_auth_starter_service_provider.dart`, which implements the contract below over `SocialAuth` and calls `MagicStarter.useSocialAuth`. See its [installation guide](https://anilcancakir.com/magic/docs/social_auth/getting-started/installation).
 
 ### The MagicStarterSocialAuth Contract
 
@@ -274,7 +281,7 @@ The screens read a `social.*` group (`continue_with`, `connect`, `disconnect`, `
 <a name="otp-flow"></a>
 ## OTP Flow
 
-The phone OTP flow is a two-step process managed by `MagicStarterOtpController`. It requires both `guest_auth` and `phone_otp` feature flags to be enabled.
+The phone OTP flow is a two-step process managed by `MagicStarterOtpController`. It is gated by the `phone_otp` feature flag alone: the route and the registry key exist only while `magic_starter.features.phone_otp` is on.
 
 <a name="sending-an-otp"></a>
 ### Sending an OTP
@@ -403,13 +410,13 @@ The flags are per device, not per account: they survive sign-out and a sign-in a
 
 The starter supports three identity modes configured via `magic_starter.auth.email` and `magic_starter.auth.phone`:
 
-| `auth.email` | `auth.phone` | Mode | Behavior |
+| `auth.email` | `auth.phone` | Mode | Behaviour |
 |:---:|:---:|---|---|
 | `true` | `false` | Email-only (default) | Only `email` field is sent in the payload |
 | `false` | `true` | Phone-only | Only `phone` field is sent in the payload |
-| `true` | `true` | Both | Both fields sent when non-empty; phone takes precedence when resolving a single identity |
+| `true` | `true` | Both | Every non-empty field is sent |
 
-The `_applyIdentityToPayload()` helper centralizes this logic across login and registration. In "both" mode, every non-empty identity field is included so the backend receives the full picture.
+The private `_applyIdentityToPayload()` helper centralizes this logic across login and registration. In "both" mode, every non-empty identity field is included, so the backend receives whatever the form collected and decides which one identifies the account.
 
 ```dart
 // Config for phone-only mode
@@ -418,7 +425,7 @@ Config.set('magic_starter.auth.phone', true);
 ```
 
 > [!IMPORTANT]
-> When both modes are enabled, phone takes precedence for single-identity resolution. If neither `email` nor `phone` is provided, the login controller sets an error and returns early.
+> `doLogin()` sets the `auth.login_failed` error and returns before any request when both `email` and `phone` are empty, and sets a `validation.required` error when `password` is empty. Registration has no such early return: with no identity in email-only mode it sends `email: ''` and leaves the refusal to the backend.
 
 <a name="feature-gates"></a>
 ## Feature Gates
@@ -451,7 +458,7 @@ Authentication features are controlled by these configuration toggles. All defau
 | `MagicStarterOtpController` | `.instance` | `sendOtp()`, `verifyOtp()`, `resetToPhoneInput()`, `step`, `phoneNumber` |
 | `MagicStarterHandoffController` | `.instance` | `handOff()`, `confirm()`, `cancel()`, `forget()`, `isConfirming`, `confirmingAs` |
 
-All controllers use the `NavigatesRoutes` mixin for safe navigation. Never call `context.go()` directly in a controller — the navigator context may not be mounted. The mixin checks `MagicRouter.instance.navigatorKey.currentContext` and no-ops when unavailable.
+All controllers use the `NavigatesRoutes` mixin for safe navigation. Never call `context.go()` directly in a controller: the navigator context may not be mounted. The mixin checks `MagicRouter.instance.navigatorKey.currentContext` and no-ops when unavailable.
 
 After successful login or registration, `Auth.login()` stores the token and user model. Call `Auth.restore()` when you need to refresh the user model from the backend (e.g., after profile updates).
 
@@ -462,23 +469,38 @@ All views extend `MagicStatefulView<ControllerType>` and are registered in the v
 
 | Registry Key | View | Layout |
 |-------------|------|--------|
-| `auth.login` | `LoginView` | `GuestLayout` |
-| `auth.register` | `RegisterView` | `GuestLayout` |
-| `auth.forgot_password` | `ForgotPasswordView` | `GuestLayout` |
-| `auth.reset_password` | `ResetPasswordView` | `GuestLayout` |
-| `auth.verify_email` | `VerifyEmailView` | `GuestLayout` |
-| `auth.two_factor_challenge` | `TwoFactorChallengeView` | `GuestLayout` |
-| `auth.otp_verify` | `OtpVerifyView` | `GuestLayout` |
-| `auth.handoff` | `HandoffView` | `GuestLayout` |
+| `auth.login` | `MagicStarterLoginView` | `layout.guest` |
+| `auth.register` | `MagicStarterRegisterView` | `layout.guest` |
+| `auth.forgot_password` | `MagicStarterForgotPasswordView` | `layout.guest` |
+| `auth.reset_password` | `MagicStarterResetPasswordView` | `layout.guest` |
+| `auth.verify_email` | `MagicStarterVerifyEmailView` | `layout.guest` |
+| `auth.two_factor_challenge` | `MagicStarterTwoFactorChallengeView` | `layout.guest` |
+| `auth.otp_verify` | `MagicStarterOtpVerifyView` | `layout.guest` |
+| `auth.handoff` | `MagicStarterHandoffView` | `layout.guest` |
 
 Views are instantiated through the registry (`MagicStarter.view.make('auth.login')`) and wrapped in the appropriate layout (`MagicStarter.view.makeLayout('layout.guest', child: view)`). The host app can override any view by registering a custom builder under the same key.
 
-Views contain zero business logic — all async operations, state management, and navigation decisions live in the controllers.
+Views carry no business logic: async operations, state management and navigation decisions live in the controllers.
 
----
+<a name="gotchas"></a>
+## Gotchas
 
-**Related links:**
+| Mistake | Fix |
+|:--------|:----|
+| Passing `password:` to `doEnableTwoFactor`, `doDisableTwoFactor`, `getRecoveryCodes` or `doRegenerateRecoveryCodes` | They take `proof:` (`{password}`, `{code}`, `{confirmation_token}` or `{}` for a guest); the screens get one from [Confirming Identity](./identity-confirmation.md). |
+| Concluding a sign-in by hand with `Auth.login()` | Every token (password, social, two-factor challenge, OTP, guest) goes through `CompletesSignIn.completeSignIn`, which also handles the two-factor answer and `deletion_cancelled`. |
+| Enabling `social_login` and expecting buttons | The buttons and the Connected accounts page render only after `MagicStarter.useSocialAuth(bridge)`; the flag alone renders nothing. |
+| Checking only `response['two_factor']` for a challenge | `completeSignIn` reads both `response['two_factor']` and `response['data']['two_factor']`; a controller of your own has to do the same. |
+| Calling `context.go()` from a controller | Use `navigateTo(path)` from the `NavigatesRoutes` mixin; the navigator may not be mounted. |
+| Expecting an authenticated before-logout hook to run after a failed token refresh | Hooks run on the two sign-out paths of the starter only. When `AuthInterceptor` signs out after a refresh failure the token is already dead; give server-side state its own expiry. |
 
-- [Configuration](https://magic.fluttersdk.com/packages/starter/configuration)
-- [Profile Management](https://magic.fluttersdk.com/packages/starter/profile)
-- [Teams](https://magic.fluttersdk.com/packages/starter/teams)
+<a name="related-documentation"></a>
+## Related Documentation
+
+- [Identity Confirmation](./identity-confirmation.md): the step-up proof the two-factor and session calls take.
+- [Connected Accounts](./connected-accounts.md): linking and unlinking providers.
+- [Profile](./profile.md): two-factor management, sessions and account deletion.
+- [Teams](./teams.md): team switching after sign-in.
+- [Configuration](../getting-started/configuration.md): the feature flags and identity keys.
+- [Manager](../architecture/manager.md): `useLogin`, `useLogout` and `beforeLogout` callbacks.
+- [Middleware](./middleware.md): the `auth` and `guest` route guards.

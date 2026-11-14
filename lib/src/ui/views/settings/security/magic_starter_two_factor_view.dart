@@ -79,7 +79,6 @@ class _MagicStarterTwoFactorViewState
   Future<void> _enableTwoFactor(BuildContext context) async {
     Map<String, dynamic>? setupData;
 
-    // ignore: use_build_context_synchronously
     if (!context.mounted) return;
 
     await confirmAndRun(
@@ -97,7 +96,6 @@ class _MagicStarterTwoFactorViewState
 
     if (setupData == null) return; // user cancelled or all attempts failed
 
-    // ignore: use_build_context_synchronously
     if (!context.mounted) return;
 
     final confirmed = await MagicStarterTwoFactorModal.show(
@@ -113,7 +111,6 @@ class _MagicStarterTwoFactorViewState
 
   /// Disable 2FA --- requires identity confirmation.
   Future<void> _disableTwoFactor(BuildContext context) async {
-    // ignore: use_build_context_synchronously
     if (!context.mounted) return;
 
     final success = await confirmAndRun(
@@ -136,7 +133,6 @@ class _MagicStarterTwoFactorViewState
 
   /// Show current recovery codes from server.
   Future<void> _showRecoveryCodes(BuildContext context) async {
-    // ignore: use_build_context_synchronously
     if (!context.mounted) return;
     await confirmAndRun(
       context,
@@ -156,7 +152,6 @@ class _MagicStarterTwoFactorViewState
 
   /// Regenerate recovery codes on the server.
   Future<void> _regenerateRecoveryCodes(BuildContext context) async {
-    // ignore: use_build_context_synchronously
     if (!context.mounted) return;
     await confirmAndRun(
       context,

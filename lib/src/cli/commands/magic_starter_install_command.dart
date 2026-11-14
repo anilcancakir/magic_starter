@@ -146,7 +146,8 @@ class MagicStarterInstallCommand extends DowelInstallCommand {
     final String appPath = '$projectRoot/lib/config/app.dart';
     if (!FileHelper.fileExists(appPath)) {
       throw Exception(
-        'Magic Framework not detected. Run `magic install` first.',
+        'Magic Framework not detected. Run `dart run magic:dowel magic:install` '
+        'first.',
       );
     }
 

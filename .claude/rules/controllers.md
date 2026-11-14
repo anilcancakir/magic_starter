@@ -5,7 +5,7 @@ paths:
 
 # HTTP Controllers
 
-- Error handling: `handleApiError(response, fallback: trans('key'))` — never raw exception messages
+- Error handling: `handleApiError(response, fallback: trans('key'))`: never raw exception messages
 - Try/catch wraps ALL async operations with structured logging:
   ```dart
   try { ... } catch (e, stackTrace) {
@@ -13,7 +13,7 @@ paths:
     setError(trans('...'));
   }
   ```
-- API calls: `Http.post()`, `Http.put()`, `Http.delete()`, `Http.upload()` — no raw Dio
+- API calls: `Http.post()`, `Http.put()`, `Http.delete()`, `Http.upload()`: no raw Dio
 - Widget rendering: `controller.renderState((_) => _buildForm())` with optional `onEmpty:` and `onError:`
 - Payload construction: build `Map<String, dynamic>` with conditional entries via spread:
   ```dart
@@ -24,17 +24,15 @@ paths:
   ```
 - Identity mode helper: `_applyIdentityToPayload()` handles email/phone/both logic centrally
 - Auth state sync: call `Auth.restore()` after login, register, or profile update to reload user model
-- Navigation: use `navigateTo(path)` from `NavigatesRoutes` mixin — never `context.go()` directly
-- Suppress notifications pattern: `_suppressNotifications = true` to prevent full-page rebuilds during form-level loading, restore in finally block
+- Navigation: use `navigateTo(path)` from `NavigatesRoutes` mixin: never `context.go()` directly
 - `ValueNotifier<T>` for fine-grained reactive state beyond MagicStateMixin:
   ```dart
-  final matrixNotifier = ValueNotifier<Map<String, dynamic>>({});
+  final ValueNotifier<List<Map<String, dynamic>>> members = ValueNotifier([]);
   ```
-- `withoutNotifying()` helper wraps async action with `_suppressNotifications = true` / finally restore
-- Recursive normalization: `_normalizeMap()` for backend responses with mixed-case or dynamic keys
+- `withoutNotifying()` on `MagicStarterProfileController` wraps an async action so `notifyListeners` is discarded while it runs (a depth counter, so overlapping actions do not un-suppress each other): use it when form-level loading already drives the submit button
 - OTP two-step flow: `sendOtp()` sets state for code input → `verifyOtp()` completes authentication
-- Newsletter controller: simple subscribe/unsubscribe — no navigation, view-only state changes
-- Two-level response extraction — always check BOTH top-level and nested `data`:
+- Newsletter controller: simple subscribe/unsubscribe: no navigation, view-only state changes
+- Two-level response extraction: always check BOTH top-level and nested `data`:
   ```dart
   final data = response.data?['data'] as Map<String, dynamic>?;
   final token = data?['token'];

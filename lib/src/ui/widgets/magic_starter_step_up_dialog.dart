@@ -15,7 +15,7 @@ import '../components/dialog/modal_presenter.dart';
 /// The backend takes a TOTP `code` when two-factor is confirmed, or a
 /// `confirmation_token` minted by re-authenticating with a linked provider.
 /// This dialog offers what the signed-in user can send: a code field for a
-/// 2FA account, and one "Confirm with <provider>" row per active linked
+/// 2FA account, and one "Confirm with `<provider>`" row per active linked
 /// account (one with no `revoked_at`) that the social login bridge offers.
 /// With neither it shows only the `social.step_up_required` sentence.
 ///

@@ -1,30 +1,33 @@
 # Configuration
 
+The `magic_starter` config file turns features on, sets the route prefixes and carries the billing, push, handoff and legal keys, read at runtime through `MagicStarterConfig`.
+
 - [Introduction](#introduction)
 - [The Config File](#config-file)
 - [Feature Toggles](#feature-toggles)
-- [Route Customization](#route-customization)
+- [Route Customisation](#route-customization)
 - [Billing](#billing)
 - [The push external id](#push-external-id)
 - [Auth Identity Modes](#auth-identity-modes)
 - [Locale & Timezone Defaults](#locale-timezone-defaults)
 - [Accessing Values](#accessing-values)
+- [Related Documentation](#related-documentation)
 
 <a name="introduction"></a>
 ## Introduction
 
-The `magic_starter` plugin is configured via a single Dart file at `lib/config/magic_starter.dart` in your consumer project. This file is generated automatically when you run the install command, and contains all feature toggles, route prefixes, auth identity settings, and locale defaults your app needs.
+The plugin is configured by one Dart file in your app, `lib/config/magic_starter.dart`, which `starter:install` generates from the features you chose. Every feature defaults to `false`: a toggle decides whether its routes are registered, its views are put in the view registry and its UI shows.
 
 ```bash
-dart run magic_starter:install
+dart run magic:dowel starter:install
 ```
 
-The install command scaffolds `lib/config/magic_starter.dart` with all features defaulting to `false`. Enable only the features your app requires — each toggle controls route registration, UI visibility, and controller behaviour.
+To flip toggles later, edit the file, or run `dart run magic:dowel starter:configure` for the toggles it has a flag for; see [CLI Commands](../basics/cli.md).
 
 <a name="config-file"></a>
 ## The Config File
 
-The generated `lib/config/magic_starter.dart` exports a single top-level getter that returns a nested `Map<String, dynamic>`:
+The file exports one top-level getter that returns a nested `Map<String, dynamic>`:
 
 ```dart
 Map<String, dynamic> get magicStarterConfig => {
@@ -45,6 +48,12 @@ Map<String, dynamic> get magicStarterConfig => {
       'timezones': false,
       'billing': false,
       'support': false,
+      'support_csat': false,
+      'support_feedback': false,
+      'support_attachments': false,
+      'support_client_context': false,
+      'support_chat': false,
+      'store_review': false,
       'releases': false,
       'app_update': false,
       'handoff': false,
@@ -75,6 +84,7 @@ Map<String, dynamic> get magicStarterConfig => {
     },
     'billing': {
       'web_origin': null,
+      'billable': 'user',
     },
     'notifications': {
       'external_id_prefix': 'user_',
@@ -87,11 +97,14 @@ Map<String, dynamic> get magicStarterConfig => {
       'terms_url': null,
       'privacy_url': null,
     },
+    'account': {
+      'deletion_url': null,
+    },
   },
 };
 ```
 
-Register it with `Magic.init()` alongside your other config factories:
+Register it with `Magic.init()` next to your other config factories (the installer does this for you):
 
 ```dart
 await Magic.init(
@@ -102,35 +115,43 @@ await Magic.init(
 );
 ```
 
-> [!NOTE]
-> All keys under `'magic_starter'` are accessible at runtime via `Config.get('magic_starter.<key>')` using dot notation. The `MagicStarterServiceProvider` reads from this namespace during the boot phase.
+Every key under `'magic_starter'` is readable with `Config.get('magic_starter.<key>')` using dot notation. The support and store review screens read further keys, listed in [Support](../basics/support.md).
 
 <a name="feature-toggles"></a>
 ## Feature Toggles
 
-Every feature defaults to `false` and must be explicitly enabled. Each toggle controls whether routes are registered, UI sections are rendered, and controller logic is activated.
+Each toggle controls whether routes are registered, views are put in the registry and UI sections render.
 
 | Key | Default | Description |
-|-----|---------|-------------|
-| `teams` | `false` | Team creation, management, member invitations, and team switching. |
-| `registration` | `false` | User registration screen and route. |
-| `extended_profile` | `false` | Additional profile fields: phone, timezone, and language preferences. |
+|:----|:--------|:------------|
+| `teams` | `false` | Team creation, management, member invitations and team switching. Needs a team resolver, see [Installation](installation.md#bootstrapping-the-starter). |
+| `registration` | `false` | The registration screen and route. |
+| `extended_profile` | `false` | Additional profile fields (phone, timezone, language) and the Language settings page. |
 | `profile_photos` | `false` | Profile photo upload and removal in the profile settings. |
-| `social_login` | `false` | Social login: provider buttons on the login and register screens, the Connected accounts settings page, and the provider option of the identity-confirmation dialog. Needs a bridge registered with `MagicStarter.useSocialAuth(...)` (see [Social Login](../basics/authentication.md#social-login)); the flag alone renders nothing. |
-| `two_factor` | `false` | Two-factor authentication setup, challenge screen, and recovery codes. |
-| `sessions` | `false` | Browser sessions list with logout/revoke capability. |
-| `phone_otp` | `false` | Phone-based OTP authentication flow (send code, verify). |
-| `newsletter` | `false` | Newsletter subscribe/unsubscribe toggle in the profile. |
-| `notifications` | `false` | In-app notification list, unread badge, and preferences screen. |
-| `email_verification` | `false` | Email verification banner and resend verification flow. |
-| `guest_auth` | `false` | The login screen's "Continue as guest" button, plus the listeners that record a guest sign-in and claim that guest's data when an account signs in. It adds no routes or screens, and `MagicStarterGuestAuthController` works without it. |
-| `timezones` | `false` | Timezone selection with debounced async API search. |
-| `support` | `false` | Support desk screens (`/support`, `/support/new`, `/support/:id`), the Support profile-menu item and the Contact sales conversation. The host registers the routes with `registerMagicStarterSupportRoutes()`; see [Support](../basics/support.md). |
-| `releases` | `false` | The "What's new" changelog page (`/settings/changelog`), its settings hub row and the `MagicStarterAppVersion` caption, read from the backend's `GET releases`. Needs `Features::releases()` on `magic-starter-laravel`; see [Releases](../basics/releases.md). |
-| `app_update` | `false` | `MagicStarterAppUpdateBanner` in the app layout: Reload when a new web deploy appears in `version.json`, Update when the store has a newer build than a store-installed release build. The store path reads `GET releases` and needs `Features::releases()` on the backend; see [Releases](../basics/releases.md). |
-| `handoff` | `false` | The sign-in handoff page `/auth/handoff?code=&next=`: trades a one-time code for a session, after asking "Sign in as ...?", and opens `next`. `handoff.confirm_without_session` (default `true`) keeps that question when nobody is signed in, which is what stops a link carrying an attacker's own code from signing a visitor in to the attacker's account; `false` only saves the tap. `handoff.signed_out_route` (default `null`, meaning `routes.login`) is where a signed-out visit without a code goes, carrying `?next=`. See [Sign-in handoff](../basics/authentication.md#handoff). |
+| `social_login` | `false` | Provider buttons on the login and register screens, the Connected accounts settings page and the provider option of the identity-confirmation dialog. Needs a bridge registered with `MagicStarter.useSocialAuth(...)`, see [Social Login](../basics/authentication.md#social-login); the flag alone renders nothing. |
+| `two_factor` | `false` | Two-factor setup, the challenge screen and recovery codes. |
+| `sessions` | `false` | The browser sessions list with revoke. |
+| `phone_otp` | `false` | The phone-based one-time code flow (send, verify). |
+| `newsletter` | `false` | The newsletter subscribe toggle in the settings. |
+| `notifications` | `false` | The in-app notification list, unread badge and preferences screen, and the push identity this package declares. |
+| `email_verification` | `false` | The email verification page and resend flow. |
+| `guest_auth` | `false` | The login screen's "Continue as guest" button, plus the listeners that record a guest sign-in and claim that guest's data when an account signs in. It adds no routes or screens. |
+| `timezones` | `false` | The Timezone settings page with debounced async search. |
+| `billing` | `false` | The `teams.billing` view; see [Billing](#billing). |
+| `support` | `false` | The support desk (`/support`, `/support/new`, `/support/:id`). The host registers the routes with `registerMagicStarterSupportRoutes()`; see [Support](../basics/support.md). |
+| `support_csat` | `false` | A thumbs rating under a resolved conversation. |
+| `support_feedback` | `false` | The feedback card and the `/support/feedback` page. |
+| `support_attachments` | `false` | Image and PDF attachments on a message. |
+| `support_client_context` | `false` | App version, platform and locale sent with a new conversation. |
+| `support_chat` | `false` | The chat launcher and its floating panel. Needs `support`. |
+| `store_review` | `false` | The native store review prompt. |
+| `releases` | `false` | The "What's new" changelog page (`/settings/changelog`) and the version caption, read from the backend's `GET releases`. Needs `Features::releases()` on `magic-starter-laravel`; see [Releases](../basics/releases.md). |
+| `app_update` | `false` | `MagicStarterAppUpdateBanner` in the app layout: Reload when a new web deploy appears in `version.json`, Update when the store has a newer build. The store path reads `GET releases`; see [Releases](../basics/releases.md). |
+| `handoff` | `false` | The sign-in handoff page `/auth/handoff?code=&next=`: it trades a one-time code for a session, after asking "Sign in as ...?", and opens `next`. See [Sign-in handoff](../basics/authentication.md#handoff). |
 
-To enable features, set their values to `true` in `lib/config/magic_starter.dart`:
+The handoff keys sit beside the toggle. `handoff.confirm_without_session` (default `true`) keeps the question when nobody is signed in, which is what stops a link carrying an attacker's own code from signing a visitor in to the attacker's account; `false` only saves the tap. `handoff.signed_out_route` (default `null`, meaning `routes.login`) is where a signed-out visit without a code goes, carrying `?next=`.
+
+To enable features, set their values to `true`:
 
 ```dart
 'features': {
@@ -142,12 +163,12 @@ To enable features, set their values to `true` in `lib/config/magic_starter.dart
 ```
 
 > [!TIP]
-> Feature-gated routes throw a `StateError` if you attempt to navigate to them when their feature is disabled. Always check the config before building navigation links — use `MagicStarterConfig.hasTeamFeatures()` and similar query methods.
+> A disabled feature registers no route and no view, so asking the view registry for its key (`MagicStarter.view.make('teams.create')`) throws a `StateError`. Check `MagicStarterConfig.hasTeamFeatures()` and its siblings before building a link to a gated page.
 
 <a name="route-customization"></a>
-## Route Customization
+## Route Customisation
 
-The `routes` block controls all URL paths registered by Magic Starter. Change these values to match your app's URL structure:
+The `routes` block controls the URL paths the starter registers:
 
 ```dart
 'routes': {
@@ -157,39 +178,39 @@ The `routes` block controls all URL paths registered by Magic Starter. Change th
   'teams_prefix': '/teams',
   'profile_prefix': '/settings',
   'notifications_prefix': '/notifications',
+  'billing': '/teams/billing',
 },
 ```
 
 | Key | Default | Description |
-|-----|---------|-------------|
-| `home` | `'/'` | Redirect target after successful login. |
-| `login` | `'/auth/login'` | Login screen path; used by `RedirectIfAuthenticated` middleware. |
-| `auth_prefix` | `'/auth'` | Prefix for all auth routes (login, register, forgot, reset, two-factor challenge). |
-| `teams_prefix` | `'/teams'` | Prefix for team routes (create, settings). |
-| `profile_prefix` | `'/settings'` | Prefix for profile routes (profile, notifications preferences). |
-| `notifications_prefix` | `'/notifications'` | Prefix for the notifications list page. |
+|:----|:--------|:------------|
+| `home` | `'/'` | Where a successful sign-in lands (unless an intended URL or a `next` path says otherwise) and where `RedirectIfAuthenticated` sends a signed-in visitor. |
+| `login` | `'/auth/login'` | Where `EnsureAuthenticated` sends a signed-out visitor. |
+| `auth_prefix` | `'/auth'` | Prefix of the auth routes (login, register, forgot and reset password, two-factor challenge, OTP, verify email, handoff). |
+| `teams_prefix` | `'/teams'` | Prefix of the team routes (create, settings). |
+| `profile_prefix` | `'/settings'` | Prefix of the settings hub and its sub-pages. |
+| `notifications_prefix` | `'/notifications'` | The notifications list page. |
+| `billing` | `'/teams/billing'` | The billing page, also where the upgrade prompts send the user. |
 
-The config class also provides computed route paths built from these prefixes:
+`MagicStarterConfig` also builds the paths that depend on a prefix:
 
 ```dart
-MagicStarterConfig.teamCreateRoute();          // '/teams/create'
+MagicStarterConfig.teamCreateRoute();           // '/teams/create'
 MagicStarterConfig.teamSettingsRoute();         // '/teams/settings'
 MagicStarterConfig.profileRoute();              // '/settings/profile'
+MagicStarterConfig.settingsHubRoute();          // '/settings'
 MagicStarterConfig.notificationsRoute();        // '/notifications'
 MagicStarterConfig.notificationPreferencesRoute(); // '/settings/notifications'
 MagicStarterConfig.twoFactorChallengeRoute();   // '/auth/two-factor-challenge'
+MagicStarterConfig.handoffRoute();              // '/auth/handoff'
 ```
 
-> [!NOTE]
-> Changing a prefix automatically updates all computed routes that depend on it. For example, setting `profile_prefix` to `'/account'` changes `profileRoute()` to `'/account/profile'` and `notificationPreferencesRoute()` to `'/account/notifications'`.
+Changing a prefix updates every path built from it: setting `profile_prefix` to `'/account'` makes `profileRoute()` return `'/account/profile'` and `notificationPreferencesRoute()` return `'/account/notifications'`.
 
 <a name="billing"></a>
 ## Billing
 
-The `billing` feature gates the `teams.billing` view, which sells subscriptions through
-[`magic_payments`](https://pub.dev/packages/magic_payments). It is off by default and it is gated on
-its OWN toggle rather than on `teams`: a subscription is bought by whoever holds the account, so an
-app with no team features can still sell one.
+The `billing` feature gates the `teams.billing` view, which sells subscriptions through [`magic_payments`](https://pub.dev/packages/magic_payments). It has its own toggle rather than hanging on `teams`: a subscription is bought by whoever holds the account, so an app with no team features can still sell one.
 
 ```dart
 'features': {
@@ -200,27 +221,24 @@ app with no team features can still sell one.
 },
 'billing': {
   'web_origin': 'https://app.example.com',
+  'billable': 'user',
 },
 ```
 
+| Key | Default | Description |
+|:----|:--------|:------------|
+| `billing.web_origin` | `null` | The host app's own web origin, with no trailing slash. Required once billing is on; read on the web rail only. |
+| `billing.billable` | `'user'` | What a store purchase is billed to: `'user'` or `'team'`. It must match `magic-starter-laravel`'s `billable` key. Any other value throws a `StateError`. |
+
 > [!WARNING]
-> `billing.web_origin` is REQUIRED once billing is on, and it carries no default on purpose. The
-> billing view builds Stripe's `successUrl`, `cancelUrl` and the portal `returnUrl` by concatenating
-> this origin with a path, and Stripe rejects a relative url. Leave it unset and checkout fails at
-> Stripe, where the resulting `BillingException` is logged rather than shown, so the customer sees a
-> button that does nothing. `dart run magic:dowel starter:doctor` reports the missing key.
+> `billing.web_origin` carries no default on purpose. The billing view builds Stripe's `successUrl`, `cancelUrl` and the portal `returnUrl` by concatenating this origin with a path, and Stripe rejects a relative url. Leave it unset and checkout fails at Stripe, where the resulting `BillingException` is logged rather than shown, so the customer sees a button that does nothing. `dart run magic:dowel starter:doctor` reports the missing key.
 
-The origin is the host app's own web origin, with no trailing slash. It is only read on the web rail;
-a store purchase on iOS or Android never touches it.
-
----
+A store purchase on iOS or Android never reads `web_origin`. See [Teams](../basics/teams.md) for what `billable` changes.
 
 <a name="push-external-id"></a>
 ## The push external id
 
-With the `notifications` feature on, this package declares who the device is subscribed as every
-time a session begins, and releases it on every sign-out, including the ones no call site performs
-(account deletion, and a session that simply expires). You wire nothing.
+With the `notifications` feature on, this package declares who the device is subscribed as every time a session begins, and releases it on every sign-out, including the ones no call site performs (account deletion, and a session that simply expires). You wire nothing.
 
 What it declares is the prefix below followed by the authenticated user's id:
 
@@ -231,45 +249,28 @@ What it declares is the prefix below followed by the authenticated user's id:
 ```
 
 > [!WARNING]
-> This has to match what your backend addresses. `magic-starter-laravel`'s `HasNotifications`
-> composes `user_<id>`, so the default is correct against that backend and changing one side alone
-> means the server sends to an id no device carries. Nothing fails visibly when they disagree: the
-> notification is accepted and delivered to nobody, and only a zero-recipient report on the server
-> says so.
+> This has to match what your backend addresses. `magic-starter-laravel`'s `HasNotifications` composes `user_<id>`, so the default is correct against that backend, and changing one side alone means the server sends to an id no device carries. Nothing fails visibly when they disagree: the notification is accepted and delivered to nobody, and only a zero-recipient report on the server says so.
 >
-> A blank value resolves to `user_` rather than to no prefix, and surrounding whitespace is trimmed,
-> because OneSignal rejects a bare numeric external id outright and the PHP side normalises the same
-> way. So emptying this key does not switch the prefix off; it restores the default.
+> A blank value resolves to `user_` rather than to no prefix, and surrounding whitespace is trimmed, because OneSignal rejects a bare numeric external id outright and the PHP side normalises the same way. Emptying this key does not switch the prefix off; it restores the default.
 
-Change it when one OneSignal app serves more than one kind of subject, and change the backend with
-it.
+Change it when one OneSignal app serves more than one kind of subject, and change the backend with it. On the backend the key is `onesignal.external_id_prefix` in `config/magic-starter.php`.
 
-`dart run magic:dowel starter:doctor` prints the prefix this config resolves to, so the two sides
-can be read against each other:
+`dart run magic:dowel starter:doctor` prints the prefix this config resolves to, so the two sides can be read against each other:
 
-```
+```text
 Push external id prefix: user_ (default, key not set)
 Push external id prefix: user_ (blank, using default)
 Push external id prefix: operator-
 ```
 
-The first two resolve to the same prefix and are not the same situation: the second means the value
-you wrote is being discarded, which "key not set" would hide.
+The first two resolve to the same prefix and are not the same situation: the second means the value you wrote is being discarded, which "key not set" would hide.
 
-It is printed rather than checked, and never fails: any prefix is valid as long as the backend uses
-the same one, and nothing inside this repository can see the other side to compare. `--verbose` adds
-the key name and the file to compare it against. The value comes from this config FILE, so an app
-that writes the key at runtime through `Config.set` is not covered; the command boots nothing and
-has no container to ask. Whole-line `//` comments are skipped, so a commented-out old key above the
-live one does not win; a block comment around it, or a key written outside the `notifications`
-block, is not covered.
-
----
+It is printed rather than checked, and never fails: any prefix is valid as long as the backend uses the same one, and nothing inside this repository can see the other side. `--verbose` adds the key name and the backend key to compare it against. The value comes from the config file text, so an app that writes the key at runtime through `Config.set` is not covered (the command boots nothing and has no container to ask), and a whole-line `//` comment above the live key is skipped.
 
 <a name="auth-identity-modes"></a>
 ## Auth Identity Modes
 
-The `auth` block controls which identity fields are shown on login and registration forms:
+The `auth` block controls which identity fields the login and registration forms show:
 
 ```dart
 'auth': {
@@ -278,54 +279,29 @@ The `auth` block controls which identity fields are shown on login and registrat
 },
 ```
 
-There are three supported modes:
+| `email` | `phone` | Result |
+|:--------|:--------|:-------|
+| `true` | `false` | Email only (default). |
+| `false` | `true` | Phone only. |
+| `true` | `true` | Both fields are offered; phone takes precedence in the login payload when both are filled in. |
 
-**Email only** (default) — users authenticate with email and password:
-
-```dart
-'auth': {
-  'email': true,
-  'phone': false,
-},
-```
-
-**Phone only** — users authenticate with phone number:
+Read the modes at runtime:
 
 ```dart
-'auth': {
-  'email': false,
-  'phone': true,
-},
-```
-
-**Both** — both fields are shown, but phone takes precedence in the login payload when both are provided:
-
-```dart
-'auth': {
-  'email': true,
-  'phone': true,
-},
-```
-
-> [!TIP]
-> When both identity modes are enabled, the `_applyIdentityToPayload()` helper in auth controllers gives phone precedence. If the user fills in both fields, the phone value is sent as the primary identifier.
-
-Access identity mode at runtime:
-
-```dart
-final emailEnabled = MagicStarterConfig.emailIdentity(); // true
-final phoneEnabled = MagicStarterConfig.phoneIdentity(); // false
+final emailEnabled = MagicStarterConfig.emailIdentity();
+final phoneEnabled = MagicStarterConfig.phoneIdentity();
 ```
 
 <a name="locale-timezone-defaults"></a>
 ## Locale & Timezone Defaults
 
-The `defaults` and `supported_locales` sections configure localisation behaviour:
-
 ```dart
 'defaults': {
   'locale': 'en',
   'timezone': 'UTC',
+},
+'localization': {
+  'apply_user_locale': true,
 },
 'supported_locales': [
   'en',
@@ -334,22 +310,13 @@ The `defaults` and `supported_locales` sections configure localisation behaviour
 ```
 
 | Key | Default | Description |
-|-----|---------|-------------|
-| `defaults.locale` | `'en'` | Default locale for new users. |
-| `defaults.timezone` | `'UTC'` | Default timezone for new users. |
+|:----|:--------|:------------|
+| `defaults.locale` | `'en'` | The language a release note or campaign falls back to when the backend sent none in the reader's own. |
+| `defaults.timezone` | `'UTC'` | Read through `MagicStarterConfig.defaultTimezone()`; no screen in the package consumes it. |
 | `localization.apply_user_locale` | `true` | Whether a signed-in user's saved `locale` attribute is applied to the running app automatically, on sign-in and on restore. Set `false` to own locale switching yourself. See [Locale Application](../architecture/manager.md#locale-application). |
-| `supported_locales` | `['en', 'tr']` | Locales available in the language selector (when `extended_profile` is enabled). |
+| `supported_locales` | `['en', 'tr']` | Read through `MagicStarterConfig.supportedLocales()`; no screen in the package consumes it. The language picker lists `MagicStarter.localeOptions`, which comes from `useLocaleOptions()` or, without it, from magic's own `Lang.supportedLocales`. |
 
-Access these values at runtime:
-
-```dart
-final locale = MagicStarterConfig.defaultLocale();       // 'en'
-final timezone = MagicStarterConfig.defaultTimezone();    // 'UTC'
-final locales = MagicStarterConfig.supportedLocales();    // ['en', 'tr']
-final applies = MagicStarterConfig.applyUserLocale();     // true
-```
-
-The `legal` block provides optional links displayed on auth screens:
+The `legal` block carries optional links shown on the registration screen and the billing page:
 
 ```dart
 'legal': {
@@ -358,15 +325,22 @@ The `legal` block provides optional links displayed on auth screens:
 },
 ```
 
-> [!NOTE]
-> Legal links default to `null`. When set, they render as tappable links on the registration screen. Use `MagicStarterConfig.hasLegalLinks()` to check if at least one legal link is configured.
+Both default to `null`, and a blank string reads as unset. `MagicStarterConfig.hasLegalLinks()` says whether at least one is set.
+
+The `account` block names where a card-billed subscription is cancelled and the account deleted:
+
+```dart
+'account': {
+  'deletion_url': 'https://app.example.com/account',
+},
+```
+
+A refused account deletion offers that page as its one action; with `null` (the default), or a blank string, it offers none.
 
 <a name="accessing-values"></a>
 ## Accessing Values
 
-At runtime, all values are accessible in two ways.
-
-**Via `MagicStarterConfig` static methods** — the recommended approach with type safety and defaults:
+`MagicStarterConfig` carries the defaults and the types, so prefer it to raw `Config.get()`:
 
 ```dart
 // Feature checks
@@ -378,20 +352,13 @@ final twoFactorEnabled = MagicStarterConfig.hasTwoFactorFeatures();
 final loginPath = MagicStarterConfig.loginRoute();
 final profilePath = MagicStarterConfig.profileRoute();
 
-// Identity
+// Identity, defaults and legal links
 final emailAuth = MagicStarterConfig.emailIdentity();
-final phoneAuth = MagicStarterConfig.phoneIdentity();
-
-// Defaults
 final locale = MagicStarterConfig.defaultLocale();
-final timezone = MagicStarterConfig.defaultTimezone();
-
-// Legal
 final termsUrl = MagicStarterConfig.termsUrl();
-final hasLegal = MagicStarterConfig.hasLegalLinks();
 ```
 
-**Via `Config.get()` dot notation** — for dynamic access or when you need the raw value:
+For dynamic access, or when you need the raw value, use dot notation:
 
 ```dart
 final teamsEnabled = Config.get<bool>('magic_starter.features.teams', false);
@@ -399,5 +366,12 @@ final authPrefix = Config.get<String>('magic_starter.routes.auth_prefix', '/auth
 final termsUrl = Config.get<String?>('magic_starter.legal.terms_url', null);
 ```
 
-> [!TIP]
-> Prefer the `MagicStarterConfig` static methods over raw `Config.get()` calls. They encapsulate default values and provide self-documenting method names that are easier to find with IDE autocompletion.
+<a name="related-documentation"></a>
+## Related Documentation
+
+- [Installation](installation.md): running the installer and bootstrapping the starter.
+- [CLI Commands](../basics/cli.md): `starter:configure` and `starter:doctor`.
+- [Authentication](../basics/authentication.md): the identity modes, social login and handoff in use.
+- [Teams](../basics/teams.md): the team resolver and the billable subject.
+- [Support](../basics/support.md): the support and store review keys.
+- [Releases](../basics/releases.md): the changelog page and the update banner.

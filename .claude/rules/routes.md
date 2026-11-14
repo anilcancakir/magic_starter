@@ -5,14 +5,14 @@ paths:
 
 # Route Registration
 
-- Top-level function pattern: `void registerMagicStarter<Module>Routes(MagicRouter router)`
-- Feature guard: check `MagicStarterConfig.has<Feature>Features()` before registering — throw `StateError` if disabled
-- Route paths from config: `MagicStarterConfig.<module>Path()` — never hardcode paths
-- Guest routes (login, register, forgot, reset): wrapped in `GuestLayout` via view registry
-- Authenticated routes (profile, teams, notifications): wrapped in `AppLayout` via view registry
-- View instantiation: `MagicStarter.view.make('auth.login')` — always through registry, never direct constructor
-- Layout wrapping: `MagicStarter.view.makeLayout('guest', child: view)` — registry-based
-- Route groups: use `router.group(prefix, (router) { ... })` for module-scoped paths
-- Middleware: `EnsureAuthenticated` for protected routes, `RedirectIfAuthenticated` for guest routes
-- Transition: `.transition(RouteTransition.none)` on auth routes — no animation between guest screens
+- Top-level function pattern: `void registerMagicStarter<Module>Routes()`: no parameter, it calls `MagicRoute` directly
+- Feature guard: a module that is wholly optional starts with `if (!MagicStarterConfig.has<Feature>Features()) return;`: disabled means nothing is registered, no error
+- Route paths from config: `MagicStarterConfig.<module>Prefix()` or `<page>Route()`: never hardcode paths
+- Guest routes (login, register, forgot, reset): wrapped in the guest layout via view registry
+- Authenticated routes (profile, teams, notifications): wrapped in the app layout via view registry
+- View instantiation: `MagicStarter.view.make('auth.login')`: always through registry, never direct constructor
+- Layout wrapping: `MagicStarter.view.makeLayout('layout.guest', child: view)`: registry-based
+- Route groups: use `MagicRoute.group(prefix:, middleware:, layout:, routes:)` for module-scoped paths
+- Middleware: the string aliases `'auth'` for protected routes and `'guest'` for guest routes, which the host's kernel maps to `EnsureAuthenticated` and `RedirectIfAuthenticated`
+- Transition: `.transition(RouteTransition.none)` on auth routes: no animation between guest screens
 - Conditional registration inside group closure: check `MagicStarterConfig.has*Features()` per route, not per group

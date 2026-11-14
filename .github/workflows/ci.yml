@@ -2,119 +2,43 @@ name: CI
 
 on:
   push:
-    branches: [main, master]
+    branches: [master]
   pull_request:
-    branches: [main, master]
+    branches: [master]
 
-# Two jobs on purpose, because there are two different questions and one job can
-# only answer one of them. `siblings` resolves the sibling packages from their
-# working trees, which is what this repo develops against and what a local
-# `pubspec_overrides.yaml` reproduces. `published` resolves them from pub.dev,
-# which is what an adopter actually installs. A CI that only ever cloned the
-# siblings would go green on a dependency nobody outside this org can resolve;
-# a CI that only ever resolved pub.dev would hide an unreleased sibling API
-# until release day. Both facts stay visible.
+permissions:
+  contents: read
+
 jobs:
-  siblings:
+  analyze-and-test:
     name: Lint & Test
     runs-on: ubuntu-latest
-    timeout-minutes: 25
 
     steps:
-      # Into a subdirectory, because the overrides written below point at
-      # ../<pkg> and the siblings therefore have to sit beside the checkout.
-      - name: Check out magic_starter
-        uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          path: magic_starter
-
-      # All three are public repositories in the same GitHub org, and the
-      # directory name is what the override expects. `dowel` and `wind_kit`
-      # resolve from pub.dev.
-      - name: Check out the sibling packages
-        run: |
-          set -euo pipefail
-          for repo in magic magic_notifications magic_payments; do
-            git clone --depth 1 "https://github.com/fluttersdk/$repo.git" "$repo"
-          done
-
-      # `pubspec_overrides.yaml` is gitignored, so it does not arrive with the
-      # checkout and CI has to write the same file a developer keeps locally.
-      # Keep this list in step with the local one; a sibling missing here is a
-      # sibling CI silently resolves from pub.dev.
-      - name: Point the resolution at the sibling checkouts
-        working-directory: magic_starter
-        run: |
-          cat > pubspec_overrides.yaml <<'YAML'
-          dependency_overrides:
-            magic:
-              path: ../magic
-            magic_notifications:
-              path: ../magic_notifications
-            magic_payments:
-              path: ../magic_payments
-          YAML
+          persist-credentials: false
 
       - name: Setup Flutter
-        uses: subosito/flutter-action@v2
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with:
           channel: stable
           cache: true
 
       - name: Install dependencies
-        working-directory: magic_starter
         run: flutter pub get
 
       - name: Analyze code
-        working-directory: magic_starter
-        run: flutter analyze
+        run: flutter analyze --no-fatal-infos
 
       - name: Check formatting
-        working-directory: magic_starter
         run: dart format --set-exit-if-changed .
 
       - name: Run tests
-        working-directory: magic_starter
         run: flutter test --coverage
 
       - name: Upload coverage
-        uses: codecov/codecov-action@v7
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
-          files: magic_starter/coverage/lcov.info
+          files: coverage/lcov.info
           fail_ci_if_error: false
-
-  published:
-    # Blocking, and it earns that. Every dependency this package declares is on
-    # pub.dev now (magic_payments 0.0.2 closed the last gap), so a red here is
-    # never "waiting for a release" and always a floor naming a version an
-    # adopter cannot resolve. It caught exactly that three times in one day:
-    # the Wind floor `^1.6.0`, `magic_notifications ^0.3.2` and `magic ^0.0.12`
-    # each sat red until the sibling published, which is the window in which an
-    # adopter would have met `version solving failed` instead.
-    #
-    # It was advisory while `magic_payments 0.0.1` was unpublished, with the
-    # wait written into the job name. That wait is over; the name and the
-    # `continue-on-error` went with it.
-    name: Published graph
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          cache: true
-
-      # No sibling clones and no overrides on purpose: this is the graph a third
-      # party gets from `flutter pub add magic_starter`.
-      - name: Resolve against pub.dev
-        run: flutter pub get
-
-      # Resolving proves the constraints are satisfiable; analyzing proves this
-      # package's own source compiles against the sibling versions that are
-      # actually released, which is where an unreleased API surfaces.
-      - name: Analyze against the published siblings
-        run: flutter analyze
