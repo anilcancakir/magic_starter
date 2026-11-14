@@ -15,7 +15,7 @@ description: Prepare a new release — bumps version, updates changelog, syncs d
 
 ## Arguments
 
-$ARGUMENTS — The target version to release (e.g. `0.0.2`, `0.1.0`, `1.0.0-alpha.1`). If empty, auto-increment the patch segment.
+$ARGUMENTS — The target version to release (e.g. `1.0.1`, `1.1.0`, `2.0.0-rc.1`). If empty, auto-increment the patch segment.
 
 ## Your task
 
@@ -88,12 +88,12 @@ If **dry-run fails** → STOP. Fix the issue before proceeding.
 Create a GitHub Release using `gh` CLI. This triggers the full pipeline:
 
 1. **Creates the GitHub Release** with changelog notes
-2. **Creates the git tag** (e.g. `0.0.2`)
+2. **Creates the git tag** (e.g. `1.0.1`)
 3. **Triggers `publish.yml`** — tag push starts the `validate` job (analyze + format + test), then `publish` job (publish to pub.dev via OIDC)
 
 > **⚠️ CRITICAL: Tag format is `{version}` — NO `v` prefix!**
 > The `publish.yml` workflow triggers on tags matching `[0-9]+.[0-9]+.[0-9]+*`.
-> A `v` prefix (e.g. `v0.0.2`) will NOT trigger the publish pipeline.
+> A `v` prefix (e.g. `v1.0.1`) will NOT trigger the publish pipeline.
 
 Determine if the version is a prerelease:
 - Contains `alpha` or `beta` or `rc` → add `--prerelease` flag

@@ -27,10 +27,6 @@
 
 ---
 
-> **Alpha** — `magic_starter` is under active development. APIs may change between minor versions until `1.0.0`.
-
----
-
 ## Why Magic Starter?
 
 Stop rebuilding authentication, profile management, and team features from scratch in every project. The same screens, the same API calls, the same state management — over and over.
@@ -67,7 +63,7 @@ Stop rebuilding authentication, profile management, and team features from scrat
 
 ```yaml
 dependencies:
-  magic_starter: ^0.1.0
+  magic_starter: ^1.0.0
 ```
 
 ### 2. Install configuration
