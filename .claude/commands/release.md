@@ -109,7 +109,7 @@ gh release create {version} \
   --notes "$(cat <<'NOTES'
 {changelog content from Phase 3 — same categories and entries}
 
-**Full Changelog**: https://github.com/fluttersdk/magic_starter/compare/{previous_tag}...{version}
+**Full Changelog**: https://github.com/anilcancakir/magic_starter/compare/{previous_tag}...{version}
 NOTES
 )"
 ```
@@ -131,7 +131,7 @@ Present a summary:
 ```
 ## Release {version} Complete
 
-**GitHub Release:** https://github.com/fluttersdk/magic_starter/releases/tag/{version}
+**GitHub Release:** https://github.com/anilcancakir/magic_starter/releases/tag/{version}
 
 **Changed files:**
 - pubspec.yaml

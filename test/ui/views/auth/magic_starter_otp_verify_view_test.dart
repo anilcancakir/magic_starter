@@ -73,7 +73,6 @@ void main() {
       (tester) async {
         // Advance controller to step 2 without network call.
         final controller = Magic.find<MagicStarterOtpController>();
-        // ignore: invalid_use_of_protected_member
         // Advance step by setting success (simulates sendOtp completing).
         controller.setSuccess(null);
         // Manually set the step by exposing it via sendOtp mechanism.

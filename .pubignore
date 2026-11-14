@@ -2,6 +2,8 @@
 .claude/
 CLAUDE.md
 .mcp.json
+skills/
+tool/
 
 # IDEs
 .idea/
@@ -17,6 +19,9 @@ coverage/
 .dart_tool/packages
 .packages
 build/
+
+# Local path wiring (absolute paths on the author's machine)
+pubspec_overrides.yaml
 
 # Environment
 .env
