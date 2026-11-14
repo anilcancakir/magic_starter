@@ -260,6 +260,8 @@ Widget buildPreview(BuildContext context, String slug) {
 }
 ```
 
+`buildPreview` here throws a `StateError` when `slug` matches no entry. In a release build `catalogPreviews()` is empty, so every call throws; the release guard (a route, a menu entry or a flag that a release build never reaches) is what keeps release builds away from this call.
+
 <a name="gotchas"></a>
 ## Gotchas
 

@@ -446,7 +446,7 @@ Authentication features are controlled by these configuration toggles. All defau
 | `magic_starter.auth.phone` | `phoneIdentity()` | Phone field in login/register (default `false`) |
 
 > [!TIP]
-> A feature that is disabled registers no route, so navigating to its path hits the router's not-found handling: magic logs `Route not found` and nothing opens. Only `MagicStarter.view.make` throws a `StateError`, for the view key of a disabled feature. Check the config before navigating programmatically.
+> A feature that is disabled registers no route, so navigating to its path hits the router's not-found handling: magic logs `Route not found` and nothing opens. A few view keys are registered only while their feature is on (`auth.verify_email`, `auth.two_factor_challenge`, `auth.handoff`, `auth.otp_verify` and the settings pages that mirror a toggle), and `MagicStarter.view.make` throws a `StateError` for one of them when the feature is off. `auth.login`, `auth.register`, `auth.forgot_password` and `auth.reset_password` are always registered; only their routes follow the toggles. Check the config before navigating programmatically.
 
 <a name="controllers"></a>
 ## Controllers
