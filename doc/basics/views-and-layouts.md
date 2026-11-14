@@ -227,6 +227,33 @@ MagicStarter.useNavigationTheme(
 
 `useNavigation` also takes `systemItems`, `bottomItems` and `profileMenuItems`. See [Manager](../architecture/manager.md) for the themes.
 
+### Theme setters and `useWindTheme`
+
+`MagicStarter.useWindTheme(windTheme)` derives the colours of every sub-theme from your Wind palette, and it lands them only on the fields you have not set yourself. So it can run before or after `useLayoutTheme`, `useNavigationTheme` and the other `use*Theme()` setters: a field you set keeps your value either way.
+
+The rule is per field. A field counts as yours when its current value differs both from its sub-theme's default constructor value and from what the previous `useWindTheme` call derived for it. Your fields are kept; every other field takes the derived value. Two things follow from that:
+
+- A second `useWindTheme` with another palette re-skins what the first one derived, and still leaves your fields alone.
+- A field you set to exactly its stock default reads as not set, so the palette derives over it. To keep a stock value on top of a palette, set it after `useWindTheme`.
+
+`useTheme(MagicStarterTheme(...))` is not a merge: it replaces every sub-theme whole.
+
+Each setter assigns its whole struct, so `MagicStarterLayoutTheme(navigationBreakpoint: 'sm')` puts every other layout field back on its default, including the sidebar, header and background colours `useWindTheme` derived. A one-field override is `current.copyWith(...)`, which every sub-theme has:
+
+```dart
+MagicStarter.useLayoutTheme(
+  MagicStarter.layoutTheme.copyWith(navigationBreakpoint: 'sm'),
+);
+
+MagicStarter.useNavigationTheme(
+  MagicStarter.navigationTheme.copyWith(
+    focusItemClassName: 'focus:ring-2 focus:ring-primary',
+  ),
+);
+```
+
+`useWindTheme` also derives the drawer and content area backgrounds (`drawerBackground*` and `contentBackground*`) from the `bg-surface` role the sidebar and header use. Those fields are `wColor` keys rather than classNames, so each half of the role (`bg-ink-50`, `dark:bg-[#0E0F11]`) becomes a colour name, or a hex, and a shade. A half that does not resolve, an opacity step or a colour the Wind theme does not carry, keeps the stock key.
+
 ### Where the sidebar starts, and where it grows labels
 
 Three fields on `MagicStarterLayoutTheme` decide the shell's shape. The first two are breakpoints, named as keys of the Wind theme's `screens` map (`sm`, `md`, `lg`, `xl`, `2xl` by default) rather than as pixel counts; the third is a width in logical pixels:

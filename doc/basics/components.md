@@ -71,7 +71,7 @@ MagicApplication(
 MagicStarter.useWindTheme(windTheme);
 ```
 
-Components that reference a semantic class (`bg-surface`, `text-fg`, `bg-primary`) resolve through this map at render time. Without the aliases wired in, those class names are silently skipped by Wind, so your brand colour and surface tokens do not apply. `useWindTheme` resets the button and field themes, so call `MagicStarter.useButtonTheme` and `useFieldTheme` after it.
+Components that reference a semantic class (`bg-surface`, `text-fg`, `bg-primary`) resolve through this map at render time. Without the aliases wired in, those class names are silently skipped by Wind, so your brand colour and surface tokens do not apply. `useWindTheme` keeps the button and field themes you set, on either side of it; `useTheme` resets them, so call `MagicStarter.useButtonTheme` and `useFieldTheme` after that.
 
 <a name="token-reference"></a>
 ### Token Reference
@@ -241,7 +241,7 @@ dart run magic:dowel design:sync
 |:--------|:----|
 | Adding a bare role such as `primary` to your `aliases` | Alias keys are full classes (`bg-primary`, `text-fg`, `border-color-border`); Wind expands only a whole token that matches a key. |
 | Leaving `aliases` out of the `WindThemeData` | The semantic classes are silently skipped and the components lose their colours. Pass `MagicStarterTokens.defaultAliases` or a `design:sync` map. |
-| Calling `useButtonTheme` or `useFieldTheme` before `useWindTheme` | `useWindTheme` resets both, so call them after it. |
+| Calling `useButtonTheme` or `useFieldTheme` before `useTheme` | `useTheme` resets both, so call them after it. `useWindTheme` keeps a field you set. |
 | Hardcoding `className: 'py-3 ...'` on an `MSButton` | A caller className is appended after the theme and wins, which breaks a host's button standard; set the shape and sizes through `MagicStarter.useButtonTheme`. |
 | Calling `Magic.toast()` to show an `MSToast` with an action | `Magic.toast(String)` carries no action and its overlay ignores pointers; show the `MSToast` through your own `OverlayEntry`. |
 | Putting `Icons.*` inline in a `build()` | Extract it to `static const _icon = Icons.xxx`; Flutter web cannot tree-shake an inline icon. |

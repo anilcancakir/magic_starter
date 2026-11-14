@@ -222,8 +222,8 @@ Failure modes:
 
 | Situation | What happens |
 |-----------|--------------|
-| `useButtonTheme()` or `useFieldTheme()` before `useWindTheme()` or `useTheme()` | The later call resets them to their defaults, without an error. |
-| `useFormTheme(MagicStarterFormTheme(inputClassName: ...))` | Every field you left out goes back to its default; change one with `MagicStarter.formTheme.copyWith(...)` (the modal theme has `copyWith` too). |
+| `useButtonTheme()` or `useFieldTheme()` before `useTheme()` | `useTheme()` replaces every sub-theme and resets them to their defaults, without an error. `useWindTheme()` keeps a field you set on either side of it. |
+| `useFormTheme(MagicStarterFormTheme(inputClassName: ...))` | Every field you left out goes back to its default; change one with `MagicStarter.formTheme.copyWith(...)` (every sub-theme has `copyWith`). |
 | A Wind alias the palette lacks | Wind drops it silently and the class paints nothing. |
 
 The derivation table: [wind_kit Theme Adoption](https://anilcancakir.com/magic/docs/starter/guides/wind-theme-adoption).
@@ -252,7 +252,7 @@ The controllers call `magic-starter-laravel`'s `api/v1` routes one to one throug
 | Check `MagicStarterConfig.has<Feature>Features()` before linking to or building a gated view | A key of a feature that is off is not registered and `make()` throws. |
 | Override a screen with `MagicStarter.view.register` and a notification screen with `Notify.view.register` | The notification screens live on `magic_notifications`' registry. |
 | Use `settings.hub` and the `settings.*` and `profile.profile` keys for the settings surface | `profile.settings` is not a registered default key. |
-| Call `useButtonTheme()` and `useFieldTheme()` after `useWindTheme()` or `useTheme()` | The unified calls reset them. |
+| Call `useButtonTheme()` and `useFieldTheme()` after `useTheme()` | `useTheme()` resets them; `useWindTheme()` keeps a field you set. |
 | Set `billing.web_origin` to an absolute URL with `billing` on | Stripe rejects a relative return URL and the failure is only logged. |
 | Keep `notifications.external_id_prefix` equal to the backend's `MAGIC_STARTER_EXTERNAL_ID_PREFIX` | A mismatch delivers pushes to nobody. |
 | Run commands as `dart run magic:dowel starter:<command>` | The package has no executable of its own. |

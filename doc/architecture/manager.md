@@ -295,7 +295,7 @@ MagicStarter.useModalTheme(
 - Return values do not change: `true` or `false` from a confirm, the proof map or `null` from the step up.
 - A sheet is full width on a phone. On a wide screen Flutter's Material 3 default caps it at 640 px; `maxWidth` applies to the dialog only.
 - The setting is read when a modal opens. An `MSDialog` widget draws the sheet panel when it is built inside a bottom sheet route, and its dialog shell otherwise, so a dialog a host opens with its own `showDialog` keeps the shell.
-- `useWindTheme()` and `useTheme()` reset the modal theme, `presentation` included, so set it after them.
+- `useWindTheme()` keeps a modal field you set, `presentation` included, on either side of it; `useTheme()` resets the modal theme, so set it after that.
 
 The theme is stored on `MagicStarterManager` as `modalTheme` and reset to defaults by `manager.reset()`. The active theme is read at widget build time, so `useModalTheme()` can be called at any point before a dialog is shown.
 
@@ -470,7 +470,7 @@ MagicStarter.useFormTheme(
 );
 ```
 
-`useFormTheme()` assigns the whole struct, so every field you leave out goes back to its default, including the ones `useWindTheme()` derived. To change one string and keep the rest, copy the active theme. `MagicStarterModalTheme` has the same `copyWith`:
+`useFormTheme()` assigns the whole struct, so every field you leave out goes back to its default, including the ones `useWindTheme()` derived. To change one string and keep the rest, copy the active theme. Every sub-theme has the same `copyWith`:
 
 ```dart
 MagicStarter.useFormTheme(
@@ -726,7 +726,7 @@ The facade provides a shortcut: `MagicStarter.view` delegates to `manager.view`.
 | `MagicStarter.switchTeam(id)`, `MagicStarter.currentTeamId()` | Switch the active team, read its id |
 | `MagicStarter.useNavigation(...)` | `manager.navigationConfig = config` |
 | `MagicStarter.useTheme(theme)` | `manager.theme = theme` (sets every sub-theme) |
-| `MagicStarter.useWindTheme(windTheme)` | Derives the colour-bearing sub-themes from a `WindThemeData` and delegates to `useTheme()`; see [wind_kit Theme Adoption](../guides/wind-theme-adoption.md) |
+| `MagicStarter.useWindTheme(windTheme)` | `manager.applyWindTheme(windTheme)`: derives the colour-bearing sub-themes from a `WindThemeData` and keeps the fields the host set; see [wind_kit Theme Adoption](../guides/wind-theme-adoption.md) |
 | `MagicStarter.useNavigationTheme(theme)` | `manager.navigationTheme = theme` |
 | `MagicStarter.useModalTheme(theme)` | `manager.modalTheme = theme` |
 | `MagicStarter.useFormTheme(theme)` | `manager.formTheme = theme` |
