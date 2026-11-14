@@ -149,6 +149,7 @@ dependencies:
       final analyze = await Process.run('dart', [
         'analyze',
         '--format=machine',
+        '--fatal-warnings',
         'lib',
       ], workingDirectory: hostDir.path);
       final problems = (analyze.stdout as String)
@@ -164,6 +165,16 @@ dependencies:
           })
           .toList();
       expect(problems, isEmpty, reason: problems.join('\n'));
+
+      // An analyzer that dies before writing a diagnostic leaves `problems`
+      // empty, so the exit code has to agree: with warnings fatal and infos
+      // not (`dart analyze` has no `--no-fatal-infos`; infos are not fatal
+      // unless `--fatal-infos` is passed), a zero exit means no error and no warning was found.
+      expect(
+        analyze.exitCode,
+        0,
+        reason: 'dart analyze failed\n${analyze.stdout}\n${analyze.stderr}',
+      );
       expect(relative, isEmpty, reason: 'relative imports survived publish');
       expect(reachesIntoSrc, isEmpty, reason: 'imports into lib/src');
     },
