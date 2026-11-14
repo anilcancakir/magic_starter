@@ -161,7 +161,7 @@ await MagicStarterNewsletterController.instance.getNewsletterStatus();
 await MagicStarterNewsletterController.instance.updateNewsletterSubscription(subscribe: true);
 ```
 
-These call `GET /user/newsletter` and `PUT /user/newsletter`. Set the label with `MagicStarter.useNewsletterLabel('Subscribe to our updates')`.
+These call `GET /user/newsletter` and `PUT /user/newsletter`. `MagicStarter.useNewsletterLabel('Subscribe to our updates')` sets the label of the newsletter checkbox on the register view (with `newsletter` on); the profile newsletter section does not read it.
 
 <a name="delete-account"></a>
 ## Delete Account

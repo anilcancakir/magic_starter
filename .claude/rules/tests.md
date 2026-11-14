@@ -28,4 +28,4 @@ paths:
 - Config binding for feature flags: `Config.set('magic_starter.features.x', true)` in setUp
 - ValueNotifier disposal: controllers with `ValueNotifier` fields must have `notifier.dispose()` in tearDown
 - Response queue: `mockDriver.mockResponse()` can be called multiple times for multi-request flows (e.g., OTP send → verify)
-- Route path assertions: verify navigation intent via `MagicStarterConfig.<module>Path()`: no actual navigation in tests
+- Route path assertions: verify navigation intent via `MagicStarterConfig.<module>Prefix()` or `<page>Route()`: no actual navigation in tests

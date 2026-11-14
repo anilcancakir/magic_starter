@@ -8,11 +8,11 @@
 
 ```bash
 flutter pub add magic_starter
-dart run magic:dowel plugin:install magic_starter
+dart run magic:dowel plugin:install magic_starter --no-bootstrap
 dart run magic:dowel starter:install --features=registration,teams,notifications
 ```
 
-`plugin:install` registers `MagicStarterDowelProvider`, injects `MagicStarterServiceProvider` into `lib/config/app.dart` and chains `starter:install` (interactive unless `--features` is passed; an unlisted key is written `false`). `starter:install` writes the config, middleware, models, dashboard, routes, the `MagicStarter.bootstrap(...)` call and `assets/lang/en.json`.
+`plugin:install` registers `MagicStarterDowelProvider` and injects `MagicStarterServiceProvider` into `lib/config/app.dart`. Pass `--no-bootstrap`: the chained `starter:install` always gets `--non-interactive`, so it writes every feature `false`, and a later `starter:install --features=...` skips the config file that exists by then and still reports success (recover with `starter:configure`, a hand edit, or `--force`). Run `starter:install` yourself; an unlisted key is written `false`. `starter:install` writes the config, middleware, models, dashboard, routes, the `MagicStarter.bootstrap(...)` call and `assets/lang/en.json`.
 
 ```dart
 import 'package:magic/magic.dart';
@@ -75,7 +75,7 @@ class AppServiceProvider extends ServiceProvider {
 - Gated profile actions (two-factor, recovery codes, session revoke, account deletion, provider link, first password) take `proof:` (`{'password': ...}`, `{'code': ...}`, `{'confirmation_token': ...}`, or `{}` for a guest); get it from `confirmIdentity` or `confirmAndRun`.
 - `useWindTheme()` and `useTheme()` reset the button and field themes: call `useButtonTheme()` and `useFieldTheme()` after them. `useFormTheme()` and `useModalTheme()` replace the whole struct; change one field with `MagicStarter.formTheme.copyWith(...)`.
 - A `Gate.define()` on a `starter.*` ability is replaced if this provider boots after it; define overrides after `MagicStarterServiceProvider`.
-- `MagicStarterConfig.requestTimeoutSeconds()` and `maxRetries()` are read by nothing; `useGuestAuthEntry()` and `useNewsletterLabel()` are stored and no screen reads them.
+- `MagicStarterConfig.requestTimeoutSeconds()` and `maxRetries()` are read by nothing; `useGuestAuthEntry()` is stored and no screen reads it. `useNewsletterLabel()` is read by the register view alone (the checkbox label when `newsletter` is on), not by the profile newsletter page.
 - Commands are `dart run magic:dowel starter:<command>`; the package has no executable.
 
 ## Docs

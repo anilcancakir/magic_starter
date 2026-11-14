@@ -8,7 +8,7 @@ paths:
 - Two layout shells: `MagicStarterAppLayout` (authenticated) and `MagicStarterGuestLayout` (auth/guest pages)
 - Both registered in the view registry: `layout.app` and `layout.guest`: override via `MagicStarter.view.registerLayout()`
 - `MagicStarterAppLayout` is responsive: sidebar + brand on desktop, drawer + bottom nav on mobile
-- `MagicStarterAppLayout.refreshNotifier`: static `ValueNotifier<int>` that triggers full layout rebuilds; bumped automatically on auth state changes: never poke manually
+- `MagicStarterAppLayout.refreshNotifier`: static `ValueNotifier<int>` that the layout listens to for a full rebuild; nothing in `lib/` bumps it (the layout rebuilds on `Auth.stateNotifier` by itself), so only a host that needs an extra rebuild increments `.value`
 - Navigation theme: all color/style tokens read from `MagicStarter.navigationTheme` at build time: never hardcode `text-primary` or `bg-primary/10` in layout code
   - `_navItem` uses `activeItemClassName` + `hoverItemClassName`
   - `_buildBrand` dispatches to `brandBuilder` when set, else `WText` with `brandClassName`

@@ -18,7 +18,7 @@ class AccordionPreview extends StatelessWidget {
       className: 'flex flex-col gap-6 p-6',
       children: [
         WText(
-          'Accordion — default',
+          'Accordion - default',
           className: 'text-sm font-medium text-fg-muted',
         ),
         const MSAccordion(
@@ -27,7 +27,7 @@ class AccordionPreview extends StatelessWidget {
               title: 'What is Magic Starter?',
               body: WText(
                 'A Flutter starter kit built on the Magic framework, '
-                'providing 14 opt-in features out of the box.',
+                'providing opt-in features out of the box.',
               ),
             ),
             MSAccordionItem(

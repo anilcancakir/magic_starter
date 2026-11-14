@@ -33,11 +33,11 @@ paths:
 - Dark mode: always pair light/dark classes: `text-gray-900 dark:text-white`
 - Conditional rendering via spreads: `if (condition) ...[widget1, widget2]`
 - Password toggle: local `setState(() => _obscurePassword = !_obscurePassword)`: not controller state
-- `ValueListenableBuilder` for controller's `ValueNotifier` state (matrixNotifier, team members):
+- `ValueListenableBuilder` for controller's `ValueNotifier` state (team members, invitations):
   ```dart
-  ValueListenableBuilder<Map<String, dynamic>>(
-    valueListenable: controller.matrixNotifier,
-    builder: (_, matrix, __) => _buildGrid(matrix),
+  ValueListenableBuilder<List<Map<String, dynamic>>>(
+    valueListenable: controller.members,
+    builder: (_, members, __) => _buildMembers(members),
   )
   ```
 - Section-level loading: multiple local `ValueNotifier<bool>` fields (_photoLoading, _emailVerificationLoading) for independent section spinners

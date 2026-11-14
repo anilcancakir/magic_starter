@@ -26,7 +26,7 @@ The `starter:*` commands that scaffold, configure, diagnose, publish and remove 
 <a name="introduction"></a>
 ## Introduction
 
-The package has no executable of its own. `MagicStarterDowelProvider` contributes its commands to the host app's `dowel` registry, so they run as `dart run magic:dowel starter:<command>`. `dart run magic:dowel plugin:install magic_starter` registers the provider and then chains `starter:install` as the plugin's bootstrap command; pass `--no-bootstrap` to `plugin:install` to skip that chain.
+The package has no executable of its own. `MagicStarterDowelProvider` contributes its commands to the host app's `dowel` registry, so they run as `dart run magic:dowel starter:<command>`. `dart run magic:dowel plugin:install magic_starter` registers the provider and, unless you pass `--no-bootstrap`, chains `starter:install` as the plugin's bootstrap command. The chain always forwards `--non-interactive`, so it writes every feature as `false` and a later `starter:install --features=...` skips the config file that exists by then: pass `--no-bootstrap` and run `starter:install` yourself (see [Installation](../getting-started/installation.md#installing-the-package)).
 
 Each command extends `DowelCommand` (install extends `DowelInstallCommand`), declares a `signature` DSL string for its arguments and flags, and implements `handle(DowelContext ctx)`. Every command resolves the host project root through `FileHelper.findProjectRoot()`.
 
@@ -48,7 +48,7 @@ Each command extends `DowelCommand` (install extends `DowelInstallCommand`), dec
 dart run magic:dowel starter:install
 ```
 
-The installer validates the host project, asks which features to enable (one yes/no prompt per feature key), generates files from stubs and injects registrations into existing files. It throws when `lib/config/app.dart` is missing, which means the host has not been scaffolded: run `dart run magic:dowel magic:install` first.
+The installer validates the host project, asks which features to enable (one yes/no prompt per feature key, unless `--features` or `--non-interactive` is passed), generates files from stubs and injects registrations into existing files. It throws when `lib/config/app.dart` is missing, which means the host has not been scaffolded: run `dart run magic:dowel magic:install` first.
 
 <a name="what-it-creates"></a>
 ### What It Creates

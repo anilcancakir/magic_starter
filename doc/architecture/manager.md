@@ -335,7 +335,7 @@ When `headerBuilder` is `null`, the app layout renders its built-in header with 
 <a name="logout-callback"></a>
 ## Logout Callback
 
-Override the default logout behavior to add custom cleanup steps:
+Override the default logout behaviour to add custom cleanup steps:
 
 ```dart
 MagicStarter.useLogout(() async {
@@ -749,7 +749,7 @@ The facade provides a shortcut: `MagicStarter.view` delegates to `manager.view`.
 | `MagicStarter.usePageContext(provider)` | `manager.pageContextProvider = provider`: what the customer is looking at, sent with each support message (see [Support](../basics/support.md)) |
 | `MagicStarter.useLocaleOptions(locales)` | `manager.localeOptions = options` |
 | `MagicStarter.useGuestAuthEntry(builder)` | `manager.guestAuthEntryBuilder = builder` (stored only: no starter screen reads it) |
-| `MagicStarter.useNewsletterLabel(label)` | `manager.newsletterLabel = label` (stored only: no starter screen reads it) |
+| `MagicStarter.useNewsletterLabel(label)` | `manager.newsletterLabel = label` (read by the register view as its newsletter checkbox label, not by the profile newsletter page) |
 | `MagicStarter.view` | `manager.view` |
 | `MagicStarter.isReady` | `manager.isReady` |
 

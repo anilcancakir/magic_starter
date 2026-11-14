@@ -410,7 +410,7 @@ The flags are per device, not per account: they survive sign-out and a sign-in a
 
 The starter supports three identity modes configured via `magic_starter.auth.email` and `magic_starter.auth.phone`:
 
-| `auth.email` | `auth.phone` | Mode | Behavior |
+| `auth.email` | `auth.phone` | Mode | Behaviour |
 |:---:|:---:|---|---|
 | `true` | `false` | Email-only (default) | Only `email` field is sent in the payload |
 | `false` | `true` | Phone-only | Only `phone` field is sent in the payload |

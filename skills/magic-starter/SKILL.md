@@ -15,12 +15,12 @@ This skill covers `magic_starter` only. The Magic framework itself (container, f
 
 ```bash
 flutter pub add magic_starter
-dart run magic:dowel plugin:install magic_starter
+dart run magic:dowel plugin:install magic_starter --no-bootstrap
 dart run magic:dowel starter:install --features=registration,teams,notifications
 dart run magic:dowel starter:doctor
 ```
 
-Requires Dart >=3.13, Flutter >=3.47 and `magic` ^1.0.0, in an app already scaffolded with `dart run magic:dowel magic:install`. `plugin:install` registers `MagicStarterDowelProvider`, injects `MagicStarterServiceProvider` into `lib/config/app.dart` and chains `starter:install`. Without `--features` that command asks one question per feature, every answer defaulting to no; with it, an unlisted key is written `false`. It writes `lib/config/magic_starter.dart`, the middleware, `User` (and `Team`), a dashboard, `lib/routes/app.dart`, the `MagicStarter.bootstrap(...)` call in `AppServiceProvider`, the `auth` and `guest` aliases in `lib/app/kernel.dart`, the route registrations and the English strings in `assets/lang/en.json`. The package has no executable: every command is `dart run magic:dowel starter:<command>`. Import only `package:magic_starter/magic_starter.dart` (or `package:magic_starter/cli.dart` from a pure Dart dispatcher).
+Requires Dart >=3.13, Flutter >=3.47 and `magic` ^1.0.0, in an app already scaffolded with `dart run magic:dowel magic:install`. `plugin:install` registers `MagicStarterDowelProvider` and injects `MagicStarterServiceProvider` into `lib/config/app.dart`; pass `--no-bootstrap`, because the chained `starter:install` always gets `--non-interactive`, writes every feature `false`, and a later `starter:install --features=...` skips the config file that exists by then yet still reports success (recover with `starter:configure`, a hand edit, or `--force`). Run `starter:install` yourself: without `--features` it asks one question per feature, every answer defaulting to no; with it, an unlisted key is written `false`. It writes `lib/config/magic_starter.dart`, the middleware, `User` (and `Team`), a dashboard, `lib/routes/app.dart`, the `MagicStarter.bootstrap(...)` call in `AppServiceProvider`, the `auth` and `guest` aliases in `lib/app/kernel.dart`, the route registrations and the English strings in `assets/lang/en.json`. The package has no executable: every command is `dart run magic:dowel starter:<command>`. Import only `package:magic_starter/magic_starter.dart` (or `package:magic_starter/cli.dart` from a pure Dart dispatcher).
 
 ## Boot rules
 
@@ -39,7 +39,7 @@ Requires Dart >=3.13, Flutter >=3.47 and `magic` ^1.0.0, in an app already scaff
 5. `notifications` makes the provider declare `<notifications.external_id_prefix><user id>` as the push identity on every `Auth.stateNotifier` change and release it on any sign-out, account deletion included. The prefix defaults to `user_` and must equal the backend's `MAGIC_STARTER_EXTERNAL_ID_PREFIX`: a mismatch is accepted by OneSignal and delivered to nobody. A blank value resolves to `user_`.
 6. `support` needs `registerMagicStarterSupportRoutes()` in the route provider; `starter:install` adds it only when `support` was chosen at install. Every `support_*` option needs `support`.
 7. `guest_auth` adds no route: it shows "Continue as guest" on login, records the guest token and claims the guest's data at the next sign-in. `RedirectIfAuthenticated` lets a guest session through to the auth pages.
-8. Stored and unread: `MagicStarterConfig.requestTimeoutSeconds()` and `maxRetries()`, `useGuestAuthEntry()` and `useNewsletterLabel()`. Do not build on them.
+8. Stored and unread: `MagicStarterConfig.requestTimeoutSeconds()` and `maxRetries()`, and `useGuestAuthEntry()`. Do not build on them. `useNewsletterLabel()` is read by the register view alone (the checkbox label when `newsletter` is on), not by the profile newsletter page.
 
 ## Route and middleware rules
 
@@ -81,7 +81,7 @@ Sub-themes, the button and field arithmetic and the modal presentation: `referen
 
 ## Recipes
 
-Bootstrap a team app. `User` and `Team` are the host's models; the `toMagicStarterTeam()` conversion is the host's too (an extension returning `MagicStarterTeam(id:, name:, photoUrl:, isPersonalTeam:)`), and the scaffolded `Team` does not ship one:
+Bootstrap a team app. `User` and `Team` are the host's models. With `teams` on, `starter:install` writes a `Team` that ships `toMagicStarterTeam()` and a `User` with the `currentTeam` and `allTeams` getters. Write the conversion yourself (an extension returning `MagicStarterTeam(id:, name:, photoUrl:, isPersonalTeam:)`) only when a `team.dart` or `user.dart` already existed and `starter:install` skipped it because `--force` was not passed:
 
 ```dart
 import 'package:magic/magic.dart';

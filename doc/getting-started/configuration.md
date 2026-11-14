@@ -5,7 +5,7 @@ The `magic_starter` config file turns features on, sets the route prefixes and c
 - [Introduction](#introduction)
 - [The Config File](#config-file)
 - [Feature Toggles](#feature-toggles)
-- [Route Customization](#route-customization)
+- [Route Customisation](#route-customization)
 - [Billing](#billing)
 - [The push external id](#push-external-id)
 - [Auth Identity Modes](#auth-identity-modes)
@@ -166,7 +166,7 @@ To enable features, set their values to `true`:
 > A disabled feature registers no route and no view, so asking the view registry for its key (`MagicStarter.view.make('teams.create')`) throws a `StateError`. Check `MagicStarterConfig.hasTeamFeatures()` and its siblings before building a link to a gated page.
 
 <a name="route-customization"></a>
-## Route Customization
+## Route Customisation
 
 The `routes` block controls the URL paths the starter registers:
 

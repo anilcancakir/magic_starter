@@ -12,6 +12,7 @@
 <p align="center">
   <a href="https://pub.dev/packages/magic_starter"><img src="https://img.shields.io/pub/v/magic_starter.svg" alt="pub package"></a>
   <a href="https://github.com/anilcancakir/magic_starter/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/anilcancakir/magic_starter/ci.yml?branch=master&label=CI" alt="CI"></a>
+  <a href="https://codecov.io/gh/anilcancakir/magic_starter"><img src="https://codecov.io/gh/anilcancakir/magic_starter/graph/badge.svg" alt="codecov"></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT"></a>
   <a href="https://pub.dev/packages/magic_starter/score"><img src="https://img.shields.io/pub/points/magic_starter" alt="pub points"></a>
 </p>
@@ -27,7 +28,7 @@
 | Fact | Value |
 |---|---|
 | Package | [`magic_starter`](https://pub.dev/packages/magic_starter) |
-| Install | `flutter pub add magic_starter`, then `dart run magic:dowel plugin:install magic_starter` (it chains `starter:install`) |
+| Install | `flutter pub add magic_starter`, then `dart run magic:dowel plugin:install magic_starter --no-bootstrap` and `dart run magic:dowel starter:install --features=...` |
 | Import | `package:magic_starter/magic_starter.dart`; `package:magic_starter/cli.dart` for the dowel provider alone; `package:magic_starter/previews.dart` for dev-only component previews |
 | Entry points | `MagicStarterServiceProvider` (wiring), `MagicStarter` (facade: `bootstrap`, `view`, theme setters), `MagicStarterConfig` (toggles and routes), `registerMagicStarter*Routes()`, `EnsureAuthenticated`, `RedirectIfAuthenticated`; the `starter:*` commands |
 | Platforms | Pure Dart, no native code: every platform Flutter and `magic` run on. Billing checks out through Stripe on the web and through the store on mobile (`magic_payments`); the store review prompt and the web update banner are platform-specific (see [Features](#features)). |
@@ -39,14 +40,11 @@
 
 ```bash
 flutter pub add magic_starter
-dart run magic:dowel plugin:install magic_starter
-```
-
-`plugin:install` registers `MagicStarterDowelProvider` under `.dowel/plugins.json`, injects `MagicStarterServiceProvider` into `lib/config/app.dart` and chains `starter:install`, which asks one yes/no question per feature (every answer defaults to no). For a scripted install name the features instead; a key you leave out is written as `false`:
-
-```bash
+dart run magic:dowel plugin:install magic_starter --no-bootstrap
 dart run magic:dowel starter:install --features=registration,teams,notifications
 ```
+
+`plugin:install` registers `MagicStarterDowelProvider` under `.dowel/plugins.json` and injects `MagicStarterServiceProvider` into `lib/config/app.dart`. Pass `--no-bootstrap`: without it, `plugin:install` chains `starter:install` and always forwards `--non-interactive`, so the chained run asks nothing and writes every feature as `false`. A later `starter:install --features=...` then skips the config file that now exists (and `lib/app/models/user.dart`) and still reports success, so the features stay off. Run `starter:install` yourself, with `--features=` naming the keys you want (a key you leave out is written as `false`) or without it to answer one yes/no question per feature. If you already ran the chain, turn features on with `dart run magic:dowel starter:configure --teams`, edit `lib/config/magic_starter.dart`, or re-run `starter:install --features=... --force`, which overwrites the files it generated and replaces `app_service_provider.dart` instead of injecting into it.
 
 `starter:install` writes `lib/config/magic_starter.dart`, the `auth` and `guest` middleware, a `User` model (and `Team` with `teams` on), a dashboard and `lib/routes/app.dart`, and injects the config factory into `lib/main.dart`, the middleware aliases into `lib/app/kernel.dart`, the route registrations into the route service provider, a `MagicStarter.bootstrap(...)` call into `AppServiceProvider` and the starter's English strings into `assets/lang/en.json`. The app must already be a Magic app: run `dart run magic:dowel magic:install` first. `dart run magic:dowel starter:doctor` checks the result.
 
@@ -238,7 +236,7 @@ The controllers call `magic-starter-laravel`'s `api/v1` routes one to one throug
 
 | Command | Does |
 |---------|------|
-| `dart run magic:dowel starter:install` | Scaffolds and injects the starter; `--features=`, `--non-interactive`, `--force`, `--dry-run`. |
+| `dart run magic:dowel starter:install` | Scaffolds and injects the starter; `--features=`, `--non-interactive`, `--force`, `--dry-run`. `--dry-run` is not a full preview: it stages the file writes without writing them, but the in-place edits of `main.dart`, `kernel.dart`, the route provider, `AppServiceProvider`, the translations and `pubspec.yaml` still run. |
 | `dart run magic:dowel starter:configure` | `--show` prints the toggles; `--teams`, `--two-factor`, ... turn a toggle on (turn one off by editing the file). |
 | `dart run magic:dowel starter:doctor` | Checks the install; also the read-only MCP tool `starter_doctor`. |
 | `dart run magic:dowel starter:publish` | `--tag=config`, `views`, `layouts`, `middleware`, `lang` or `all`, with a scope such as `views:auth`. |

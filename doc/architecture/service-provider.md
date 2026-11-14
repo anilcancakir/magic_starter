@@ -7,7 +7,7 @@
 - [Boot Phase](#boot-phase)
     - [Teams Feature Warning](#teams-feature-warning)
     - [Gate Abilities](#gate-abilities)
-    - [Primary Color Fallback](#primary-color-fallback)
+    - [Primary Colour Fallback](#primary-color-fallback)
     - [Auth State Listeners](#auth-state-listeners)
     - [Before-Logout Hooks](#before-logout-hooks)
 - [IoC Bindings](#ioc-bindings)
@@ -60,7 +60,7 @@ void register() {
 
 1. warns about a missing team resolver,
 2. defines the Gate abilities,
-3. schedules the primary color fallback,
+3. schedules the primary colour fallback,
 4. installs the modal presentation resolver on magic's router (`MagicRoute.useOverlayPresentation`), so an overlay route follows the modal theme's `presentation`,
 5. on the web, primes the app build when `app_update` or `releases` is on,
 6. attaches the auth state listeners and the before-logout hooks described below.
@@ -121,9 +121,9 @@ Gate.define('starter.delete-account', (user, [_]) => false); // disable for all
 > A `Gate.define()` for a `starter.*` ability in a provider listed before `MagicStarterServiceProvider` boots first and is then overwritten by the starter's own definition.
 
 <a name="primary-color-fallback"></a>
-### Primary Color Fallback
+### Primary Colour Fallback
 
-If the host has not defined a `primary` color in its Wind theme, the provider registers `indigo` as the fallback. `boot()` runs during `Magic.init()`, before `runApp()` builds the widget tree, so the check is deferred to a post-frame callback:
+If the host has not defined a `primary` colour in its Wind theme, the provider registers `indigo` as the fallback. `boot()` runs during `Magic.init()`, before `runApp()` builds the widget tree, so the check is deferred to a post-frame callback:
 
 ```dart
 WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -139,7 +139,7 @@ WidgetsBinding.instance.addPostFrameCallback((_) {
 });
 ```
 
-The fallback applies only when no `primary` color exists; if your `WindThemeData.colors` defines one, the callback does nothing.
+The fallback applies only when no `primary` colour exists; if your `WindThemeData.colors` defines one, the callback does nothing.
 
 <a name="auth-state-listeners"></a>
 ### Auth State Listeners

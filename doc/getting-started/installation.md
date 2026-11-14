@@ -40,10 +40,13 @@ The package is the client of `magic-starter-laravel`'s `api/v1` routes: its cont
 
 ```bash
 flutter pub add magic_starter
-dart run magic:dowel plugin:install magic_starter
+dart run magic:dowel plugin:install magic_starter --no-bootstrap
 ```
 
-`plugin:install` registers `MagicStarterDowelProvider` under `.dowel/plugins.json`, injects `MagicStarterServiceProvider` into `lib/config/app.dart` and then chains `starter:install` as the plugin's bootstrap command. Pass `--no-bootstrap` to skip the chain and run it yourself.
+`plugin:install` registers `MagicStarterDowelProvider` under `.dowel/plugins.json` and injects `MagicStarterServiceProvider` into `lib/config/app.dart`. Without `--no-bootstrap` it also chains `starter:install` as the plugin's bootstrap command.
+
+> [!WARNING]
+> Pass `--no-bootstrap`. The chained run always receives `--non-interactive`, so it asks no questions and writes every feature as `false`. A later `starter:install --features=...` then skips the `lib/config/magic_starter.dart` and `lib/app/models/user.dart` that now exist, still prints that the installation completed, and leaves the features off. Run `starter:install` yourself, as below. If you already ran the chain, turn features on with `starter:configure` or by editing `lib/config/magic_starter.dart`, or re-run `starter:install --features=... --force`.
 
 The package has no executable of its own: every command is `dart run magic:dowel starter:<command>`.
 
@@ -72,7 +75,7 @@ The command then:
 6. **Adds** `magic_notifications` to the host `pubspec.yaml` when `notifications` is on, and prints the `notifications:install` command that finishes OneSignal setup.
 7. **Runs** `dart format .` on the host project.
 
-Every injection is idempotent: a second run does not duplicate a registration. Pass `--force` to overwrite files the command already generated, and `--dry-run` to preview the staged file writes. The other commands (`starter:configure`, `starter:doctor`, `starter:publish`, `starter:uninstall`) are documented in [CLI Commands](../basics/cli.md).
+Every injection is idempotent: a second run does not duplicate a registration. Pass `--force` to overwrite files the command already generated (it also replaces `app_service_provider.dart` instead of injecting into it). `--dry-run` is not a full preview: it stages the file writes without writing them, but the in-place edits of `main.dart`, `kernel.dart`, the route provider, `AppServiceProvider`, the translations and `pubspec.yaml` still run. The other commands (`starter:configure`, `starter:doctor`, `starter:publish`, `starter:uninstall`) are documented in [CLI Commands](../basics/cli.md).
 
 <a name="registering-the-service-provider"></a>
 ## Registering the Service Provider
@@ -132,6 +135,9 @@ Registering the provider is not enough. The starter also needs four host-owned t
 ```dart
 class AppServiceProvider extends ServiceProvider {
   AppServiceProvider(super.app);
+
+  @override
+  void register() {}
 
   @override
   Future<void> boot() async {

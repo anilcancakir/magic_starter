@@ -4,7 +4,7 @@ import 'package:magic/magic.dart';
 
 import 'accordion.recipe.dart';
 
-// Icon for collapsed/expanded state — extracted as static const for web tree-shaking.
+// Icon for collapsed/expanded state - extracted as static const for web tree-shaking.
 const _kIconExpanded = Icons.keyboard_arrow_up;
 const _kIconCollapsed = Icons.keyboard_arrow_down;
 
@@ -41,7 +41,7 @@ class MSAccordionItem {
 ///     ),
 ///     MSAccordionItem(
 ///       title: 'What features are included?',
-///       body: WText('14 opt-in features including auth, teams, and notifications.'),
+///       body: WText('Opt-in features including auth, teams, and notifications.'),
 ///     ),
 ///   ],
 /// )
@@ -100,9 +100,9 @@ class _AccordionState extends State<MSAccordion> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Header row — tappable trigger.
+          // Header row - tappable trigger.
           _buildTrigger(index, isExpanded, item.title, slots),
-          // Collapsible panel — only rendered when this item is expanded.
+          // Collapsible panel - only rendered when this item is expanded.
           if (isExpanded) WDiv(className: slots['panel'], child: item.body),
         ],
       ),

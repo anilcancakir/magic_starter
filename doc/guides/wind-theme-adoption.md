@@ -55,8 +55,8 @@ semantic token replaces every hand-written `bg-white dark:bg-gray-800` pair. No
 manual `dark:` palette utility is emitted.
 
 A role is emitted as a semantic token only when the passed `WindThemeData`
-defines it, either as a key in its `aliases` map or as the backing color key in
-its `colors` map (`bg-primary` is backed by the `primary` color). When the theme
+defines it, either as a key in its `aliases` map or as the backing colour key in
+its `colors` map (`bg-primary` is backed by the `primary` colour). When the theme
 does not define a role, the property keeps the shipped default palette pair for
 that role, so a partially-configured theme never produces a silent no-op
 (invisible) surface. Pair `useWindTheme` with a full alias map to re-skin every
@@ -166,7 +166,7 @@ spacing, radius, and dimension tokens are preserved as-is.
 | `brandBarClassName` | `border-color-border-subtle` |
 
 Numeric dimensions (`sidebarWidth`, `headerHeight`) and the `wColor()`
-content/drawer background color-key fields keep their defaults; they are not
+content/drawer background colour-key fields keep their defaults; they are not
 expressed as semantic className tokens.
 
 <a name="dropdown"></a>

@@ -9,7 +9,7 @@
 #
 #   - The DYNAMIC layer lives in MagicStarterInstallCommand's fluent override
 #     (_applyFluentOverride). It is manifest-inexpressible because it is
-#     feature-gated: the 14 opt-in feature toggles drive which config flags,
+#     feature-gated: the opt-in feature toggles drive which config flags,
 #     route registrations, models, and AppServiceProvider boot blocks are
 #     scaffolded. Manifest `prompts:` run unconditionally during prepare(),
 #     so feature-gated selection stays in code (--non-interactive / --features
@@ -37,16 +37,21 @@ post_install:
     Magic Starter provider registered.
 
     The `starter:install` bootstrap is chained automatically to scaffold your
-    config, route registrations, middleware, models, and dashboard (all opt-in
-    features disabled by default). If the bootstrap reported a non-zero exit
-    above, or `lib/config/magic_starter.dart` is missing, run it by hand:
+    config, route registrations, middleware, models, and dashboard. The chain
+    runs non-interactively, so every opt-in feature is written disabled. If
+    the bootstrap reported a non-zero exit above, or
+    `lib/config/magic_starter.dart` is missing, run it by hand:
 
       dart run magic:dowel starter:install
 
-    Then enable features with `dart run magic:dowel starter:configure`, or
-    install with features directly:
+    Enable features afterwards with `dart run magic:dowel starter:configure`
+    or by editing `lib/config/magic_starter.dart`: `starter:install
+    --features=...` skips a config file that already exists unless you add
+    `--force`.
+
+    To choose the features during the install, pass `--no-bootstrap` to
+    `plugin:install` and then run:
 
       dart run magic:dowel starter:install --features=registration,teams,sessions
 
-    To skip the automatic scaffold on future installs, pass `--no-bootstrap`
-    to `plugin:install`. Finally: `flutter pub get && flutter run`.
+    Finally: `flutter pub get && flutter run`.

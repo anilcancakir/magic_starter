@@ -111,6 +111,9 @@ class AppServiceProvider extends ServiceProvider {
   AppServiceProvider(super.app);
 
   @override
+  void register() {}
+
+  @override
   Future<void> boot() async {
     MagicStarter.useUserModel((data) => User.fromMap(data));
     // MagicStarter.useTeamResolver(...) goes here, see Teams.
