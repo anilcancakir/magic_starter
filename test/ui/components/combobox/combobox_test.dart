@@ -395,14 +395,14 @@ void main() {
       );
     });
 
-    testWidgets('useWindTheme after useFieldTheme puts the defaults back', (
+    testWidgets('useWindTheme after useFieldTheme keeps the host standard', (
       tester,
     ) async {
       MagicStarter.useFieldTheme(hostFieldTheme);
       MagicStarter.useWindTheme(WindThemeData());
       await pumpControlAt(tester, kDesktop, control(value: 'a'));
 
-      expect(tester.getSize(find.byType(WSelect<String>)).height, 40);
+      expect(tester.getSize(find.byType(WSelect<String>)).height, 44);
     });
   });
 }

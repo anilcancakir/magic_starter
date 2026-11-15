@@ -17,13 +17,13 @@ The screens, layouts and `MS` components read className strings from sub-themes 
 | `useButtonTheme` | `MagicStarterButtonTheme` | `MSButton` shape (`shapeClassName`), the `sm`, `md`, `lg` sizes, the secondary border |
 | `useFieldTheme` | `MagicStarterFieldTheme` | The padding, minimum height and type of `MSInput`, `MSSelect`, `MSCombobox`, `MagicStarterTimezoneSelect` and `MSSegmentedControl` |
 
-`useTheme(MagicStarterTheme(...))` sets all of them; `MagicStarterTheme` has `copyWith` for every sub-theme. `useWindTheme(WindThemeData)` is `useTheme(MagicStarterTheme.fromWind(theme))`: it derives the colour-bearing sub-themes from the palette's semantic roles (`bg-surface`, `bg-surface-container`, `text-fg`, `text-fg-muted`, `bg-primary`, `text-on-primary`, `border-color-border`, `bg-destructive`, ...), keeps the shipped default for a role the palette does not define, and leaves the button and field themes at their defaults.
+`useTheme(MagicStarterTheme(...))` sets all of them; `MagicStarterTheme` has `copyWith` for every sub-theme. `useWindTheme(WindThemeData)` is not a `useTheme` call: it derives a theme through `MagicStarterTheme.fromWind(theme)` and merges it onto the fields the host has not set (`manager.applyWindTheme`). A field is the host's when it differs from its sub-theme's default and from what the previous `useWindTheme()` derived; those are kept. The derivation reads the palette's semantic roles (`bg-surface`, `bg-surface-container`, `text-fg`, `text-fg-muted`, `bg-primary`, `text-on-primary`, `border-color-border`, `bg-destructive`, ...), keeps the shipped default for a role the palette does not define, and derives nothing for the button and field themes, so they keep what you set and otherwise stay at their defaults.
 
 ## Order
 
 1. `useWindTheme()` or `useTheme()`.
-2. Single setters, `useButtonTheme()` and `useFieldTheme()` among them: the unified calls reset both.
-3. One string at a time with `copyWith`: `MagicStarter.useFormTheme(MagicStarter.formTheme.copyWith(inputClassName: ...))`, `MagicStarter.useModalTheme(MagicStarter.modalTheme.copyWith(presentation: ...))`. Only the form and modal sub-themes have `copyWith`; a new struct for any other hands every omitted field back to its default.
+2. Single setters, `useButtonTheme()` and `useFieldTheme()` among them: `useTheme()` resets both, so set them after it. `useWindTheme()` keeps, field by field, what a setter called before it set. A setter called after `useWindTheme()` assigns its whole struct, so build it from the active theme (`MagicStarter.useLayoutTheme(MagicStarter.layoutTheme.copyWith(...))`) or the derived colours it omits go back to their stock defaults. A field set to exactly its stock default, or to exactly what the previous `useWindTheme()` derived for it, reads as unset, and the next `useWindTheme()` replaces it; to keep such a value, set a different one, or set it again after `useWindTheme()` with `copyWith`.
+3. One string at a time with `copyWith`: `MagicStarter.useFormTheme(MagicStarter.formTheme.copyWith(inputClassName: ...))`, `MagicStarter.useModalTheme(MagicStarter.modalTheme.copyWith(presentation: ...))`. Every sub-theme has `copyWith`; a new struct hands every omitted field back to its default.
 
 Call them from a provider's `boot()`, before the shell first paints.
 

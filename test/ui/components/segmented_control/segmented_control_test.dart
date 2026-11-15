@@ -1327,7 +1327,7 @@ void main() {
         );
       });
 
-      testWidgets('useWindTheme after useFieldTheme puts the defaults back', (
+      testWidgets('useWindTheme after useFieldTheme keeps the host standard', (
         tester,
       ) async {
         MagicStarter.useFieldTheme(hostFieldTheme);
@@ -1336,7 +1336,7 @@ void main() {
 
         expect(
           tester.getSize(find.byType(MSSegmentedControl<String>)).height,
-          40,
+          44,
         );
       });
 

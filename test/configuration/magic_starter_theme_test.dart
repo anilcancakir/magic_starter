@@ -1,7 +1,9 @@
 import 'dart:io';
 
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:magic/magic.dart';
+import 'package:material_ui/material_ui.dart' show MaterialColor;
 import 'package:magic_starter/src/configuration/magic_starter_theme.dart';
 import 'package:magic_starter/src/ui/theme/magic_starter_tokens.dart';
 
@@ -1179,10 +1181,21 @@ void main() {
         expect(fields, hasLength(names.length));
       });
 
-      test('the theme under test has every field distinct', () {
-        final values = fields.map((f) => f.read(original)).toList();
+      // A boolean has two values, so a theme with three flags cannot hold
+      // them apart; each flag is still held against its default below.
+      test('the theme under test has every non-boolean field distinct', () {
+        final values = fields
+            .map((f) => f.read(original))
+            .where((value) => value is! bool)
+            .toList();
 
         expect(values.toSet(), hasLength(values.length));
+      });
+
+      test('the theme under test differs from the defaults in every field', () {
+        for (final f in fields) {
+          expect(f.read(original), isNot(f.read(defaults)), reason: f.name);
+        }
       });
 
       test('copyWith with no argument keeps every field', () {
@@ -1215,6 +1228,8 @@ void main() {
                   999.0,
                   MagicStarterModalPresentation.dialog,
                   'xl',
+                  false,
+                  _changedBuilder,
                 ]),
                 reason: f.name,
               );
@@ -1278,8 +1293,925 @@ void main() {
         );
       });
     });
+
+    // The other eight sub-themes take the same table. Their setters assign
+    // the whole struct too, so a one-field override is
+    // `MagicStarter.<x>Theme.copyWith(...)` there as well.
+
+    group('MagicStarterNavigationTheme', () {
+      expectCopyWithComplete<MagicStarterNavigationTheme>(
+        className: 'MagicStarterNavigationTheme',
+        fields: [
+          field(
+            'activeItemClassName',
+            (t) => t.activeItemClassName,
+            (t) => t.copyWith(activeItemClassName: 'changed'),
+          ),
+          field(
+            'hoverItemClassName',
+            (t) => t.hoverItemClassName,
+            (t) => t.copyWith(hoverItemClassName: 'changed'),
+          ),
+          field(
+            'brandClassName',
+            (t) => t.brandClassName,
+            (t) => t.copyWith(brandClassName: 'changed'),
+          ),
+          field(
+            'brandBuilder',
+            (t) => t.brandBuilder,
+            (t) => t.copyWith(brandBuilder: _changedBuilder),
+          ),
+          field(
+            'compactBrandBuilder',
+            (t) => t.compactBrandBuilder,
+            (t) => t.copyWith(compactBrandBuilder: _changedBuilder),
+          ),
+          field(
+            'bottomNavActiveClassName',
+            (t) => t.bottomNavActiveClassName,
+            (t) => t.copyWith(bottomNavActiveClassName: 'changed'),
+          ),
+          field(
+            'avatarClassName',
+            (t) => t.avatarClassName,
+            (t) => t.copyWith(avatarClassName: 'changed'),
+          ),
+          field(
+            'avatarTextClassName',
+            (t) => t.avatarTextClassName,
+            (t) => t.copyWith(avatarTextClassName: 'changed'),
+          ),
+          field(
+            'dropdownAvatarClassName',
+            (t) => t.dropdownAvatarClassName,
+            (t) => t.copyWith(dropdownAvatarClassName: 'changed'),
+          ),
+          field(
+            'dropdownAvatarTextClassName',
+            (t) => t.dropdownAvatarTextClassName,
+            (t) => t.copyWith(dropdownAvatarTextClassName: 'changed'),
+          ),
+          field(
+            'focusItemClassName',
+            (t) => t.focusItemClassName,
+            (t) => t.copyWith(focusItemClassName: 'changed'),
+          ),
+          field(
+            'badgeClassName',
+            (t) => t.badgeClassName,
+            (t) => t.copyWith(badgeClassName: 'changed'),
+          ),
+        ],
+        original: const MagicStarterNavigationTheme(
+          activeItemClassName: 'nav-active',
+          hoverItemClassName: 'nav-hover',
+          brandClassName: 'nav-brand',
+          brandBuilder: _brandBuilder,
+          compactBrandBuilder: _compactBrandBuilder,
+          bottomNavActiveClassName: 'nav-bottom-active',
+          avatarClassName: 'nav-avatar',
+          avatarTextClassName: 'nav-avatar-text',
+          dropdownAvatarClassName: 'nav-dropdown-avatar',
+          dropdownAvatarTextClassName: 'nav-dropdown-avatar-text',
+          focusItemClassName: 'nav-focus',
+          badgeClassName: 'nav-badge',
+        ),
+        defaults: const MagicStarterNavigationTheme(),
+        copy: (t) => t.copyWith(),
+      );
+    });
+
+    group('MagicStarterCardTheme', () {
+      expectCopyWithComplete<MagicStarterCardTheme>(
+        className: 'MagicStarterCardTheme',
+        fields: [
+          field(
+            'surfaceClassName',
+            (t) => t.surfaceClassName,
+            (t) => t.copyWith(surfaceClassName: 'changed'),
+          ),
+          field(
+            'insetClassName',
+            (t) => t.insetClassName,
+            (t) => t.copyWith(insetClassName: 'changed'),
+          ),
+          field(
+            'elevatedClassName',
+            (t) => t.elevatedClassName,
+            (t) => t.copyWith(elevatedClassName: 'changed'),
+          ),
+          field(
+            'titleClassName',
+            (t) => t.titleClassName,
+            (t) => t.copyWith(titleClassName: 'changed'),
+          ),
+          field(
+            'titleNoPaddingContainerClassName',
+            (t) => t.titleNoPaddingContainerClassName,
+            (t) => t.copyWith(titleNoPaddingContainerClassName: 'changed'),
+          ),
+          field(
+            'borderRadius',
+            (t) => t.borderRadius,
+            (t) => t.copyWith(borderRadius: 'changed'),
+          ),
+          field(
+            'paddingClassName',
+            (t) => t.paddingClassName,
+            (t) => t.copyWith(paddingClassName: 'changed'),
+          ),
+        ],
+        original: const MagicStarterCardTheme(
+          surfaceClassName: 'card-surface',
+          insetClassName: 'card-inset',
+          elevatedClassName: 'card-elevated',
+          titleClassName: 'card-title',
+          titleNoPaddingContainerClassName: 'card-title-no-padding',
+          borderRadius: 'card-radius',
+          paddingClassName: 'card-padding',
+        ),
+        defaults: const MagicStarterCardTheme(),
+        copy: (t) => t.copyWith(),
+      );
+    });
+
+    group('MagicStarterPageHeaderTheme', () {
+      expectCopyWithComplete<MagicStarterPageHeaderTheme>(
+        className: 'MagicStarterPageHeaderTheme',
+        fields: [
+          field(
+            'containerClassName',
+            (t) => t.containerClassName,
+            (t) => t.copyWith(containerClassName: 'changed'),
+          ),
+          field(
+            'containerInlineClassName',
+            (t) => t.containerInlineClassName,
+            (t) => t.copyWith(containerInlineClassName: 'changed'),
+          ),
+          field(
+            'titleClassName',
+            (t) => t.titleClassName,
+            (t) => t.copyWith(titleClassName: 'changed'),
+          ),
+          field(
+            'subtitleClassName',
+            (t) => t.subtitleClassName,
+            (t) => t.copyWith(subtitleClassName: 'changed'),
+          ),
+          field(
+            'actionContainerClassName',
+            (t) => t.actionContainerClassName,
+            (t) => t.copyWith(actionContainerClassName: 'changed'),
+          ),
+          field(
+            'backControlClassName',
+            (t) => t.backControlClassName,
+            (t) => t.copyWith(backControlClassName: 'changed'),
+          ),
+          field(
+            'inlineActions',
+            (t) => t.inlineActions,
+            (t) => t.copyWith(inlineActions: false),
+          ),
+          field(
+            'largeTitle',
+            (t) => t.largeTitle,
+            (t) => t.copyWith(largeTitle: false),
+          ),
+          field(
+            'largeTitleClassName',
+            (t) => t.largeTitleClassName,
+            (t) => t.copyWith(largeTitleClassName: 'changed'),
+          ),
+          field(
+            'compactBarClassName',
+            (t) => t.compactBarClassName,
+            (t) => t.copyWith(compactBarClassName: 'changed'),
+          ),
+          field(
+            'compactBarOpaqueClassName',
+            (t) => t.compactBarOpaqueClassName,
+            (t) => t.copyWith(compactBarOpaqueClassName: 'changed'),
+          ),
+          field(
+            'compactTitleClassName',
+            (t) => t.compactTitleClassName,
+            (t) => t.copyWith(compactTitleClassName: 'changed'),
+          ),
+          field(
+            'compactBarBlurSigma',
+            (t) => t.compactBarBlurSigma,
+            (t) => t.copyWith(compactBarBlurSigma: 999.0),
+          ),
+        ],
+        original: const MagicStarterPageHeaderTheme(
+          containerClassName: 'header-container',
+          containerInlineClassName: 'header-container-inline',
+          titleClassName: 'header-title',
+          subtitleClassName: 'header-subtitle',
+          actionContainerClassName: 'header-actions',
+          backControlClassName: 'header-back',
+          inlineActions: true,
+          largeTitle: true,
+          largeTitleClassName: 'header-large-title',
+          compactBarClassName: 'header-compact-bar',
+          compactBarOpaqueClassName: 'header-compact-bar-opaque',
+          compactTitleClassName: 'header-compact-title',
+          compactBarBlurSigma: 7.0,
+        ),
+        defaults: const MagicStarterPageHeaderTheme(),
+        copy: (t) => t.copyWith(),
+      );
+    });
+
+    group('MagicStarterLayoutTheme', () {
+      expectCopyWithComplete<MagicStarterLayoutTheme>(
+        className: 'MagicStarterLayoutTheme',
+        fields: [
+          field(
+            'sidebarClassName',
+            (t) => t.sidebarClassName,
+            (t) => t.copyWith(sidebarClassName: 'changed'),
+          ),
+          field(
+            'sidebarWidth',
+            (t) => t.sidebarWidth,
+            (t) => t.copyWith(sidebarWidth: 999.0),
+          ),
+          field(
+            'navigationBreakpoint',
+            (t) => t.navigationBreakpoint,
+            (t) => t.copyWith(navigationBreakpoint: 'changed'),
+          ),
+          field(
+            'sidebarExpandedBreakpoint',
+            (t) => t.sidebarExpandedBreakpoint,
+            (t) => t.copyWith(sidebarExpandedBreakpoint: 'changed'),
+          ),
+          field(
+            'sidebarCompactWidth',
+            (t) => t.sidebarCompactWidth,
+            (t) => t.copyWith(sidebarCompactWidth: 999.0),
+          ),
+          field(
+            'sidebarCollapsible',
+            (t) => t.sidebarCollapsible,
+            (t) => t.copyWith(sidebarCollapsible: false),
+          ),
+          field(
+            'sidebarCollapsedByDefault',
+            (t) => t.sidebarCollapsedByDefault,
+            (t) => t.copyWith(sidebarCollapsedByDefault: false),
+          ),
+          field(
+            'headerClassName',
+            (t) => t.headerClassName,
+            (t) => t.copyWith(headerClassName: 'changed'),
+          ),
+          field(
+            'headerHeight',
+            (t) => t.headerHeight,
+            (t) => t.copyWith(headerHeight: 999.0),
+          ),
+          field(
+            'contentBackgroundLightColor',
+            (t) => t.contentBackgroundLightColor,
+            (t) => t.copyWith(contentBackgroundLightColor: 'changed'),
+          ),
+          field(
+            'contentBackgroundLightShade',
+            (t) => t.contentBackgroundLightShade,
+            (t) => t.copyWith(contentBackgroundLightShade: 999),
+          ),
+          field(
+            'contentBackgroundDarkColor',
+            (t) => t.contentBackgroundDarkColor,
+            (t) => t.copyWith(contentBackgroundDarkColor: 'changed'),
+          ),
+          field(
+            'contentBackgroundDarkShade',
+            (t) => t.contentBackgroundDarkShade,
+            (t) => t.copyWith(contentBackgroundDarkShade: 999),
+          ),
+          field(
+            'drawerBackgroundLightColor',
+            (t) => t.drawerBackgroundLightColor,
+            (t) => t.copyWith(drawerBackgroundLightColor: 'changed'),
+          ),
+          field(
+            'drawerBackgroundLightShade',
+            (t) => t.drawerBackgroundLightShade,
+            (t) => t.copyWith(drawerBackgroundLightShade: 999),
+          ),
+          field(
+            'drawerBackgroundDarkColor',
+            (t) => t.drawerBackgroundDarkColor,
+            (t) => t.copyWith(drawerBackgroundDarkColor: 'changed'),
+          ),
+          field(
+            'drawerBackgroundDarkShade',
+            (t) => t.drawerBackgroundDarkShade,
+            (t) => t.copyWith(drawerBackgroundDarkShade: 999),
+          ),
+          field(
+            'brandBarClassName',
+            (t) => t.brandBarClassName,
+            (t) => t.copyWith(brandBarClassName: 'changed'),
+          ),
+          field(
+            'bottomNavClassName',
+            (t) => t.bottomNavClassName,
+            (t) => t.copyWith(bottomNavClassName: 'changed'),
+          ),
+          field(
+            'contentClassName',
+            (t) => t.contentClassName,
+            (t) => t.copyWith(contentClassName: 'changed'),
+          ),
+          field(
+            'contentScrollPrimary',
+            (t) => t.contentScrollPrimary,
+            (t) => t.copyWith(contentScrollPrimary: false),
+          ),
+          field(
+            'notificationTriggerClassName',
+            (t) => t.notificationTriggerClassName,
+            (t) => t.copyWith(notificationTriggerClassName: 'changed'),
+          ),
+          field(
+            'notificationTriggerIconClassName',
+            (t) => t.notificationTriggerIconClassName,
+            (t) => t.copyWith(notificationTriggerIconClassName: 'changed'),
+          ),
+          field(
+            'notificationPanelClassName',
+            (t) => t.notificationPanelClassName,
+            (t) => t.copyWith(notificationPanelClassName: 'changed'),
+          ),
+          field(
+            'notificationBadgeClassName',
+            (t) => t.notificationBadgeClassName,
+            (t) => t.copyWith(notificationBadgeClassName: 'changed'),
+          ),
+          field(
+            'notificationBadgeTextClassName',
+            (t) => t.notificationBadgeTextClassName,
+            (t) => t.copyWith(notificationBadgeTextClassName: 'changed'),
+          ),
+        ],
+        original: const MagicStarterLayoutTheme(
+          sidebarClassName: 'layout-sidebar',
+          sidebarWidth: 301.0,
+          navigationBreakpoint: 'layout-nav-bp',
+          sidebarExpandedBreakpoint: 'layout-expanded-bp',
+          sidebarCompactWidth: 71.0,
+          sidebarCollapsible: true,
+          sidebarCollapsedByDefault: true,
+          headerClassName: 'layout-header',
+          headerHeight: 57.0,
+          contentBackgroundLightColor: 'layout-content-light',
+          contentBackgroundLightShade: 51,
+          contentBackgroundDarkColor: 'layout-content-dark',
+          contentBackgroundDarkShade: 952,
+          drawerBackgroundLightColor: 'layout-drawer-light',
+          drawerBackgroundLightShade: 53,
+          drawerBackgroundDarkColor: 'layout-drawer-dark',
+          drawerBackgroundDarkShade: 954,
+          brandBarClassName: 'layout-brand-bar',
+          bottomNavClassName: 'layout-bottom-nav',
+          contentClassName: 'layout-content',
+          contentScrollPrimary: true,
+          notificationTriggerClassName: 'layout-bell-trigger',
+          notificationTriggerIconClassName: 'layout-bell-icon',
+          notificationPanelClassName: 'layout-bell-panel',
+          notificationBadgeClassName: 'layout-bell-badge',
+          notificationBadgeTextClassName: 'layout-bell-badge-text',
+        ),
+        defaults: const MagicStarterLayoutTheme(),
+        copy: (t) => t.copyWith(),
+      );
+    });
+
+    group('MagicStarterAuthTheme', () {
+      expectCopyWithComplete<MagicStarterAuthTheme>(
+        className: 'MagicStarterAuthTheme',
+        fields: [
+          field(
+            'cardClassName',
+            (t) => t.cardClassName,
+            (t) => t.copyWith(cardClassName: 'changed'),
+          ),
+          field(
+            'titleClassName',
+            (t) => t.titleClassName,
+            (t) => t.copyWith(titleClassName: 'changed'),
+          ),
+          field(
+            'subtitleClassName',
+            (t) => t.subtitleClassName,
+            (t) => t.copyWith(subtitleClassName: 'changed'),
+          ),
+          field(
+            'errorBannerClassName',
+            (t) => t.errorBannerClassName,
+            (t) => t.copyWith(errorBannerClassName: 'changed'),
+          ),
+          field(
+            'themeToggleClassName',
+            (t) => t.themeToggleClassName,
+            (t) => t.copyWith(themeToggleClassName: 'changed'),
+          ),
+          field(
+            'themeToggleIconClassName',
+            (t) => t.themeToggleIconClassName,
+            (t) => t.copyWith(themeToggleIconClassName: 'changed'),
+          ),
+          field(
+            'socialDividerClassName',
+            (t) => t.socialDividerClassName,
+            (t) => t.copyWith(socialDividerClassName: 'changed'),
+          ),
+          field(
+            'socialDividerLineClassName',
+            (t) => t.socialDividerLineClassName,
+            (t) => t.copyWith(socialDividerLineClassName: 'changed'),
+          ),
+          field(
+            'socialDividerTextClassName',
+            (t) => t.socialDividerTextClassName,
+            (t) => t.copyWith(socialDividerTextClassName: 'changed'),
+          ),
+          field(
+            'guestButtonClassName',
+            (t) => t.guestButtonClassName,
+            (t) => t.copyWith(guestButtonClassName: 'changed'),
+          ),
+          field(
+            'registrationLinkClassName',
+            (t) => t.registrationLinkClassName,
+            (t) => t.copyWith(registrationLinkClassName: 'changed'),
+          ),
+          field(
+            'registrationLinkTextClassName',
+            (t) => t.registrationLinkTextClassName,
+            (t) => t.copyWith(registrationLinkTextClassName: 'changed'),
+          ),
+        ],
+        original: const MagicStarterAuthTheme(
+          cardClassName: 'auth-card',
+          titleClassName: 'auth-title',
+          subtitleClassName: 'auth-subtitle',
+          errorBannerClassName: 'auth-error',
+          themeToggleClassName: 'auth-toggle',
+          themeToggleIconClassName: 'auth-toggle-icon',
+          socialDividerClassName: 'auth-divider',
+          socialDividerLineClassName: 'auth-divider-line',
+          socialDividerTextClassName: 'auth-divider-text',
+          guestButtonClassName: 'auth-guest',
+          registrationLinkClassName: 'auth-registration',
+          registrationLinkTextClassName: 'auth-registration-text',
+        ),
+        defaults: const MagicStarterAuthTheme(),
+        copy: (t) => t.copyWith(),
+      );
+    });
+
+    group('MagicStarterDropdownTheme', () {
+      expectCopyWithComplete<MagicStarterDropdownTheme>(
+        className: 'MagicStarterDropdownTheme',
+        fields: [
+          field(
+            'panelClassName',
+            (t) => t.panelClassName,
+            (t) => t.copyWith(panelClassName: 'changed'),
+          ),
+          field(
+            'dividerClassName',
+            (t) => t.dividerClassName,
+            (t) => t.copyWith(dividerClassName: 'changed'),
+          ),
+          field(
+            'itemClassName',
+            (t) => t.itemClassName,
+            (t) => t.copyWith(itemClassName: 'changed'),
+          ),
+          field(
+            'tileClassName',
+            (t) => t.tileClassName,
+            (t) => t.copyWith(tileClassName: 'changed'),
+          ),
+          field(
+            'textClassName',
+            (t) => t.textClassName,
+            (t) => t.copyWith(textClassName: 'changed'),
+          ),
+          field(
+            'mutedTextClassName',
+            (t) => t.mutedTextClassName,
+            (t) => t.copyWith(mutedTextClassName: 'changed'),
+          ),
+          field(
+            'dangerTextClassName',
+            (t) => t.dangerTextClassName,
+            (t) => t.copyWith(dangerTextClassName: 'changed'),
+          ),
+          field(
+            'dangerTileClassName',
+            (t) => t.dangerTileClassName,
+            (t) => t.copyWith(dangerTileClassName: 'changed'),
+          ),
+        ],
+        original: const MagicStarterDropdownTheme(
+          panelClassName: 'dropdown-panel',
+          dividerClassName: 'dropdown-divider',
+          itemClassName: 'dropdown-item',
+          tileClassName: 'dropdown-tile',
+          textClassName: 'dropdown-text',
+          mutedTextClassName: 'dropdown-muted',
+          dangerTextClassName: 'dropdown-danger-text',
+          dangerTileClassName: 'dropdown-danger-tile',
+        ),
+        defaults: const MagicStarterDropdownTheme(),
+        copy: (t) => t.copyWith(),
+      );
+    });
+
+    group('MagicStarterButtonTheme', () {
+      expectCopyWithComplete<MagicStarterButtonTheme>(
+        className: 'MagicStarterButtonTheme',
+        fields: [
+          field(
+            'shapeClassName',
+            (t) => t.shapeClassName,
+            (t) => t.copyWith(shapeClassName: 'changed'),
+          ),
+          field(
+            'smClassName',
+            (t) => t.smClassName,
+            (t) => t.copyWith(smClassName: 'changed'),
+          ),
+          field(
+            'mdClassName',
+            (t) => t.mdClassName,
+            (t) => t.copyWith(mdClassName: 'changed'),
+          ),
+          field(
+            'lgClassName',
+            (t) => t.lgClassName,
+            (t) => t.copyWith(lgClassName: 'changed'),
+          ),
+          field(
+            'secondaryBorderClassName',
+            (t) => t.secondaryBorderClassName,
+            (t) => t.copyWith(secondaryBorderClassName: 'changed'),
+          ),
+        ],
+        original: const MagicStarterButtonTheme(
+          shapeClassName: 'button-shape',
+          smClassName: 'button-sm',
+          mdClassName: 'button-md',
+          lgClassName: 'button-lg',
+          secondaryBorderClassName: 'button-border',
+        ),
+        defaults: const MagicStarterButtonTheme(),
+        copy: (t) => t.copyWith(),
+      );
+    });
+
+    group('MagicStarterFieldTheme', () {
+      expectCopyWithComplete<MagicStarterFieldTheme>(
+        className: 'MagicStarterFieldTheme',
+        fields: [
+          field(
+            'inputSizeClassName',
+            (t) => t.inputSizeClassName,
+            (t) => t.copyWith(inputSizeClassName: 'changed'),
+          ),
+          field(
+            'selectSizeClassName',
+            (t) => t.selectSizeClassName,
+            (t) => t.copyWith(selectSizeClassName: 'changed'),
+          ),
+          field(
+            'segmentedSmClassName',
+            (t) => t.segmentedSmClassName,
+            (t) => t.copyWith(segmentedSmClassName: 'changed'),
+          ),
+          field(
+            'segmentedMdClassName',
+            (t) => t.segmentedMdClassName,
+            (t) => t.copyWith(segmentedMdClassName: 'changed'),
+          ),
+          field(
+            'segmentedPaddingClassName',
+            (t) => t.segmentedPaddingClassName,
+            (t) => t.copyWith(segmentedPaddingClassName: 'changed'),
+          ),
+        ],
+        original: const MagicStarterFieldTheme(
+          inputSizeClassName: 'field-input',
+          selectSizeClassName: 'field-select',
+          segmentedSmClassName: 'field-segmented-sm',
+          segmentedMdClassName: 'field-segmented-md',
+          segmentedPaddingClassName: 'field-segmented-padding',
+        ),
+        defaults: const MagicStarterFieldTheme(),
+        copy: (t) => t.copyWith(),
+      );
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // applyWindTheme: every field goes through the merge
+  // -------------------------------------------------------------------------
+
+  // `MagicStarterManager.applyWindTheme` rebuilds each sub-theme field by
+  // field, and a named parameter it leaves out compiles and quietly falls back
+  // to the stock default: a host field set before `useWindTheme` would then be
+  // lost again, the defect #149 fixed. The constructors are the list to hold
+  // the merge to.
+  group('the Wind theme merge', () {
+    final theme = File('lib/src/configuration/magic_starter_theme.dart')
+        .readAsStringSync();
+    final manager = File('lib/src/magic_starter_manager.dart')
+        .readAsStringSync();
+
+    Set<String> namesIn(
+      String source,
+      String opening,
+      RegExp name, {
+      String closing = '\n  });',
+    }) {
+      final start = source.indexOf(opening);
+      final end = source.indexOf(closing, start);
+      final close = end < 0 ? source.indexOf('\n}', start) : end;
+
+      expect(start, isNonNegative, reason: 'no "$opening"');
+
+      return name
+          .allMatches(source.substring(start, close))
+          .map((m) => m.group(1)!)
+          .toSet();
+    }
+
+    for (final (className, merge) in const [
+      ('MagicStarterNavigationTheme', '_mergeNavigation'),
+      ('MagicStarterModalTheme', '_mergeModal'),
+      ('MagicStarterFormTheme', '_mergeForm'),
+      ('MagicStarterCardTheme', '_mergeCard'),
+      ('MagicStarterPageHeaderTheme', '_mergePageHeader'),
+      ('MagicStarterLayoutTheme', '_mergeLayout'),
+      ('MagicStarterAuthTheme', '_mergeAuth'),
+      ('MagicStarterDropdownTheme', '_mergeDropdown'),
+      ('MagicStarterButtonTheme', '_mergeButton'),
+      ('MagicStarterFieldTheme', '_mergeField'),
+    ]) {
+      test('$merge picks every field of $className', () {
+        final fields = namesIn(
+          theme,
+          '  const $className({',
+          RegExp(r'this\.(\w+)'),
+        );
+        final picked = namesIn(
+          manager,
+          '$className $merge(',
+          // A picked field, or one of a pair picked into a local first.
+          RegExp(r'(\w+): (?:m\.pick|[a-z]\w*,)'),
+        );
+
+        expect(picked, fields);
+      });
+    }
+
+    // The ten pairs above are written by hand, so a sub-theme added to
+    // `MagicStarterTheme` without a merge would pass them all and then be
+    // reset to its default by every `useWindTheme`.
+    test('applyWindTheme merges every sub-theme of MagicStarterTheme', () {
+      final subThemes = namesIn(
+        theme,
+        '  const MagicStarterTheme({',
+        RegExp(r'this\.(\w+)'),
+      );
+      final merged = namesIn(
+        manager,
+        'merge(bool record) => MagicStarterTheme(',
+        RegExp(r'(\w+): _merge\w+\('),
+        closing: '\n    );',
+      );
+
+      expect(merged, subThemes);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // fromWind: drawer and content backgrounds
+  // -------------------------------------------------------------------------
+
+  // The two pairs are `wColor` keys rather than classNames, so `fromWind`
+  // reads them out of the `bg-surface` role the sidebar and the header are
+  // derived from: a host palette that is not grey otherwise gets a drawer and
+  // a content area in stock greys beside its own sidebar.
+  group('MagicStarterTheme.fromWind backgrounds', () {
+    const ink = MaterialColor(0xFF223344, <int, Color>{
+      50: Color(0xFFF1F2F4),
+      500: Color(0xFF223344),
+      950: Color(0xFF0E0F11),
+    });
+
+    test('derives both pairs from a palette surface', () {
+      final layout = MagicStarterTheme.fromWind(
+        WindThemeData(
+          colors: const {'ink': ink},
+          aliases: const {'bg-surface': 'bg-ink-50 dark:bg-ink-950'},
+        ),
+      ).layout;
+
+      expect(layout.contentBackgroundLightColor, 'ink');
+      expect(layout.contentBackgroundLightShade, 50);
+      expect(layout.contentBackgroundDarkColor, 'ink');
+      expect(layout.contentBackgroundDarkShade, 950);
+      expect(layout.drawerBackgroundLightColor, 'ink');
+      expect(layout.drawerBackgroundLightShade, 50);
+      expect(layout.drawerBackgroundDarkColor, 'ink');
+      expect(layout.drawerBackgroundDarkShade, 950);
+    });
+
+    test('derives both pairs from an arbitrary hex surface', () {
+      final layout = MagicStarterTheme.fromWind(
+        WindThemeData(
+          aliases: const {'bg-surface': 'bg-[#F7F7F8] dark:bg-[#0E0F11]'},
+        ),
+      ).layout;
+
+      expect(layout.contentBackgroundLightColor, '#F7F7F8');
+      expect(layout.contentBackgroundDarkColor, '#0E0F11');
+      expect(layout.drawerBackgroundLightColor, '#F7F7F8');
+      expect(layout.drawerBackgroundDarkColor, '#0E0F11');
+    });
+
+    // Wind paints the last background utility of a brightness, so a surface
+    // role that names two must be read the same way or the content and
+    // drawer drift from the sidebar painted with the role itself.
+    testWidgets('reads the last background of each brightness, as Wind does', (
+      tester,
+    ) async {
+      const sky = MaterialColor(0xFF3366AA, <int, Color>{
+        200: Color(0xFFAACCEE),
+        900: Color(0xFF112244),
+      });
+      final wind = WindThemeData(
+        colors: const {'ink': ink, 'sky': sky},
+        aliases: const {
+          'bg-surface': 'bg-ink-50 bg-sky-200 dark:bg-ink-500 dark:bg-sky-900',
+        },
+      );
+      Color? painted;
+      await tester.pumpWidget(
+        WindTheme(
+          data: wind,
+          child: Builder(
+            builder: (context) {
+              painted = WindParser.parse(
+                'bg-surface',
+                context,
+              ).decoration?.color;
+              return const SizedBox();
+            },
+          ),
+        ),
+      );
+      expect(painted, const Color(0xFFAACCEE), reason: 'Wind paints sky-200');
+
+      final layout = MagicStarterTheme.fromWind(wind).layout;
+
+      expect(layout.contentBackgroundLightColor, 'sky');
+      expect(layout.contentBackgroundLightShade, 200);
+      expect(layout.contentBackgroundDarkColor, 'sky');
+      expect(layout.contentBackgroundDarkShade, 900);
+      expect(layout.drawerBackgroundLightColor, 'sky');
+      expect(layout.drawerBackgroundDarkShade, 900);
+    });
+
+    test('reads the last hex background, and reuses it for dark mode', () {
+      final layout = MagicStarterTheme.fromWind(
+        WindThemeData(
+          aliases: const {'bg-surface': 'bg-[#F7F7F8] bg-[#EEEEF0]'},
+        ),
+      ).layout;
+
+      expect(layout.contentBackgroundLightColor, '#EEEEF0');
+      expect(layout.contentBackgroundDarkColor, '#EEEEF0');
+    });
+
+    test('uses the light surface in dark mode when it names no dark one', () {
+      final layout = MagicStarterTheme.fromWind(
+        WindThemeData(
+          colors: const {'ink': ink},
+          aliases: const {'bg-surface': 'bg-ink-950'},
+        ),
+      ).layout;
+
+      expect(layout.drawerBackgroundDarkColor, 'ink');
+      expect(layout.drawerBackgroundDarkShade, 950);
+    });
+
+    test(
+      'keeps the stock pairs when the theme does not define the surface',
+      () {
+        final layout = MagicStarterTheme.fromWind(WindThemeData()).layout;
+        const stock = MagicStarterLayoutTheme();
+
+        expect(
+          layout.contentBackgroundLightColor,
+          stock.contentBackgroundLightColor,
+        );
+        expect(
+          layout.contentBackgroundLightShade,
+          stock.contentBackgroundLightShade,
+        );
+        expect(
+          layout.contentBackgroundDarkColor,
+          stock.contentBackgroundDarkColor,
+        );
+        expect(
+          layout.contentBackgroundDarkShade,
+          stock.contentBackgroundDarkShade,
+        );
+        expect(
+          layout.drawerBackgroundLightColor,
+          stock.drawerBackgroundLightColor,
+        );
+        expect(
+          layout.drawerBackgroundDarkColor,
+          stock.drawerBackgroundDarkColor,
+        );
+        expect(
+          layout.drawerBackgroundDarkShade,
+          stock.drawerBackgroundDarkShade,
+        );
+      },
+    );
+
+    test('keeps the stock half a surface names in a colour Wind lacks', () {
+      // A role written in a palette key the theme does not carry resolves to
+      // nothing, which would leave the drawer transparent; that half stays on
+      // the shipped pair instead.
+      final layout = MagicStarterTheme.fromWind(
+        WindThemeData(
+          colors: const {'ink': ink},
+          aliases: const {'bg-surface': 'bg-ink-50 dark:bg-mist-900'},
+        ),
+      ).layout;
+      const stock = MagicStarterLayoutTheme();
+
+      expect(layout.drawerBackgroundLightColor, 'ink');
+      expect(layout.drawerBackgroundDarkColor, stock.drawerBackgroundDarkColor);
+      expect(layout.drawerBackgroundDarkShade, stock.drawerBackgroundDarkShade);
+    });
+
+    for (final brightness in Brightness.values) {
+      testWidgets('resolves a derived hex surface in ${brightness.name} mode', (
+        tester,
+      ) async {
+        final layout = MagicStarterTheme.fromWind(
+          WindThemeData(
+            aliases: const {'bg-surface': 'bg-[#F7F7F8] dark:bg-[#0E0F11]'},
+          ),
+        ).layout;
+        late Color? content;
+        late Color? drawer;
+
+        await tester.pumpWidget(
+          WindTheme(
+            data: WindThemeData(brightness: brightness, syncWithSystem: false),
+            child: Builder(
+              builder: (context) {
+                content = layout.contentBackgroundColor(context);
+                drawer = layout.drawerBackgroundColor(context);
+
+                return const SizedBox();
+              },
+            ),
+          ),
+        );
+
+        final expected = brightness == Brightness.dark
+            ? const Color(0xFF0E0F11)
+            : const Color(0xFFF7F7F8);
+        expect(content, expected);
+        expect(drawer, expected);
+      });
+    }
   });
 }
+
+Widget _brandBuilder(BuildContext context) => const SizedBox();
+
+Widget _compactBrandBuilder(BuildContext context) => const SizedBox();
+
+Widget _changedBuilder(BuildContext context) => const SizedBox();
 
 /// One field of a theme under test: how to read it, and how to set it through
 /// `copyWith` to a value no distinct test theme uses.

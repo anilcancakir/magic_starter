@@ -145,6 +145,46 @@ class MagicStarterNavigationTheme {
     this.focusItemClassName = '',
     this.badgeClassName = '',
   });
+
+  /// Returns a copy of this theme with the given fields replaced.
+  ///
+  /// [MagicStarter.useNavigationTheme] assigns the whole struct, so a new
+  /// [MagicStarterNavigationTheme] hands every field it does not repeat back to
+  /// its default, the ones [MagicStarter.useWindTheme] derived included. Copy
+  /// the active theme to change one field. A builder cannot be cleared back to
+  /// `null` through here; build a new theme for that.
+  MagicStarterNavigationTheme copyWith({
+    String? activeItemClassName,
+    String? hoverItemClassName,
+    String? brandClassName,
+    Widget Function(BuildContext context)? brandBuilder,
+    Widget Function(BuildContext context)? compactBrandBuilder,
+    String? bottomNavActiveClassName,
+    String? avatarClassName,
+    String? avatarTextClassName,
+    String? dropdownAvatarClassName,
+    String? dropdownAvatarTextClassName,
+    String? focusItemClassName,
+    String? badgeClassName,
+  }) {
+    return MagicStarterNavigationTheme(
+      activeItemClassName: activeItemClassName ?? this.activeItemClassName,
+      hoverItemClassName: hoverItemClassName ?? this.hoverItemClassName,
+      brandClassName: brandClassName ?? this.brandClassName,
+      brandBuilder: brandBuilder ?? this.brandBuilder,
+      compactBrandBuilder: compactBrandBuilder ?? this.compactBrandBuilder,
+      bottomNavActiveClassName:
+          bottomNavActiveClassName ?? this.bottomNavActiveClassName,
+      avatarClassName: avatarClassName ?? this.avatarClassName,
+      avatarTextClassName: avatarTextClassName ?? this.avatarTextClassName,
+      dropdownAvatarClassName:
+          dropdownAvatarClassName ?? this.dropdownAvatarClassName,
+      dropdownAvatarTextClassName:
+          dropdownAvatarTextClassName ?? this.dropdownAvatarTextClassName,
+      focusItemClassName: focusItemClassName ?? this.focusItemClassName,
+      badgeClassName: badgeClassName ?? this.badgeClassName,
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -559,6 +599,32 @@ class MagicStarterCardTheme {
     this.borderRadius = 'rounded-2xl',
     this.paddingClassName = 'p-6',
   });
+
+  /// Returns a copy of this theme with the given fields replaced.
+  ///
+  /// [MagicStarter.useCardTheme] assigns the whole struct, so copy the active
+  /// theme to change one field and keep the rest.
+  MagicStarterCardTheme copyWith({
+    String? surfaceClassName,
+    String? insetClassName,
+    String? elevatedClassName,
+    String? titleClassName,
+    String? titleNoPaddingContainerClassName,
+    String? borderRadius,
+    String? paddingClassName,
+  }) {
+    return MagicStarterCardTheme(
+      surfaceClassName: surfaceClassName ?? this.surfaceClassName,
+      insetClassName: insetClassName ?? this.insetClassName,
+      elevatedClassName: elevatedClassName ?? this.elevatedClassName,
+      titleClassName: titleClassName ?? this.titleClassName,
+      titleNoPaddingContainerClassName:
+          titleNoPaddingContainerClassName ??
+          this.titleNoPaddingContainerClassName,
+      borderRadius: borderRadius ?? this.borderRadius,
+      paddingClassName: paddingClassName ?? this.paddingClassName,
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -711,6 +777,46 @@ class MagicStarterPageHeaderTheme {
         'text-base font-semibold text-gray-900 dark:text-white truncate',
     this.compactBarBlurSigma = 20.0,
   });
+
+  /// Returns a copy of this theme with the given fields replaced.
+  ///
+  /// [MagicStarter.usePageHeaderTheme] assigns the whole struct, so copy the
+  /// active theme to change one field and keep the rest.
+  MagicStarterPageHeaderTheme copyWith({
+    String? containerClassName,
+    String? containerInlineClassName,
+    String? titleClassName,
+    String? subtitleClassName,
+    String? actionContainerClassName,
+    String? backControlClassName,
+    bool? inlineActions,
+    bool? largeTitle,
+    String? largeTitleClassName,
+    String? compactBarClassName,
+    String? compactBarOpaqueClassName,
+    String? compactTitleClassName,
+    double? compactBarBlurSigma,
+  }) {
+    return MagicStarterPageHeaderTheme(
+      containerClassName: containerClassName ?? this.containerClassName,
+      containerInlineClassName:
+          containerInlineClassName ?? this.containerInlineClassName,
+      titleClassName: titleClassName ?? this.titleClassName,
+      subtitleClassName: subtitleClassName ?? this.subtitleClassName,
+      actionContainerClassName:
+          actionContainerClassName ?? this.actionContainerClassName,
+      backControlClassName: backControlClassName ?? this.backControlClassName,
+      inlineActions: inlineActions ?? this.inlineActions,
+      largeTitle: largeTitle ?? this.largeTitle,
+      largeTitleClassName: largeTitleClassName ?? this.largeTitleClassName,
+      compactBarClassName: compactBarClassName ?? this.compactBarClassName,
+      compactBarOpaqueClassName:
+          compactBarOpaqueClassName ?? this.compactBarOpaqueClassName,
+      compactTitleClassName:
+          compactTitleClassName ?? this.compactTitleClassName,
+      compactBarBlurSigma: compactBarBlurSigma ?? this.compactBarBlurSigma,
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -962,6 +1068,143 @@ class MagicStarterLayoutTheme {
     this.notificationBadgeClassName,
     this.notificationBadgeTextClassName,
   });
+
+  /// Returns a copy of this theme with the given fields replaced.
+  ///
+  /// [MagicStarter.useLayoutTheme] assigns the whole struct, so a new
+  /// [MagicStarterLayoutTheme] hands every field it does not repeat back to its
+  /// default, the colours [MagicStarter.useWindTheme] derived included. Copy the
+  /// active theme to change one field:
+  ///
+  /// ```dart
+  /// MagicStarter.useLayoutTheme(
+  ///   MagicStarter.layoutTheme.copyWith(navigationBreakpoint: 'sm'),
+  /// );
+  /// ```
+  ///
+  /// A `notification*` field cannot be cleared back to `null` through here;
+  /// build a new theme for that.
+  MagicStarterLayoutTheme copyWith({
+    String? sidebarClassName,
+    double? sidebarWidth,
+    String? navigationBreakpoint,
+    String? sidebarExpandedBreakpoint,
+    double? sidebarCompactWidth,
+    bool? sidebarCollapsible,
+    bool? sidebarCollapsedByDefault,
+    String? headerClassName,
+    double? headerHeight,
+    String? contentBackgroundLightColor,
+    int? contentBackgroundLightShade,
+    String? contentBackgroundDarkColor,
+    int? contentBackgroundDarkShade,
+    String? drawerBackgroundLightColor,
+    int? drawerBackgroundLightShade,
+    String? drawerBackgroundDarkColor,
+    int? drawerBackgroundDarkShade,
+    String? brandBarClassName,
+    String? bottomNavClassName,
+    String? contentClassName,
+    bool? contentScrollPrimary,
+    String? notificationTriggerClassName,
+    String? notificationTriggerIconClassName,
+    String? notificationPanelClassName,
+    String? notificationBadgeClassName,
+    String? notificationBadgeTextClassName,
+  }) {
+    return MagicStarterLayoutTheme(
+      sidebarClassName: sidebarClassName ?? this.sidebarClassName,
+      sidebarWidth: sidebarWidth ?? this.sidebarWidth,
+      navigationBreakpoint: navigationBreakpoint ?? this.navigationBreakpoint,
+      sidebarExpandedBreakpoint:
+          sidebarExpandedBreakpoint ?? this.sidebarExpandedBreakpoint,
+      sidebarCompactWidth: sidebarCompactWidth ?? this.sidebarCompactWidth,
+      sidebarCollapsible: sidebarCollapsible ?? this.sidebarCollapsible,
+      sidebarCollapsedByDefault:
+          sidebarCollapsedByDefault ?? this.sidebarCollapsedByDefault,
+      headerClassName: headerClassName ?? this.headerClassName,
+      headerHeight: headerHeight ?? this.headerHeight,
+      contentBackgroundLightColor:
+          contentBackgroundLightColor ?? this.contentBackgroundLightColor,
+      contentBackgroundLightShade:
+          contentBackgroundLightShade ?? this.contentBackgroundLightShade,
+      contentBackgroundDarkColor:
+          contentBackgroundDarkColor ?? this.contentBackgroundDarkColor,
+      contentBackgroundDarkShade:
+          contentBackgroundDarkShade ?? this.contentBackgroundDarkShade,
+      drawerBackgroundLightColor:
+          drawerBackgroundLightColor ?? this.drawerBackgroundLightColor,
+      drawerBackgroundLightShade:
+          drawerBackgroundLightShade ?? this.drawerBackgroundLightShade,
+      drawerBackgroundDarkColor:
+          drawerBackgroundDarkColor ?? this.drawerBackgroundDarkColor,
+      drawerBackgroundDarkShade:
+          drawerBackgroundDarkShade ?? this.drawerBackgroundDarkShade,
+      brandBarClassName: brandBarClassName ?? this.brandBarClassName,
+      bottomNavClassName: bottomNavClassName ?? this.bottomNavClassName,
+      contentClassName: contentClassName ?? this.contentClassName,
+      contentScrollPrimary: contentScrollPrimary ?? this.contentScrollPrimary,
+      notificationTriggerClassName:
+          notificationTriggerClassName ?? this.notificationTriggerClassName,
+      notificationTriggerIconClassName:
+          notificationTriggerIconClassName ??
+          this.notificationTriggerIconClassName,
+      notificationPanelClassName:
+          notificationPanelClassName ?? this.notificationPanelClassName,
+      notificationBadgeClassName:
+          notificationBadgeClassName ?? this.notificationBadgeClassName,
+      notificationBadgeTextClassName:
+          notificationBadgeTextClassName ?? this.notificationBadgeTextClassName,
+    );
+  }
+
+  /// The content area background for the brightness of the [context]'s Wind
+  /// theme, or `null` when the theme does not carry the colour.
+  ///
+  /// Reads the `contentBackground*` pair the way the app and guest layouts
+  /// paint it. Either half may name a `#hex` colour, which is what
+  /// [MagicStarterTheme.fromWind] derives from a hex surface; `wColor` reads a
+  /// hex only in its light half.
+  Color? contentBackgroundColor(BuildContext context) {
+    return _resolveBackground(
+      context,
+      lightColor: contentBackgroundLightColor,
+      lightShade: contentBackgroundLightShade,
+      darkColor: contentBackgroundDarkColor,
+      darkShade: contentBackgroundDarkShade,
+    );
+  }
+
+  /// The drawer background for the brightness of the [context]'s Wind theme,
+  /// or `null` when the theme does not carry the colour.
+  ///
+  /// Reads the `drawerBackground*` pair under the same rules as
+  /// [contentBackgroundColor].
+  Color? drawerBackgroundColor(BuildContext context) {
+    return _resolveBackground(
+      context,
+      lightColor: drawerBackgroundLightColor,
+      lightShade: drawerBackgroundLightShade,
+      darkColor: drawerBackgroundDarkColor,
+      darkShade: drawerBackgroundDarkShade,
+    );
+  }
+
+  /// Picks the half for the theme's brightness first, so a dark `#hex` goes
+  /// through `wColor`'s hex branch instead of its palette-only dark branch.
+  static Color? _resolveBackground(
+    BuildContext context, {
+    required String lightColor,
+    required int lightShade,
+    required String darkColor,
+    required int darkShade,
+  }) {
+    final bool isDark = WindTheme.dataOf(context).brightness == Brightness.dark;
+
+    return isDark
+        ? wColor(context, darkColor, shade: darkShade)
+        : wColor(context, lightColor, shade: lightShade);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -1071,6 +1314,46 @@ class MagicStarterAuthTheme {
     this.registrationLinkClassName = 'text-sm text-gray-500 dark:text-gray-400',
     this.registrationLinkTextClassName = 'text-sm font-semibold text-primary',
   });
+
+  /// Returns a copy of this theme with the given fields replaced.
+  ///
+  /// [MagicStarter.useAuthTheme] assigns the whole struct, so copy the active
+  /// theme to change one field and keep the rest.
+  MagicStarterAuthTheme copyWith({
+    String? cardClassName,
+    String? titleClassName,
+    String? subtitleClassName,
+    String? errorBannerClassName,
+    String? themeToggleClassName,
+    String? themeToggleIconClassName,
+    String? socialDividerClassName,
+    String? socialDividerLineClassName,
+    String? socialDividerTextClassName,
+    String? guestButtonClassName,
+    String? registrationLinkClassName,
+    String? registrationLinkTextClassName,
+  }) {
+    return MagicStarterAuthTheme(
+      cardClassName: cardClassName ?? this.cardClassName,
+      titleClassName: titleClassName ?? this.titleClassName,
+      subtitleClassName: subtitleClassName ?? this.subtitleClassName,
+      errorBannerClassName: errorBannerClassName ?? this.errorBannerClassName,
+      themeToggleClassName: themeToggleClassName ?? this.themeToggleClassName,
+      themeToggleIconClassName:
+          themeToggleIconClassName ?? this.themeToggleIconClassName,
+      socialDividerClassName:
+          socialDividerClassName ?? this.socialDividerClassName,
+      socialDividerLineClassName:
+          socialDividerLineClassName ?? this.socialDividerLineClassName,
+      socialDividerTextClassName:
+          socialDividerTextClassName ?? this.socialDividerTextClassName,
+      guestButtonClassName: guestButtonClassName ?? this.guestButtonClassName,
+      registrationLinkClassName:
+          registrationLinkClassName ?? this.registrationLinkClassName,
+      registrationLinkTextClassName:
+          registrationLinkTextClassName ?? this.registrationLinkTextClassName,
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -1181,6 +1464,32 @@ class MagicStarterDropdownTheme {
     this.dangerTextClassName = 'danger:text-red-600 dark:danger:text-red-500',
     this.dangerTileClassName = 'danger:bg-red-50 dark:danger:bg-red-900/20',
   });
+
+  /// Returns a copy of this theme with the given fields replaced.
+  ///
+  /// [MagicStarter.useDropdownTheme] assigns the whole struct, so copy the
+  /// active theme to change one field and keep the rest.
+  MagicStarterDropdownTheme copyWith({
+    String? panelClassName,
+    String? dividerClassName,
+    String? itemClassName,
+    String? tileClassName,
+    String? textClassName,
+    String? mutedTextClassName,
+    String? dangerTextClassName,
+    String? dangerTileClassName,
+  }) {
+    return MagicStarterDropdownTheme(
+      panelClassName: panelClassName ?? this.panelClassName,
+      dividerClassName: dividerClassName ?? this.dividerClassName,
+      itemClassName: itemClassName ?? this.itemClassName,
+      tileClassName: tileClassName ?? this.tileClassName,
+      textClassName: textClassName ?? this.textClassName,
+      mutedTextClassName: mutedTextClassName ?? this.mutedTextClassName,
+      dangerTextClassName: dangerTextClassName ?? this.dangerTextClassName,
+      dangerTileClassName: dangerTileClassName ?? this.dangerTileClassName,
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -1315,6 +1624,27 @@ class MagicStarterButtonTheme {
     this.lgClassName = 'px-5 py-3 text-base',
     this.secondaryBorderClassName = 'border border-color-border',
   });
+
+  /// Returns a copy of this theme with the given fields replaced.
+  ///
+  /// [MagicStarter.useButtonTheme] assigns the whole struct, so copy the active
+  /// theme to change one field and keep the rest.
+  MagicStarterButtonTheme copyWith({
+    String? shapeClassName,
+    String? smClassName,
+    String? mdClassName,
+    String? lgClassName,
+    String? secondaryBorderClassName,
+  }) {
+    return MagicStarterButtonTheme(
+      shapeClassName: shapeClassName ?? this.shapeClassName,
+      smClassName: smClassName ?? this.smClassName,
+      mdClassName: mdClassName ?? this.mdClassName,
+      lgClassName: lgClassName ?? this.lgClassName,
+      secondaryBorderClassName:
+          secondaryBorderClassName ?? this.secondaryBorderClassName,
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -1366,8 +1696,8 @@ class MagicStarterButtonTheme {
 /// root does. Padding around a fixed `leading-*` also centres the text, which
 /// a bare `min-h-11` does not in every Wind box.
 ///
-/// Call it after [MagicStarter.useWindTheme] and [MagicStarter.useTheme], which
-/// reset it with the rest of the unified theme.
+/// Call it after [MagicStarter.useTheme], which resets it with the rest of the
+/// unified theme. [MagicStarter.useWindTheme] keeps it on either side.
 ///
 /// A className handed to a control (`MSInput.className`, the `classNames` of
 /// the others) is appended after all of this and wins on any family it names.
@@ -1444,6 +1774,27 @@ class MagicStarterFieldTheme {
     this.segmentedMdClassName = 'px-3 py-1.5 text-sm',
     this.segmentedPaddingClassName = 'p-1',
   });
+
+  /// Returns a copy of this theme with the given fields replaced.
+  ///
+  /// [MagicStarter.useFieldTheme] assigns the whole struct, so copy the active
+  /// theme to change one field and keep the rest.
+  MagicStarterFieldTheme copyWith({
+    String? inputSizeClassName,
+    String? selectSizeClassName,
+    String? segmentedSmClassName,
+    String? segmentedMdClassName,
+    String? segmentedPaddingClassName,
+  }) {
+    return MagicStarterFieldTheme(
+      inputSizeClassName: inputSizeClassName ?? this.inputSizeClassName,
+      selectSizeClassName: selectSizeClassName ?? this.selectSizeClassName,
+      segmentedSmClassName: segmentedSmClassName ?? this.segmentedSmClassName,
+      segmentedMdClassName: segmentedMdClassName ?? this.segmentedMdClassName,
+      segmentedPaddingClassName:
+          segmentedPaddingClassName ?? this.segmentedPaddingClassName,
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -1555,6 +1906,11 @@ class MagicStarterTheme {
   /// manual `dark:` palette utility is emitted; the single token re-skins in
   /// both modes.
   ///
+  /// The layout theme's `drawerBackground*` and `contentBackground*` pairs are
+  /// `wColor` keys rather than classNames, so they are read out of the
+  /// `bg-surface` role, the one the sidebar and header use: its light and
+  /// `dark:` utilities become a colour name (or `#hex`) and a shade each.
+  ///
   /// A role is only emitted as a token when [theme] actually defines it (as an
   /// alias key, or a backing color key in [WindThemeData.colors]); otherwise
   /// the property keeps the shipped default palette pair for that role so a
@@ -1613,6 +1969,15 @@ class MagicStarterTheme {
       surfaceContainerHigh,
     );
     final hoverFg = _withVariant('hover', fg);
+
+    // The drawer and the content area take `wColor` keys rather than a
+    // className, so the surface role is read down to a colour name and shade
+    // per brightness. Surface, because the sidebar and the header above are,
+    // and the drawer is the sidebar's phone form while every page paints
+    // `bg-surface` over the content area. A half that does not resolve keeps
+    // the shipped key, as an undefined role keeps its shipped pair.
+    const stockLayout = MagicStarterLayoutTheme();
+    final (light: surfaceLight, dark: surfaceDark) = _surfaceColorKeys(theme);
 
     return MagicStarterTheme(
       navigation: MagicStarterNavigationTheme(
@@ -1684,6 +2049,22 @@ class MagicStarterTheme {
             'h-16 px-4 $surface border-b $border flex items-center justify-between',
         brandBarClassName:
             'h-14 px-5 flex items-center justify-between border-b $borderSubtle',
+        contentBackgroundLightColor:
+            surfaceLight?.$1 ?? stockLayout.contentBackgroundLightColor,
+        contentBackgroundLightShade:
+            surfaceLight?.$2 ?? stockLayout.contentBackgroundLightShade,
+        contentBackgroundDarkColor:
+            surfaceDark?.$1 ?? stockLayout.contentBackgroundDarkColor,
+        contentBackgroundDarkShade:
+            surfaceDark?.$2 ?? stockLayout.contentBackgroundDarkShade,
+        drawerBackgroundLightColor:
+            surfaceLight?.$1 ?? stockLayout.drawerBackgroundLightColor,
+        drawerBackgroundLightShade:
+            surfaceLight?.$2 ?? stockLayout.drawerBackgroundLightShade,
+        drawerBackgroundDarkColor:
+            surfaceDark?.$1 ?? stockLayout.drawerBackgroundDarkColor,
+        drawerBackgroundDarkShade:
+            surfaceDark?.$2 ?? stockLayout.drawerBackgroundDarkShade,
       ),
       auth: MagicStarterAuthTheme(
         cardClassName:
@@ -1714,6 +2095,67 @@ class MagicStarterTheme {
         dangerTileClassName: _withVariant('danger', destructiveContainer),
       ),
     );
+  }
+
+  /// A background utility as Wind's background parser reads it: a palette
+  /// name with an optional shade, or an arbitrary hex.
+  static final RegExp _backgroundToken = RegExp(
+    r'^bg-(?:(?<color>[a-zA-Z0-9]+)-?(?<shade>[0-9]{0,3})'
+    r'|\[(?<hex>#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}'
+    r'|[0-9a-fA-F]{8}))\])$',
+  );
+
+  /// The `wColor` key (colour name or `#hex`, and shade) of the `bg-surface`
+  /// role in each brightness, or null for a half [theme] cannot resolve.
+  ///
+  /// Both halves are null unless [theme] defines the role, the same condition
+  /// [MagicStarterTokens.role] emits the bare token under. A role without a
+  /// `dark:` utility paints its light one in dark mode too, so that half
+  /// answers for both.
+  static ({(String, int)? light, (String, int)? dark}) _surfaceColorKeys(
+    WindThemeData theme,
+  ) {
+    const role = 'bg-surface';
+    if (MagicStarterTokens.role(theme, role) != role) {
+      return (light: null, dark: null);
+    }
+
+    // A backing colour defines the role without an alias: the bare token is
+    // then the utility. Wind paints the last background of a brightness, so
+    // the last one is read.
+    final tokens = (theme.aliases[role] ?? role).split(RegExp(r'\s+'));
+    final String? light = tokens
+        .where((token) => token.startsWith('bg-'))
+        .lastOrNull;
+    final String? dark =
+        tokens
+            .where((token) => token.startsWith('dark:bg-'))
+            .map((token) => token.substring('dark:'.length))
+            .lastOrNull ??
+        light;
+
+    return (light: _colorKey(theme, light), dark: _colorKey(theme, dark));
+  }
+
+  /// The `wColor` key [token] paints, or null when it is not a plain
+  /// background utility (an opacity step, a nested alias) or names a colour
+  /// [theme] does not carry, either of which `wColor` resolves to nothing.
+  static (String, int)? _colorKey(WindThemeData theme, String? token) {
+    final RegExpMatch? match = token == null
+        ? null
+        : _backgroundToken.firstMatch(token);
+    if (match == null) return null;
+
+    final String? hex = match.namedGroup('hex');
+    if (hex != null) return (hex, 500);
+
+    final String color = match.namedGroup('color')!;
+    final String shade = match.namedGroup('shade')!;
+    final int shadeValue = shade.isEmpty ? 500 : int.parse(shade);
+
+    return theme.getColor(color, shadeValue) == null
+        ? null
+        : (color, shadeValue);
   }
 
   /// Scopes every utility in [role] to [variant].

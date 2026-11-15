@@ -466,6 +466,18 @@ class MagicStarter {
   ///   ),
   /// );
   /// ```
+  ///
+  /// The theme is assigned whole, so a field you leave out goes back to its
+  /// default, including one [useWindTheme] derived. A one-field override is
+  /// `current.copyWith(...)`:
+  ///
+  /// ```dart
+  /// MagicStarter.useNavigationTheme(
+  ///   MagicStarter.navigationTheme.copyWith(
+  ///     focusItemClassName: 'focus:ring-2 focus:ring-primary',
+  ///   ),
+  /// );
+  /// ```
   static void useNavigationTheme(MagicStarterNavigationTheme theme) {
     manager.navigationTheme = theme;
   }
@@ -543,16 +555,33 @@ class MagicStarter {
   ///
   /// Derives a [MagicStarterTheme] from the passed theme's semantic alias
   /// palette (surface / surface-container / fg / primary / on-primary / border
-  /// / destructive, etc.) and delegates to [useTheme]. Every color-bearing
-  /// className in the built-in navigation, modal, form, card, page header,
-  /// layout, auth, and dropdown surfaces is rebuilt from those semantic roles,
-  /// so a consumer aligns the entire starter kit to their brand in a single
-  /// call instead of constructing up to 8 sub-theme structs by hand. The button
-  /// theme and the field theme (shape and size) are not derived and reset to
-  /// their defaults, so call [useButtonTheme] and [useFieldTheme] after this.
+  /// / destructive, etc.). Every color-bearing className in the built-in
+  /// navigation, modal, form, card, page header, layout, auth, and dropdown
+  /// surfaces is rebuilt from those semantic roles, as are the drawer and
+  /// content backgrounds, so a consumer aligns the entire starter kit to their
+  /// brand in a single call instead of constructing up to 8 sub-theme structs
+  /// by hand. The button and field themes carry shape and size only and have
+  /// nothing to derive.
   ///
-  /// This is additive: [useTheme] and every individual `use*Theme()` setter
-  /// still work and can override any sub-theme afterward.
+  /// ### Setters before and after this call
+  ///
+  /// The derived values land only on the fields the host has not set, so a
+  /// [useLayoutTheme], [useNavigationTheme] or other `use*Theme()` call made
+  /// before this one is kept field by field. A setter called after it assigns
+  /// its whole struct: build that struct from the active theme
+  /// (`useLayoutTheme(MagicStarter.layoutTheme.copyWith(...))`), or every
+  /// field it omits, the derived colours included, goes back to its stock
+  /// default. A field counts as host-set when its current value differs both
+  /// from its sub-theme's default constructor value and from what the previous
+  /// [useWindTheme] call derived for it; every other field takes the derived
+  /// value. So a second call with another palette re-skins what the first one
+  /// derived. A field set to exactly its stock default, or to exactly what the
+  /// previous `useWindTheme()` derived for it, reads as unset, and the next
+  /// `useWindTheme()` replaces it; to keep such a value, set a different one,
+  /// or set it again after `useWindTheme()` with `copyWith`. See
+  /// [MagicStarterManager.applyWindTheme].
+  ///
+  /// [useTheme] is different: it replaces every sub-theme whole.
   ///
   /// Pair it with a full alias map (e.g. `MagicStarterTokens.defaultAliases` or
   /// a `design:sync`-generated map) so every surface re-skins; see
@@ -567,7 +596,7 @@ class MagicStarter {
   /// );
   /// ```
   static void useWindTheme(WindThemeData theme) {
-    useTheme(MagicStarterTheme.fromWind(theme));
+    manager.applyWindTheme(theme);
   }
 
   /// Get the active unified theme.
@@ -672,8 +701,9 @@ class MagicStarter {
   /// passed to a button is appended after these and wins.
   ///
   /// All fields in [MagicStarterButtonTheme] are optional, pass only the values
-  /// you want to customise. [useWindTheme] and [useTheme] set the whole unified
-  /// theme and reset this one, so call this after them.
+  /// you want to customise. [useWindTheme] keeps it whichever side of this call
+  /// it is on; [useTheme] sets the whole unified theme and resets this one, so
+  /// call this after that.
   ///
   /// ```dart
   /// MagicStarter.useButtonTheme(
@@ -701,8 +731,9 @@ class MagicStarter {
   /// a control is appended after these and wins.
   ///
   /// All fields in [MagicStarterFieldTheme] are optional, pass only the values
-  /// you want to customise. [useWindTheme] and [useTheme] set the whole unified
-  /// theme and reset this one, so call this after them.
+  /// you want to customise. [useWindTheme] keeps it whichever side of this call
+  /// it is on; [useTheme] sets the whole unified theme and resets this one, so
+  /// call this after that.
   ///
   /// ```dart
   /// MagicStarter.useFieldTheme(
@@ -813,6 +844,16 @@ class MagicStarter {
   ///     sidebarWidth: 280,
   ///     sidebarClassName: 'h-full flex flex-col bg-zinc-900 border-r border-zinc-700',
   ///   ),
+  /// );
+  /// ```
+  ///
+  /// The theme is assigned whole, so a field you leave out goes back to its
+  /// default, including the sidebar, header and background colours
+  /// [useWindTheme] derived. A one-field override is `current.copyWith(...)`:
+  ///
+  /// ```dart
+  /// MagicStarter.useLayoutTheme(
+  ///   MagicStarter.layoutTheme.copyWith(navigationBreakpoint: 'sm'),
   /// );
   /// ```
   static void useLayoutTheme(MagicStarterLayoutTheme theme) {

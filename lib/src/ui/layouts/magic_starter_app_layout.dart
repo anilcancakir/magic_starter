@@ -222,13 +222,7 @@ class _MagicStarterAppLayoutState extends State<MagicStarterAppLayout> {
     // so a page under the shell's Navigator reaches the bar's slot.
     return MagicStarterBottomNavScope(
       child: Scaffold(
-        backgroundColor: wColor(
-          context,
-          layoutTheme.contentBackgroundLightColor,
-          shade: layoutTheme.contentBackgroundLightShade,
-          darkColorName: layoutTheme.contentBackgroundDarkColor,
-          darkShade: layoutTheme.contentBackgroundDarkShade,
-        ),
+        backgroundColor: layoutTheme.contentBackgroundColor(context),
         drawer: (isDesktop || hideChrome)
             ? null
             : _buildDrawer(context, currentPath),
@@ -434,13 +428,7 @@ class _MagicStarterAppLayoutState extends State<MagicStarterAppLayout> {
   Widget _buildDrawer(BuildContext context, String currentPath) {
     final layoutTheme = MagicStarter.manager.layoutTheme;
     return Drawer(
-      backgroundColor: wColor(
-        context,
-        layoutTheme.drawerBackgroundLightColor,
-        shade: layoutTheme.drawerBackgroundLightShade,
-        darkColorName: layoutTheme.drawerBackgroundDarkColor,
-        darkShade: layoutTheme.drawerBackgroundDarkShade,
-      ),
+      backgroundColor: layoutTheme.drawerBackgroundColor(context),
       child: SafeArea(
         child: WDiv(
           className: 'flex flex-col h-full',
