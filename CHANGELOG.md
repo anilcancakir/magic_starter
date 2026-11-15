@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-15
+
 ### Added
 
 - **Every theme sub-theme has a `copyWith`, and the layout theme resolves its backgrounds.** `MagicStarterNavigationTheme`, `MagicStarterCardTheme`, `MagicStarterPageHeaderTheme`, `MagicStarterLayoutTheme`, `MagicStarterAuthTheme`, `MagicStarterDropdownTheme`, `MagicStarterButtonTheme` and `MagicStarterFieldTheme` join the form and modal themes, so a one-field override keeps the rest: `MagicStarter.useLayoutTheme(MagicStarter.layoutTheme.copyWith(navigationBreakpoint: 'sm'))`. `MagicStarterLayoutTheme.contentBackgroundColor(context)` and `drawerBackgroundColor(context)` resolve the two background pairs for the current brightness and accept a `#hex` in either half; both layouts paint through them. (`lib/src/configuration/magic_starter_theme.dart`, `lib/src/ui/layouts/`)
@@ -32,7 +34,7 @@ All notable changes to this project will be documented in this file.
 
 - **First stable release: version 1.0.0 replaces the planned 0.1.0 and requires `magic ^1.0.0` and `dowel ^1.0.0`; no API change beyond what is listed below.**
 - **Now depends on `magic ^1.0.0`, `magic_picker` and `magic_socket`.** `Pick` (attachments, profile photo) comes from `package:magic_picker/magic_picker.dart` and `BroadcastListeners` (support sync) from `package:magic_socket/magic_socket.dart`, since core 1.0.0 no longer ships either. (`pubspec.yaml`, `lib/src/support/support_sync.dart`, `lib/src/ui/views/support/magic_starter_support_attachments.dart`, `lib/src/ui/views/profile/`)
-- **The package page and every documentation link name the new location under `https://anilcancakir.com/magic/starter`.** The pub.dev page carries it from the next release. (`pubspec.yaml`, `README.md`, `llms.txt`, `doc/`, `skills/`, `tool/check-docs.py`)
+- **The package page and every documentation link name the new location under `https://anilcancakir.com/magic/starter`.** (`pubspec.yaml`, `README.md`, `llms.txt`, `doc/`, `skills/`, `tool/check-docs.py`)
 - **Package metadata names the new owner.** The pub.dev description is rewritten, and the homepage, repository and issue tracker point at `anilcancakir`. (`pubspec.yaml`)
 - **`starter:configure` accepts `--no-<feature>` on a real command line.** dowel registers a signature flag as non-negatable, so `--no-teams` (the form the usage and the docs show) was rejected with "Could not find an option named"; the command now registers the eight feature flags as negatable. (`lib/src/cli/commands/magic_starter_configure_command.dart`)
 - **Direct dependencies raised to the latest release.** `path ^1.9.1`, `web ^1.1.2` and dev `test ^1.32.0`. (`pubspec.yaml`)
