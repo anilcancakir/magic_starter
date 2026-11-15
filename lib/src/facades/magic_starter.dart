@@ -575,8 +575,10 @@ class MagicStarter {
   /// from its sub-theme's default constructor value and from what the previous
   /// [useWindTheme] call derived for it; every other field takes the derived
   /// value. So a second call with another palette re-skins what the first one
-  /// derived, and a field set to exactly its stock default reads as unset (set
-  /// it after this call to keep the stock value over a palette). See
+  /// derived. A field set to exactly its stock default, or to exactly what the
+  /// previous `useWindTheme()` derived for it, reads as unset, and the next
+  /// `useWindTheme()` replaces it; to keep such a value, set a different one,
+  /// or set it again after `useWindTheme()` with `copyWith`. See
   /// [MagicStarterManager.applyWindTheme].
   ///
   /// [useTheme] is different: it replaces every sub-theme whole.
