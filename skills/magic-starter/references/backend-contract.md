@@ -30,7 +30,9 @@ The notification list, preferences and push-state requests are `magic_notificati
 | `magic_starter.notifications.external_id_prefix` (default `user_`) | `MAGIC_STARTER_EXTERNAL_ID_PREFIX` (`onesignal.external_id_prefix`, default `user_`) | OneSignal accepts the id and delivers to nobody |
 | `magic_starter.billing.billable` (`'user'` or `'team'`) | `billable` in `config/magic-starter.php` | The app and the backend disagree on what a store purchase is billed to; a Flutter value other than the two throws `StateError` |
 | `magic_starter.billing.web_origin` (absolute, no trailing slash) | Stripe return URLs | Unset or empty, the web checkout button is hidden; a relative value makes Stripe refuse it and the error is only logged |
-| A feature toggle | The same feature in `features` | The screens call routes that answer 404 |
+| A feature toggle | The matching backend feature in `features` (names below) | The screens call routes that answer 404 |
+
+The backend names most features with hyphens and a few differently: `two_factor` is `two-factor-authentication`, `newsletter` is `newsletter-subscription`, `handoff` is `sign-in-handoff`. The rest keep their name with `-` for `_`: `teams`, `profile_photos` (`profile-photos`), `sessions`, `social_login`, `extended_profile`, `notifications`, `email_verification`, `guest_auth`, `phone_otp`, `timezones`, `billing`, `support`, `support_csat`, `support_feedback`, `support_attachments`, `support_client_context` and `releases`. `registration` has no backend feature (`POST auth/register` is always routed), and `store_review`, `app_update` and `support_chat` are client-only toggles with no backend counterpart; check `src/Features.php` in `magic-starter-laravel` when a name is in doubt.
 
 ## Refusal codes
 
