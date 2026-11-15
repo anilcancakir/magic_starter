@@ -46,8 +46,11 @@ omits, the derived colours included, goes back to its stock default:
   sub-theme's default constructor value and from what the previous
   `useWindTheme` call derived for it. Yours are kept; every other field takes
   the derived value, so a second call with another palette re-skins what the
-  first derived. A field set to exactly its stock default reads as not set; set
-  it after `useWindTheme` to keep it over a palette.
+  first derived.
+- A field set to exactly its stock default, or to exactly what the previous
+  `useWindTheme()` derived for it, reads as unset, and the next
+  `useWindTheme()` replaces it; to keep such a value, set a different one, or
+  set it again after `useWindTheme()` with `copyWith`.
 - Every individual `use*Theme()` setter (`useCardTheme`, `useFormTheme`, ...)
   still assigns its whole struct, so fine-tune one field of the derived theme
   with `copyWith`:

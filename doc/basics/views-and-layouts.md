@@ -234,7 +234,7 @@ MagicStarter.useNavigationTheme(
 The rule is per field. A field counts as yours when its current value differs both from its sub-theme's default constructor value and from what the previous `useWindTheme` call derived for it. Your fields are kept; every other field takes the derived value. Two things follow from that:
 
 - A second `useWindTheme` with another palette re-skins what the first one derived, and still leaves your fields alone, including a field whose value a palette in between happened to derive too.
-- A field you set to exactly its stock default reads as not set, so the palette derives over it. To keep a stock value on top of a palette, set it after `useWindTheme`.
+- A field set to exactly its stock default, or to exactly what the previous `useWindTheme()` derived for it, reads as unset, and the next `useWindTheme()` replaces it; to keep such a value, set a different one, or set it again after `useWindTheme()` with `copyWith`.
 
 `useTheme(MagicStarterTheme(...))` is not a merge: it replaces every sub-theme whole.
 

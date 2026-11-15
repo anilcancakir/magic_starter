@@ -644,6 +644,36 @@ void main() {
       // A background is a colour and a shade read together by `wColor`, so a
       // host that set one half owns the pair: taking the other half from the
       // palette paints a shade the host never chose.
+      // Each half of `('ink', 950)` matches something the merge discounts:
+      // the colour the palette derived and the stock shade. The pair as a
+      // whole matches neither, so it is the host's.
+      test('keeps a host pair whose halves each match a discounted value', () {
+        const ink = MaterialColor(0xFF223344, <int, Color>{
+          50: Color(0xFFF1F2F4),
+          800: Color(0xFF1A2230),
+          950: Color(0xFF0E0F11),
+        });
+        final palette = WindThemeData(
+          colors: const {'ink': ink},
+          aliases: const {'bg-surface': 'bg-ink-50 dark:bg-ink-800'},
+        );
+        MagicStarter.useWindTheme(palette);
+        MagicStarter.useLayoutTheme(
+          MagicStarter.layoutTheme.copyWith(contentBackgroundDarkShade: 950),
+        );
+
+        MagicStarter.useWindTheme(palette);
+        final layout = MagicStarter.layoutTheme;
+
+        expect(
+          (
+            layout.contentBackgroundDarkColor,
+            layout.contentBackgroundDarkShade,
+          ),
+          ('ink', 950),
+        );
+      });
+
       test('keeps a background colour and its shade as one pair', () {
         const ink = MaterialColor(0xFF223344, <int, Color>{
           50: Color(0xFFF1F2F4),

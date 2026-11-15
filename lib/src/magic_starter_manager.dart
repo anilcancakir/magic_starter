@@ -1003,10 +1003,15 @@ class _WindMerge<S> {
     return field(source);
   }
 
-  /// [first] and [second] decided as one value: both from the host when it
-  /// set either, both derived otherwise.
+  /// [first] and [second] decided as one value: both from the host when the
+  /// pair differs from the stock pair and from the pair the previous call left
+  /// to the palette, both derived otherwise. The halves are not tested apart:
+  /// a host pair can match the derived colour and the stock shade one half at
+  /// a time and still be neither.
   (A, B) pickPair<A, B>(A Function(S theme) first, B Function(S theme) second) {
-    final bool hostSet = _hostSet(first) || _hostSet(second);
+    (A, B) pair(S theme) => (first(theme), second(theme));
+    final (A, B) value = pair(current);
+    final bool hostSet = value != pair(stock) && value != pair(previous);
     final S source = hostSet ? (record ? stock : current) : derived;
 
     return (first(source), second(source));
