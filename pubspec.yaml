@@ -22,125 +22,43 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  # `RouteDefinition.stacked()` is the API this floor names, and it exists in no
-  # release below 0.0.12: `git show 0.0.11:lib/src/routing/route_definition.dart`
-  # has no `stacked` at all. Eleven routes here call it. A caret on a zero major
-  # spans the whole 0.0.x line, so leaving the floor at `^0.0.6` lets pub resolve
-  # an adopter onto 0.0.11 and hand them `The method 'stacked' isn't defined`
-  # inside a package they do not own, rather than a version-solve message naming
-  # magic. `SessionScope`, `SessionScoped`, the keyed `LatestRead` and
-  # `BaseGuard.cacheUser`, which the team switch and the billing reads call,
-  # first ship in 0.0.22, and the restore listener reads `AuthRestored.changed`,
-  # which first ships in 0.0.24. The real requirement is 0.0.29: the views read
-  # route values through `pathParameterOf` and `queryParameterOf`, which first
-  # ship there. The floor itself names 0.0.40, the release 0.0.73 was verified
-  # against, and the old range already admitted it; 0.0.40 adds
-  # `MagicRoute.useOverlayPresentation` and `MagicOverlayPresentation`, which
-  # the provider calls to frame an overlay route by the modal theme. The one
-  # breaking entry in 0.0.30 to 0.0.39, `MagicVaultService.macOsUsesDataProtectionKeychain`
-  # becoming `bool?` in 0.0.38, is a field this package never reads.
-  #
-  # 1.0.0 is the release that moved the `Pick` facade out to `magic_picker` and
-  # the broadcasting layer out to `magic_socket`; this package imports both.
+  # 1.0.0 is the first release with every Magic API the routes and views call
+  # (`RouteDefinition.stacked`, `SessionScope`, `pathParameterOf`,
+  # `MagicRoute.useOverlayPresentation`) and the one that moved the `Pick`
+  # facade out to `magic_picker` and the broadcasting layer out to
+  # `magic_socket`; this package imports both. A caret on 1.x admits every later
+  # minor.
   magic: ^1.0.0
   magic_picker: ^1.0.0
   magic_socket: ^1.0.0
   dowel: ^1.0.0
-  # This is a FLOOR for an API, not an upper-bound fix, and the API is
-  # `Notify.view`: the notification screens, the bell dropdown and the
-  # preferences controller live in that package now, and this package's routes
-  # resolve them through that registry. The release that first carries it is
-  # 0.1.0.
-  #
-  # The floor only ever names a version pub.dev already has: name one it does
-  # not and this package is unresolvable for every adopter. It has moved three
-  # times now, and the third move is the first one that is not about whether
-  # this package compiles.
-  #
-  # 0.2.0 was about compiling. `NotificationsListView.onDelete` became
-  # `Future<bool>` there, and `_confirmThenDelete` in
-  # `lib/src/routes/notification_routes.dart` returns one. Against 0.1.0 the
-  # library still builds, since `Future<bool>` satisfies a `Future<void>`
-  # parameter, but the routes test does not: it reads `onDelete`'s return type.
-  #
-  # 0.3.0 is about being REACHABLE. A caret raises the MINOR whenever the major
-  # is zero, so `^0.2.0` is `>=0.2.0 <0.3.0` and `^0.0.2` equally admits 0.0.3,
-  # which has no `Notify.view` at all. The consequence of leaving the floor at
-  # `^0.2.0` is not that this package declines 0.3.0 for itself; it is that pub
-  # finds no intersection with an app asking for 0.3.0 and walks magic_starter
-  # BACKWARDS to an older release rather than failing, so an adopter upgrading
-  # magic_notifications loses starter releases with an exit code of zero and
-  # nothing said. 0.3.0 also adds the bulk preferences card, whose two
-  # translation keys ship in this package's install stub.
-  #
-  # At least ^0.3.2, rather than ^0.3.0, because `notification_routes.dart` passes
-  # `contentClassName`, which 0.3.2 adds. A caret spans the whole 0.3.x line, so
-  # leaving the floor lower does not merely make CI red until that release: it
-  # lets pub resolve an adopter onto 0.3.0 or 0.3.1 and hand them a COMPILE
-  # error at `notification_routes.dart` instead of a version-solve message
-  # naming the package. Raising it is the difference between a readable refusal
-  # and a broken build. `Notify.pushState`, which the provider registers as a
-  # before-logout hook, first ships in 0.3.5. Then ^0.3.12, because
-  # `notification_routes.dart` also passes `headerBuilder` and takes a
-  # `NotificationsPageHeader`, both of which 0.3.12 adds: a lower floor would
-  # resolve an adopter onto a release this package does not compile against.
-  # The floor now names 1.0.0, the release that renamed the CLI provider to
-  # `MagicNotificationsDowelProvider` and moved Wind to `wind_kit`.
+  # The floor names an API, `Notify.view`: the notification screens, the bell
+  # dropdown and the preferences controller live in that package, and this
+  # package's routes resolve them through that registry. The routes also pass
+  # `contentClassName` and `headerBuilder` and register `Notify.pushState` as a
+  # before-logout hook. 1.0.0 renamed the CLI provider to
+  # `MagicNotificationsDowelProvider` and moved Wind to `wind_kit`. A floor must
+  # name a version pub.dev already has, or the package is unresolvable.
   magic_notifications: ^1.0.0
-  # Direct rather than transitive, and this is the point of declaring it:
-  # `wind_kit` reaches this package through `magic`, so without an entry
-  # here there is no floor to raise when this package starts calling a new Wind
-  # API. `magic_starter_timezone_select.dart` passes `WSelect.onOpen`, which
-  # 1.6.0 adds: a new public parameter is a minor rather than the patch this
-  # comment predicted before the release existed. An adopter whose
-  # `pubspec.lock` already pins 1.5.3 and upgrades this package would otherwise
-  # get `undefined_named_parameter` inside a package they do not own, with
-  # nothing saying why; with the floor they get a version-solve message naming
-  # wind. 1.8.3 is the first release whose `WInput` and `WFormInput` take the
-  # `autofillHints` the auth forms pass, and it also switched platform autofill
-  # off on every field that passes none; 1.8.4 restores that. 1.9.1 is the
-  # first release whose `WSelect` lights `focus:` on keyboard focus, which the
-  # `MSSelect` focus ring needs; below it the ring never paints. The floor itself
-  # names 1.11.0, the release 0.0.73 was verified against: 1.10.0 adds `WImage`
-  # object-position classes and a `decimalSeparator` for a number `WInput`, and
-  # 1.11.0 adds `wWindowClassOf`, this package calls none of them, and the old
-  # range already admitted both. The package was renamed `wind_kit` at 1.12.0,
-  # the release `magic` 1.0.0 itself depends on.
+  # Direct rather than transitive: `wind_kit` reaches this package through
+  # `magic`, so without an entry here there is no floor to raise when this
+  # package starts calling a new Wind API. `magic_starter_timezone_select.dart`
+  # passes `WSelect.onOpen` (1.6.0), the auth forms pass `autofillHints`
+  # (1.8.3, with 1.8.4 restoring platform autofill on fields that pass none),
+  # and the `MSSelect` focus ring needs `WSelect` to light `focus:` on keyboard
+  # focus (1.9.1). 1.12.0 is the release `magic` 1.0.0 itself depends on.
   wind_kit: ^1.12.0
   # `MaterialApp`, `ThemeData` and `Colors`: `wind_kit` builds on `material_ui`,
   # so `lib/` imports it rather than `flutter/material.dart`.
   material_ui: ^1.11.0
-  # Published, and carrying what the billing screen needs: magic_payments 0.0.2
-  # is on pub.dev and ships both `BillingCycle` and `PlanStatus.isDunning`. This
-  # comment used to say the package had no release at all and that those two
-  # symbols existed only on its default branch, which was true when it was
-  # written and is not now.
-  #
-  # `^0.0.1` is `>=0.0.1 <0.1.0`: pub_semver's `Version.nextBreaking` raises the
-  # MINOR whenever the major is zero, whatever the minor itself is
-  # (`version.dart:243`), so a caret on any `0.0.x` tracks the whole `0.0.x`
-  # line rather than pinning one patch, and this constraint therefore already
-  # resolves to 0.0.2. Do not restate that rule as "the first non-zero
-  # component": for `0.0.1` that is the patch, which yields `<0.0.2` and is the
-  # wrong bound this paragraph exists to correct.
-  #
-  # So the release order this line used to block on is closed, and so is the one
-  # a dependency up: magic_notifications 0.1.0 is published and carries
-  # `Notify.view`, `hasOverride` and `forgetView`. The `Published graph` CI job
-  # is what says so out loud, by resolving the graph a third party actually gets
-  # rather than the local path overrides. `StoreIdentitySync`, which
-  # `switchTeam` re-identifies the store rail through, first ships in 0.0.5.
-  # The floor names 0.0.8 because the billing screen purchases by catalogue
-  # product key on both rails (`checkout(productKey:)`,
-  # `purchase(productKey, context:)`) and reads `PurchaseContext` and
-  # `StoreBillingService.lastChangeTiming`, which first ship there; below it
-  # this package does not compile. 0.0.9 is where `introEligible` first ships,
-  # which the trial copy on the billing screen depends on. 0.0.10 is where
-  # `BillingErrorCode.paymentDeclined` and `paymentRequiresAction` first ship;
-  # the billing screen's exhaustive error copy switch names both. The floor
-  # itself names 0.0.12, the release the 2026-10-14 batch verified this
-  # package against. The floor now names 1.0.0, the release that renamed the
-  # CLI provider to `MagicPaymentsDowelProvider` and moved to `magic` 1.0.0.
+  # The billing screen purchases by catalogue product key on both rails
+  # (`checkout(productKey:)`, `purchase(productKey, context:)`) and reads
+  # `PurchaseContext`, `StoreBillingService.lastChangeTiming`, `introEligible`
+  # (the trial copy) and `BillingErrorCode.paymentDeclined` and
+  # `paymentRequiresAction` (its exhaustive error copy switch names both);
+  # `switchTeam` re-identifies the store rail through `StoreIdentitySync`. 1.0.0
+  # renamed the CLI provider to `MagicPaymentsDowelProvider` and moved to
+  # `magic` 1.0.0.
   magic_payments: ^1.0.0
   args: ^2.7.0
   path: ^1.9.1

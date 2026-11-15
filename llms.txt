@@ -55,7 +55,7 @@ class AppServiceProvider extends ServiceProvider {
 
 ## Platforms
 
-- Every platform Flutter and `magic` run on; no native code of its own.
+- No native code of its own. pub.dev lists Android and iOS only: its static import-graph check reaches `path_provider` and `share_plus` (through `magic` and `magic_picker`), so the web, macOS, Windows and Linux tags are absent although the screens are written for them.
 - Billing checks out through Stripe on the web and through the App Store or Google Play on mobile, via `magic_payments`.
 - `store_review` (native review prompt, Rate us) runs on Android, iOS and macOS and is hidden on the web.
 - `app_update`: on the web the banner offers Reload when `version.json` names a new deploy; on a store-installed release build it offers Update when the backend's latest build is higher.

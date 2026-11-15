@@ -11,11 +11,10 @@
 # A private vulnerability report needs a signed-in session.
 ^https://github\.com/anilcancakir/magic_starter/security/advisories/new
 
-# The package pages are published with the docs site; until then they answer 404.
-# Added 2026-11-15: remove these lines once the docs site serves /magic/<slug> and
-# /magic/docs/<slug> for starter, social_auth, notifications and socket.
-^https://anilcancakir\.com/magic/(?:starter|social_auth|notifications|socket)(?:[/?#]|$)
-^https://anilcancakir\.com/magic/docs/(?:starter|social_auth|notifications|socket)(?:[/?#]|$)
+# The starter's own docs are published from a release tag; until a tag that
+# carries `doc/` ships, /magic/docs/starter answers 404. Added 2026-11-15:
+# remove this line once starter 1.0.1 is tagged and the docs site serves it.
+^https://anilcancakir\.com/magic/docs/starter(?:[/?#]|$)
 
 # Placeholder hosts inside example code.
 ^https?://([a-z0-9-]+\.)*example\.com
