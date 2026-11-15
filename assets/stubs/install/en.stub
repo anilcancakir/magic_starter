@@ -469,13 +469,18 @@
     }
   },
   "nav": {
+    "account_menu": "Account menu",
     "badge_count": "One item|:count items",
+    "close_menu": "Close menu",
     "collapse_sidebar": "Collapse sidebar",
     "dashboard": "Dashboard",
     "expand_sidebar": "Expand sidebar",
+    "notifications": "Notifications",
+    "open_menu": "Open menu",
     "profile": "Profile",
     "settings": "Settings",
-    "system": "System"
+    "system": "System",
+    "team_menu": "Team menu"
   },
   "notifications": {
     "delete_confirm_message": "This notification will be permanently removed.",

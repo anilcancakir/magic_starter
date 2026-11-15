@@ -367,4 +367,39 @@ void main() {
       expect(resting, [const Color(0xFF101012)]);
     });
   });
+
+  // The compact trigger draws the team's initial and nothing else, so a
+  // screen reader announced "A, button" for the rail's team switcher.
+  group('compact trigger name', () {
+    setUp(() {
+      final team = MagicStarterTeam.fromMap({
+        'id': 1,
+        'name': 'Acme Corp',
+        'personal_team': false,
+      });
+      MagicStarter.useTeamResolver(
+        currentTeam: () => team,
+        allTeams: () => [team],
+        onSwitch: (id) async {},
+      );
+    });
+
+    testWidgets('names the button and carries the team as its value', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+
+      await tester.pumpWidget(wrap(const MSTeamSelector(compact: true)));
+      await tester.pump();
+
+      final finder = find.bySemanticsLabel('Team menu');
+      expect(finder, findsOneWidget);
+      final data = tester.getSemantics(finder).getSemanticsData();
+      expect(data.flagsCollection.isButton, isTrue);
+      expect(data.value, 'Acme Corp');
+      expect(find.bySemanticsLabel(RegExp('nav\\.')), findsNothing);
+
+      handle.dispose();
+    });
+  });
 }

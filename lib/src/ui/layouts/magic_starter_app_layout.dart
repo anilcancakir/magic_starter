@@ -7,6 +7,7 @@ import 'package:magic/magic.dart';
 import 'package:magic_notifications/magic_notifications.dart';
 
 import '../../configuration/magic_starter_config.dart';
+import '../../configuration/magic_starter_theme.dart';
 import '../../facades/magic_starter.dart';
 import '../../magic_starter_manager.dart';
 import '../../models/magic_starter_nav_item.dart';
@@ -158,6 +159,17 @@ class _MagicStarterAppLayoutState extends State<MagicStarterAppLayout> {
       name,
       setting: 'MagicStarterLayoutTheme.$field',
     );
+  }
+
+  /// The catalogue line for [key], or the English [fallback] when the host's
+  /// catalogue does not carry it.
+  ///
+  /// For the names of the icon-only controls: `trans` answers a missing key
+  /// with the key itself, and a screen reader would then announce
+  /// "nav dot open underscore menu" to someone installed before the key
+  /// shipped in the stub.
+  static String _controlName(String key, String fallback) {
+    return Lang.has(key) ? trans(key) : fallback;
   }
 
   // -------------------------------------------------------------------------
@@ -474,6 +486,7 @@ class _MagicStarterAppLayoutState extends State<MagicStarterAppLayout> {
         Builder(
           builder: (drawerContext) => WAnchor(
             onTap: () => Scaffold.of(drawerContext).openDrawer(),
+            semanticLabel: _controlName('nav.open_menu', 'Open menu'),
             child: WIcon(Icons.menu, className: 'text-fg-muted'),
           ),
         ),
@@ -537,6 +550,7 @@ class _MagicStarterAppLayoutState extends State<MagicStarterAppLayout> {
         if (showClose)
           WAnchor(
             onTap: () => Navigator.pop(context),
+            semanticLabel: _controlName('nav.close_menu', 'Close menu'),
             child: WDiv(
               className: '''
                                 w-8 h-8 rounded-lg flex items-center justify-center
@@ -756,8 +770,13 @@ class _MagicStarterAppLayoutState extends State<MagicStarterAppLayout> {
                 ''',
         children: [
           // The compact rail has no label column to put a count in, so the
-          // badge rides the icon; the labelled row ends with it.
-          compact ? _withCornerBadge(glyph, badge) : glyph,
+          // badge rides the icon; the labelled row ends with it. The rail's
+          // glyph carries the label as its name, since the dropped text was
+          // the item's only one; merged into the anchor's button node ahead
+          // of the badge's sentence, it reads as the labelled row does.
+          compact
+              ? _withCornerBadge(Semantics(label: label, child: glyph), badge)
+              : glyph,
           if (!compact) Expanded(child: _navLabel(label, badge)),
         ],
       ),
@@ -1006,6 +1025,19 @@ class _MagicStarterAppLayoutState extends State<MagicStarterAppLayout> {
     // layout theme, and a null one keeps the widget's own default.
     final theme = MagicStarter.manager.layoutTheme;
 
+    // The dropdown takes no name of its own, and its trigger is an icon, so
+    // its button node had nothing to announce. The outer merge folds this
+    // label into that node (the unread count, when shown, follows it); the
+    // feed panel lives in the overlay, outside this subtree, and is unaffected.
+    return MergeSemantics(
+      child: Semantics(
+        label: _controlName('nav.notifications', 'Notifications'),
+        child: _notificationDropdown(theme),
+      ),
+    );
+  }
+
+  Widget _notificationDropdown(MagicStarterLayoutTheme theme) {
     return NotificationDropdown(
       notificationStream: Notify.notifications(),
       onMarkAsRead: (id) => Notify.markAsRead(id),
