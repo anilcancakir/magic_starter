@@ -22,7 +22,7 @@ The screens, layouts and `MS` components read className strings from sub-themes 
 ## Order
 
 1. `useWindTheme()` or `useTheme()`.
-2. Single setters, `useButtonTheme()` and `useFieldTheme()` among them: `useTheme()` resets both, so set them after it. `useWindTheme()` keeps, field by field, what a setter called before it set. A setter called after `useWindTheme()` assigns its whole struct, so build it from the active theme (`MagicStarter.useLayoutTheme(MagicStarter.layoutTheme.copyWith(...))`) or the derived colours it omits go back to their stock defaults.
+2. Single setters, `useButtonTheme()` and `useFieldTheme()` among them: `useTheme()` resets both, so set them after it. `useWindTheme()` keeps, field by field, what a setter called before it set. A setter called after `useWindTheme()` assigns its whole struct, so build it from the active theme (`MagicStarter.useLayoutTheme(MagicStarter.layoutTheme.copyWith(...))`) or the derived colours it omits go back to their stock defaults. A field set to exactly its stock default, or to exactly what the previous `useWindTheme()` derived for it, reads as unset, and the next `useWindTheme()` replaces it; to keep such a value, set a different one, or set it again after `useWindTheme()` with `copyWith`.
 3. One string at a time with `copyWith`: `MagicStarter.useFormTheme(MagicStarter.formTheme.copyWith(inputClassName: ...))`, `MagicStarter.useModalTheme(MagicStarter.modalTheme.copyWith(presentation: ...))`. Every sub-theme has `copyWith`; a new struct hands every omitted field back to its default.
 
 Call them from a provider's `boot()`, before the shell first paints.

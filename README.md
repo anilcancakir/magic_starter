@@ -227,6 +227,7 @@ Failure modes:
 |-----------|--------------|
 | `useButtonTheme()` or `useFieldTheme()` before `useTheme()` | `useTheme()` replaces every sub-theme and resets them to their defaults, without an error. `useWindTheme()` keeps a field you set on either side of it. |
 | `useFormTheme(MagicStarterFormTheme(inputClassName: ...))` | Every field you left out goes back to its default; change one with `MagicStarter.formTheme.copyWith(...)` (every sub-theme has `copyWith`). |
+| A field set to its stock default, or to what `useWindTheme()` derived, before `useWindTheme()` | A field set to exactly its stock default, or to exactly what the previous `useWindTheme()` derived for it, reads as unset, and the next `useWindTheme()` replaces it; to keep such a value, set a different one, or set it again after `useWindTheme()` with `copyWith`. |
 | A Wind alias the palette lacks | Wind drops it silently and the class paints nothing. |
 
 The derivation table: [wind_kit Theme Adoption](https://anilcancakir.com/magic/docs/starter/guides/wind-theme-adoption).
