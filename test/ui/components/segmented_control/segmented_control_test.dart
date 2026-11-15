@@ -1,3 +1,5 @@
+import 'dart:ui' show Tristate;
+
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -110,6 +112,92 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(changed, equals(1));
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Semantics
+  //
+  // A screen reader hears a segment's label and that it is a button, but the
+  // painted `selected:` state is invisible to it: without the selected flag on
+  // the segment's own node, "Monthly" and "Annual" read the same whichever one
+  // is chosen.
+  // ---------------------------------------------------------------------------
+
+  group('SegmentedControl semantics', () {
+    Future<void> pumpControl(WidgetTester tester, int selectedIndex) async {
+      await tester.pumpWidget(
+        wrap(
+          MSSegmentedControl<String>(
+            options: const ['Monthly', 'Annual', 'Lifetime'],
+            selectedIndex: selectedIndex,
+            onChanged: (_) {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    bool isSelected(WidgetTester tester, String label) {
+      return tester
+              .getSemantics(find.text(label))
+              .getSemanticsData()
+              .flagsCollection
+              .isSelected ==
+          Tristate.isTrue;
+    }
+
+    testWidgets('only the selected segment is announced as selected', (
+      tester,
+    ) async {
+      final SemanticsHandle handle = tester.ensureSemantics();
+      await pumpControl(tester, 1);
+
+      expect(isSelected(tester, 'Monthly'), isFalse);
+      expect(isSelected(tester, 'Annual'), isTrue);
+      expect(isSelected(tester, 'Lifetime'), isFalse);
+
+      handle.dispose();
+    });
+
+    testWidgets('the segment keeps its label and button role', (tester) async {
+      final SemanticsHandle handle = tester.ensureSemantics();
+      await pumpControl(tester, 0);
+
+      final SemanticsData data = tester
+          .getSemantics(find.text('Monthly'))
+          .getSemanticsData();
+      expect(data.label, 'Monthly');
+      expect(data.flagsCollection.isButton, isTrue);
+
+      handle.dispose();
+    });
+
+    testWidgets('the announcement follows a change of selection', (
+      tester,
+    ) async {
+      final SemanticsHandle handle = tester.ensureSemantics();
+      await pumpControl(tester, 0);
+      expect(isSelected(tester, 'Monthly'), isTrue);
+
+      await pumpControl(tester, 2);
+      expect(isSelected(tester, 'Monthly'), isFalse);
+      expect(isSelected(tester, 'Lifetime'), isTrue);
+
+      handle.dispose();
+    });
+
+    testWidgets('a selectedIndex that names no segment selects none', (
+      tester,
+    ) async {
+      final SemanticsHandle handle = tester.ensureSemantics();
+      await pumpControl(tester, -1);
+
+      for (final String label in const ['Monthly', 'Annual', 'Lifetime']) {
+        expect(isSelected(tester, label), isFalse, reason: label);
+      }
+
+      handle.dispose();
     });
   });
 

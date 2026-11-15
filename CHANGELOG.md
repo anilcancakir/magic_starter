@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- **`MSSegmentedControl` tells a screen reader which segment is selected.** The `selected:` look was painted only, so "Monthly" and "Annual" read alike whichever one was chosen. Each segment now carries `Semantics(selected:)` on its own button node (merged, so the node's name is still the label), true for the one at `selectedIndex` and false for the rest, including a `selectedIndex` that names no segment. Nothing changes visually or in the layout. (`lib/src/ui/components/segmented_control/segmented_control.dart`)
+
 ## [1.1.0] - 2026-11-15
 
 ### Added

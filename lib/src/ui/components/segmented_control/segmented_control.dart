@@ -286,20 +286,29 @@ class _MSSegmentedControlState<T> extends State<MSSegmentedControl<T>> {
   /// The pill sits in a [hitClassName] cell that is 44 px tall below `lg`, so
   /// the anchor (and the semantics node a tap target check measures) is the
   /// cell while the painted pill keeps its own height.
+  ///
+  /// The `selected:` look is painted only, so the segment also says it is
+  /// selected: [MergeSemantics] outside, so the flag lands on the anchor's own
+  /// button node, whose name is the label.
   Widget _buildSegment(int index, String itemClassName, String hitClassName) {
     final bool isSelected = index == widget.selectedIndex;
     final Set<String> segmentStates = {if (isSelected) 'selected'};
 
-    return WAnchor(
-      key: _segmentKeys[index],
-      onTap: () => widget.onChanged?.call(index),
-      states: segmentStates,
-      child: WDiv(
-        className: hitClassName,
-        child: WDiv(
-          className: itemClassName,
+    return MergeSemantics(
+      child: Semantics(
+        selected: isSelected,
+        child: WAnchor(
+          key: _segmentKeys[index],
+          onTap: () => widget.onChanged?.call(index),
           states: segmentStates,
-          child: WText(widget.options[index]),
+          child: WDiv(
+            className: hitClassName,
+            child: WDiv(
+              className: itemClassName,
+              states: segmentStates,
+              child: WText(widget.options[index]),
+            ),
+          ),
         ),
       ),
     );
