@@ -1,7 +1,7 @@
 ---
 name: magic-starter
 description: "Build with magic_starter: opt-in Magic screens for sign-in, settings, teams, billing and support, plus the view registry."
-version: 1.1.0
+version: 1.1.1
 when_to_use: "Use when code imports package:magic_starter or touches MagicStarter, a starter view key, an MS component or a starter:* command."
 ---
 
