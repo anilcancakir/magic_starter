@@ -2121,16 +2121,17 @@ class MagicStarterTheme {
     }
 
     // A backing colour defines the role without an alias: the bare token is
-    // then the utility.
+    // then the utility. Wind paints the last background of a brightness, so
+    // the last one is read.
     final tokens = (theme.aliases[role] ?? role).split(RegExp(r'\s+'));
     final String? light = tokens
         .where((token) => token.startsWith('bg-'))
-        .firstOrNull;
+        .lastOrNull;
     final String? dark =
         tokens
             .where((token) => token.startsWith('dark:bg-'))
             .map((token) => token.substring('dark:'.length))
-            .firstOrNull ??
+            .lastOrNull ??
         light;
 
     return (light: _colorKey(theme, light), dark: _colorKey(theme, dark));
