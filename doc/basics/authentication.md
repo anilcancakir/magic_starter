@@ -63,7 +63,7 @@ await MagicStarterAuthController.instance.doLogin(
 );
 ```
 
-`rememberMe` is sent as `remember_me`. A `magic-starter-laravel` release up to 0.0.64 ignores it, so the "remember me" checkbox changes nothing there; the backend honours it from the release after 0.0.64 (`master` today), which ties the Sanctum token lifetime to it.
+`rememberMe` is sent as `remember_me`. `magic-starter-laravel` up to 0.0.64 ignores it, so the "remember me" checkbox changes nothing there; a backend that reads it sets the Sanctum token lifetime from it.
 
 The login flow has three possible outcomes:
 
