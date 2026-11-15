@@ -236,6 +236,14 @@ dart run magic:dowel starter:publish
 
 Copies plugin source files into the host application for customisation, the starter's equivalent of Laravel's `vendor:publish`. Without `--tag` it publishes every group. When views or layouts are published, the command registers them in `AppServiceProvider` (`MagicStarter.view.register(...)` and `registerLayout(...)`) so the registry serves your copy.
 
+A published view or layout compiles where it lands. Its relative imports are rewritten as it is copied: one that the package barrel covers becomes `import 'package:magic_starter/magic_starter.dart';`, and any other keeps its target through a `package:magic_starter/src/...` URI. A view or layout that has a registry key needs only the barrel; the support screens' helper widgets, published by the unscoped `views` tag, still reach into `src/`, which a host on `flutter_lints` sees as `implementation_imports`. Config, middleware and translations are copied unchanged. The registration imports your copy under a prefix, because `AppServiceProvider` also imports the barrel and the barrel exports the original under the same class name:
+
+```dart
+import '../../resources/views/starter/auth/magic_starter_login_view.dart' as published;
+
+MagicStarter.view.register('auth.login', () => const published.MagicStarterLoginView());
+```
+
 <a name="publish-tags"></a>
 ### Publish Tags
 

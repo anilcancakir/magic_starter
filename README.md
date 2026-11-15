@@ -191,7 +191,7 @@ void customiseStarter() {
 | `has(key)`, `hasLayout(key)`, `hasModal(key)` | Whether a key is registered. |
 | `slot(viewKey, slotName, builder)`, `buildSlot(...)` | A widget inside a shipped view; a slot name the view does not read is inert. |
 
-The settings surface is `settings.hub` plus drill-down keys (`profile.profile`, `settings.appearance`, `settings.security.*`, ...). The notification screens are not on this registry: override them on `magic_notifications`' `Notify.view`. Every key and slot: [View Registry](https://anilcancakir.com/magic/docs/starter/architecture/view-registry). To own a screen's source instead, `dart run magic:dowel starter:publish --tag=views:auth.login` copies it into `lib/resources/views/starter/` and registers it; a published copy does not follow later releases.
+The settings surface is `settings.hub` plus drill-down keys (`profile.profile`, `settings.appearance`, `settings.security.*`, ...). The notification screens are not on this registry: override them on `magic_notifications`' `Notify.view`. Every key and slot: [View Registry](https://anilcancakir.com/magic/docs/starter/architecture/view-registry). To own a screen's source instead, `dart run magic:dowel starter:publish --tag=views:auth.login` copies it into `lib/resources/views/starter/` with its imports pointed at the package barrel, and registers it; a published copy does not follow later releases.
 
 ## Theming
 

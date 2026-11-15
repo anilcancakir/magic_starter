@@ -641,6 +641,78 @@ void main() {
     });
 
     // -------------------------------------------------------------------
+    // Import rewriting for published views and layouts
+    // -------------------------------------------------------------------
+
+    test(
+      'rewrites relative imports so a published view resolves from the host',
+      () async {
+        createPluginFile('lib/magic_starter.dart', '''
+export 'src/facades/magic_starter.dart';
+export 'src/ui/components/card/index.dart';
+''');
+        createPluginFile(
+          'lib/src/ui/components/card/index.dart',
+          "export 'card.dart';\n",
+        );
+        createPluginFile(
+          'lib/src/ui/views/auth/magic_starter_login_view.dart',
+          '''
+import 'package:magic/magic.dart';
+import 'package:magic_starter/magic_starter.dart' show MSButton;
+
+import '../../../facades/magic_starter.dart';
+import '../../components/card/card.dart';
+import '../../../http/controllers/concerns/navigates_routes.dart';
+import 'magic_starter_handoff_view.dart'
+    show handoffHelper;
+
+class MagicStarterLoginView {}
+''',
+        );
+
+        await _runPublish(command, tag: 'views:auth.login');
+
+        // Exported targets collapse into one unrestricted barrel import (the
+        // existing `show` import widens rather than duplicating it); targets
+        // the barrel does not export keep their path under the package.
+        expect(
+          readHostFile(
+            'lib/resources/views/starter/auth/magic_starter_login_view.dart',
+          ),
+          '''
+import 'package:magic/magic.dart';
+import 'package:magic_starter/magic_starter.dart';
+
+import 'package:magic_starter/src/http/controllers/concerns/navigates_routes.dart';
+import 'package:magic_starter/src/ui/views/auth/magic_starter_handoff_view.dart'
+    show handoffHelper;
+
+class MagicStarterLoginView {}
+''',
+        );
+      },
+    );
+
+    test('publishes config and middleware byte for byte', () async {
+      createPluginFile(
+        'assets/stubs/install/ensure_authenticated.stub',
+        "import '../relative.dart';\n",
+      );
+      createPluginFile(
+        'assets/stubs/install/redirect_if_authenticated.stub',
+        "import '../relative.dart';\n",
+      );
+
+      await _runPublish(command, tag: 'middleware');
+
+      expect(
+        readHostFile('lib/app/middleware/ensure_authenticated.dart'),
+        "import '../relative.dart';\n",
+      );
+    });
+
+    // -------------------------------------------------------------------
     // Auto-wire into AppServiceProvider
     // -------------------------------------------------------------------
 
@@ -672,11 +744,12 @@ class AppServiceProvider extends ServiceProvider {
           'lib/app/providers/app_service_provider.dart',
         );
 
-        // Should contain the import.
+        // The import is prefixed: the provider also imports the package
+        // barrel, which exports the original class under the same name.
         expect(
           content,
           contains(
-            "import '../../resources/views/starter/auth/magic_starter_login_view.dart';",
+            "import '../../resources/views/starter/auth/magic_starter_login_view.dart' as published;",
           ),
         );
 
@@ -684,7 +757,7 @@ class AppServiceProvider extends ServiceProvider {
         expect(
           content,
           contains(
-            "MagicStarter.view.register('auth.login', () => const MagicStarterLoginView());",
+            "MagicStarter.view.register('auth.login', () => const published.MagicStarterLoginView());",
           ),
         );
       },
@@ -720,14 +793,14 @@ class AppServiceProvider extends ServiceProvider {
         expect(
           content,
           contains(
-            "import '../../resources/layouts/starter/magic_starter_app_layout.dart';",
+            "import '../../resources/layouts/starter/magic_starter_app_layout.dart' as published;",
           ),
         );
 
         expect(
           content,
           contains(
-            "MagicStarter.view.registerLayout('layout.app', (child) => MagicStarterAppLayout(child: child));",
+            "MagicStarter.view.registerLayout('layout.app', (child) => published.MagicStarterAppLayout(child: child));",
           ),
         );
       },
@@ -767,7 +840,7 @@ class AppServiceProvider extends ServiceProvider {
         // Count occurrences of the registration line.
         final regPattern = RegExp(
           RegExp.escape(
-            "MagicStarter.view.register('auth.login', () => const MagicStarterLoginView());",
+            "MagicStarter.view.register('auth.login', () => const published.MagicStarterLoginView());",
           ),
         );
         final matches = regPattern.allMatches(content).length;
@@ -776,7 +849,7 @@ class AppServiceProvider extends ServiceProvider {
         // Count occurrences of the import line.
         final importPattern = RegExp(
           RegExp.escape(
-            "import '../../resources/views/starter/auth/magic_starter_login_view.dart';",
+            "import '../../resources/views/starter/auth/magic_starter_login_view.dart' as published;",
           ),
         );
         final importMatches = importPattern.allMatches(content).length;
@@ -981,13 +1054,13 @@ class AppServiceProvider extends ServiceProvider {
       expect(
         content,
         contains(
-          "MagicStarter.view.register('auth.login', () => const MagicStarterLoginView());",
+          "MagicStarter.view.register('auth.login', () => const published.MagicStarterLoginView());",
         ),
       );
       expect(
         content,
         contains(
-          "MagicStarter.view.register('auth.register', () => const MagicStarterRegisterView());",
+          "MagicStarter.view.register('auth.register', () => const published.MagicStarterRegisterView());",
         ),
       );
     });
