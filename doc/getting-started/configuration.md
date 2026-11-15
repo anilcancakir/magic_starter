@@ -16,7 +16,7 @@ The `magic_starter` config file turns features on, sets the route prefixes and c
 <a name="introduction"></a>
 ## Introduction
 
-The plugin is configured by one Dart file in your app, `lib/config/magic_starter.dart`, which `starter:install` generates from the features you chose. Every feature defaults to `false` (an absent key reads `false`; only `starter:publish`, with `--tag=config` or the default `all`, on a host without the file copies a template with four features on, see [CLI](../basics/cli.md#publish-tags)): a toggle decides whether its routes are registered, its views are put in the view registry and its UI shows.
+The plugin is configured by one Dart file in your app, `lib/config/magic_starter.dart`, which `starter:install` generates from the features you chose. Every feature defaults to `false` (an absent key reads `false`, and the template `starter:publish --tag=config` copies on a host without the file writes every feature `false` too, see [CLI](../basics/cli.md#publish-tags)): a toggle decides whether its routes are registered, its views are put in the view registry and its UI shows.
 
 ```bash
 dart run magic:dowel starter:install

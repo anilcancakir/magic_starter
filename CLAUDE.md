@@ -87,7 +87,7 @@ Every feature, fix, or refactor goes through red-green-refactor: write a failing
 
 ## Release
 
-1. Open a `release:` PR that bumps `pubspec.yaml`, `skills/magic-starter/SKILL.md` and the `Version:` line above, and promotes `[Unreleased]` in `CHANGELOG.md`.
+1. Open a `release:` PR that bumps `pubspec.yaml`, `magicStarterVersion` in `lib/src/cli/starter_dowel_provider.dart`, `skills/magic-starter/SKILL.md` and the `Version:` line above, and promotes `[Unreleased]` in `CHANGELOG.md`.
 2. After it merges, tag the merge commit on `master` with the bare version (`git tag 1.0.1 && git push origin 1.0.1`, no `v`). `publish.yml` runs from the tag; the pub.dev Admin tab holds repository `anilcancakir/magic_starter`, tag pattern `{{version}}` and push events only.
 3. A failed `Validate` is fixed forward: delete the tag (`git push --delete origin <tag>` and `git tag -d <tag>`), fix it on a PR and tag the new merge commit. If only `GitHub Release` fails after pub.dev accepted the version, use "Re-run failed jobs" (never "Re-run all jobs") or `gh release create <tag> --title <tag> --latest --verify-tag --notes-file <file>`.
 
