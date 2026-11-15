@@ -1977,7 +1977,8 @@ void main() {
         final picked = namesIn(
           manager,
           '$className $merge(',
-          RegExp(r'(\w+): m\.pick'),
+          // A picked field, or one of a pair picked into a local first.
+          RegExp(r'(\w+): (?:m\.pick|[a-z]\w*,)'),
         );
 
         expect(picked, fields);
@@ -1995,7 +1996,7 @@ void main() {
       );
       final merged = namesIn(
         manager,
-        'theme = MagicStarterTheme(',
+        'merge(bool record) => MagicStarterTheme(',
         RegExp(r'(\w+): _merge\w+\('),
         closing: '\n    );',
       );
@@ -2048,6 +2049,60 @@ void main() {
       expect(layout.contentBackgroundDarkColor, '#0E0F11');
       expect(layout.drawerBackgroundLightColor, '#F7F7F8');
       expect(layout.drawerBackgroundDarkColor, '#0E0F11');
+    });
+
+    // Wind paints the last background utility of a brightness, so a surface
+    // role that names two must be read the same way or the content and
+    // drawer drift from the sidebar painted with the role itself.
+    testWidgets('reads the last background of each brightness, as Wind does', (
+      tester,
+    ) async {
+      const sky = MaterialColor(0xFF3366AA, <int, Color>{
+        200: Color(0xFFAACCEE),
+        900: Color(0xFF112244),
+      });
+      final wind = WindThemeData(
+        colors: const {'ink': ink, 'sky': sky},
+        aliases: const {
+          'bg-surface': 'bg-ink-50 bg-sky-200 dark:bg-ink-500 dark:bg-sky-900',
+        },
+      );
+      Color? painted;
+      await tester.pumpWidget(
+        WindTheme(
+          data: wind,
+          child: Builder(
+            builder: (context) {
+              painted = WindParser.parse(
+                'bg-surface',
+                context,
+              ).decoration?.color;
+              return const SizedBox();
+            },
+          ),
+        ),
+      );
+      expect(painted, const Color(0xFFAACCEE), reason: 'Wind paints sky-200');
+
+      final layout = MagicStarterTheme.fromWind(wind).layout;
+
+      expect(layout.contentBackgroundLightColor, 'sky');
+      expect(layout.contentBackgroundLightShade, 200);
+      expect(layout.contentBackgroundDarkColor, 'sky');
+      expect(layout.contentBackgroundDarkShade, 900);
+      expect(layout.drawerBackgroundLightColor, 'sky');
+      expect(layout.drawerBackgroundDarkShade, 900);
+    });
+
+    test('reads the last hex background, and reuses it for dark mode', () {
+      final layout = MagicStarterTheme.fromWind(
+        WindThemeData(
+          aliases: const {'bg-surface': 'bg-[#F7F7F8] bg-[#EEEEF0]'},
+        ),
+      ).layout;
+
+      expect(layout.contentBackgroundLightColor, '#EEEEF0');
+      expect(layout.contentBackgroundDarkColor, '#EEEEF0');
     });
 
     test('uses the light surface in dark mode when it names no dark one', () {

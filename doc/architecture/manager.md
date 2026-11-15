@@ -280,7 +280,7 @@ All fields are optional; an omitted field keeps its default.
 
 ### Presentation
 
-`presentation: MagicStarterModalPresentation.adaptive` opens every modal the starter opens, and every `MSBottomSheet.show`, as a bottom sheet below `dialogBreakpoint` and as a centered `MSDialog` (at most `maxWidth`) from it: a phone gets the sheet, a desktop window the dialog, from one setting. The screen width is read when a modal opens, so one that is already open keeps its form through a resize; `MSBottomSheet.show(dialogBreakpoint:)` is ignored, and a breakpoint the Wind theme does not carry throws a `StateError` naming `MagicStarterModalTheme.dialogBreakpoint`. Overlay routes (`RouteDefinition.overlay`) follow too: the provider installs a resolver on magic's router (`MagicRoute.useOverlayPresentation`), an `MSBottomSheet` built in a dialog route draws the dialog shell, and under `dialog` or `sheet` an overlay route stays the sheet it has always been.
+`presentation: MagicStarterModalPresentation.adaptive` opens every modal the starter opens, and every `MSBottomSheet.show`, as a bottom sheet below `dialogBreakpoint` and as a centred `MSDialog` (at most `maxWidth`) from it: a phone gets the sheet, a desktop window the dialog, from one setting. The screen width is read when a modal opens, so one that is already open keeps its form through a resize; `MSBottomSheet.show(dialogBreakpoint:)` is ignored, and a breakpoint the Wind theme does not carry throws a `StateError` naming `MagicStarterModalTheme.dialogBreakpoint`. Overlay routes (`RouteDefinition.overlay`) follow too: the provider installs a resolver on magic's router (`MagicRoute.useOverlayPresentation`), an `MSBottomSheet` built in a dialog route draws the dialog shell, and under `dialog` or `sheet` an overlay route stays the sheet it has always been.
 
 `presentation: MagicStarterModalPresentation.sheet` opens the starter's modals as the same bottom sheet `MSBottomSheet` draws, at every width (the plan upgrade prompt, which opens through magic's `MagicFeedback.showCustomDialog`, stays a dialog): `MSDialog.show`, `MSConfirmDialog.show` (and its `MagicStarterConfirmDialog` alias), `MagicStarterPasswordConfirmDialog.show`, `MagicStarterStepUpDialog.show` and `MagicStarterTwoFactorModal.show`. `MSBottomSheet.show(dialogBreakpoint:)` then ignores its breakpoint and stays a sheet.
 
@@ -295,7 +295,7 @@ MagicStarter.useModalTheme(
 - Return values do not change: `true` or `false` from a confirm, the proof map or `null` from the step up.
 - A sheet is full width on a phone. On a wide screen Flutter's Material 3 default caps it at 640 px; `maxWidth` applies to the dialog only.
 - The setting is read when a modal opens. An `MSDialog` widget draws the sheet panel when it is built inside a bottom sheet route, and its dialog shell otherwise, so a dialog a host opens with its own `showDialog` keeps the shell.
-- `useWindTheme()` keeps a modal field you set, `presentation` included, on either side of it; `useTheme()` resets the modal theme, so set it after that.
+- `useWindTheme()` keeps a modal field set before it, `presentation` included. After it, set the field with `MagicStarter.modalTheme.copyWith(...)`, since a fresh `MagicStarterModalTheme` puts the derived colours it omits back on their defaults. `useTheme()` resets the modal theme, so set it after that.
 
 The theme is stored on `MagicStarterManager` as `modalTheme` and reset to defaults by `manager.reset()`. The active theme is read at widget build time, so `useModalTheme()` can be called at any point before a dialog is shown.
 

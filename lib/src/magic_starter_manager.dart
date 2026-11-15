@@ -391,9 +391,12 @@ class MagicStarterManager {
     fieldTheme = value.field;
   }
 
-  /// What the last [applyWindTheme] derived, or the stock theme before the
-  /// first call. A field still holding its value here is the palette's, not
-  /// the host's, so the next palette may replace it.
+  /// What the last [applyWindTheme] left to the palette: the derived value of
+  /// every field the palette owns, and the stock value of every field the host
+  /// owns, or the stock theme before the first call. A field still holding its
+  /// value here is the palette's, so the next palette may replace it; a host
+  /// field is recorded as stock so that a later palette deriving the same
+  /// value does not take it over.
   MagicStarterTheme _windDerived = const MagicStarterTheme();
 
   /// Derives the sub-themes from [wind] through [MagicStarterTheme.fromWind]
@@ -403,8 +406,11 @@ class MagicStarterManager {
   ///
   /// The rule, per field of every sub-theme: the field is host-set when its
   /// current value differs both from that sub-theme's default constructor value
-  /// and from what the previous call derived for it; a host-set field is kept,
-  /// any other field takes the derived value. Two consequences follow. A host
+  /// and from what the previous call left to the palette for it; a host-set
+  /// field is kept, any other field takes the derived value. A layout
+  /// background's colour and shade are one field for this rule, since `wColor`
+  /// reads them together. A host field stays the host's when a later palette
+  /// happens to derive the same value. Two consequences follow. A host
   /// value equal to the stock default reads as unset and is derived over, so
   /// a host that wants the stock value back on top of a palette sets it after
   /// this call. And a second call re-derives what the first one derived,
@@ -416,13 +422,16 @@ class MagicStarterManager {
     final MagicStarterTheme current = theme;
     final MagicStarterTheme previous = _windDerived;
 
-    theme = MagicStarterTheme(
+    // One merge gives both results: with `record` off the theme to apply, with
+    // it on what the palette owns afterwards.
+    MagicStarterTheme merge(bool record) => MagicStarterTheme(
       navigation: _mergeNavigation(
         _WindMerge(
           current.navigation,
           previous.navigation,
           derived.navigation,
           const MagicStarterNavigationTheme(),
+          record,
         ),
       ),
       modal: _mergeModal(
@@ -431,6 +440,7 @@ class MagicStarterManager {
           previous.modal,
           derived.modal,
           const MagicStarterModalTheme(),
+          record,
         ),
       ),
       form: _mergeForm(
@@ -439,6 +449,7 @@ class MagicStarterManager {
           previous.form,
           derived.form,
           const MagicStarterFormTheme(),
+          record,
         ),
       ),
       card: _mergeCard(
@@ -447,6 +458,7 @@ class MagicStarterManager {
           previous.card,
           derived.card,
           const MagicStarterCardTheme(),
+          record,
         ),
       ),
       pageHeader: _mergePageHeader(
@@ -455,6 +467,7 @@ class MagicStarterManager {
           previous.pageHeader,
           derived.pageHeader,
           const MagicStarterPageHeaderTheme(),
+          record,
         ),
       ),
       layout: _mergeLayout(
@@ -463,6 +476,7 @@ class MagicStarterManager {
           previous.layout,
           derived.layout,
           const MagicStarterLayoutTheme(),
+          record,
         ),
       ),
       auth: _mergeAuth(
@@ -471,6 +485,7 @@ class MagicStarterManager {
           previous.auth,
           derived.auth,
           const MagicStarterAuthTheme(),
+          record,
         ),
       ),
       dropdown: _mergeDropdown(
@@ -479,6 +494,7 @@ class MagicStarterManager {
           previous.dropdown,
           derived.dropdown,
           const MagicStarterDropdownTheme(),
+          record,
         ),
       ),
       button: _mergeButton(
@@ -487,6 +503,7 @@ class MagicStarterManager {
           previous.button,
           derived.button,
           const MagicStarterButtonTheme(),
+          record,
         ),
       ),
       field: _mergeField(
@@ -495,10 +512,13 @@ class MagicStarterManager {
           previous.field,
           derived.field,
           const MagicStarterFieldTheme(),
+          record,
         ),
       ),
     );
-    _windDerived = derived;
+
+    theme = merge(false);
+    _windDerived = merge(true);
   }
 
   /// Native language names for common locale codes.
@@ -947,24 +967,49 @@ class MagicStarterManager {
 // ---------------------------------------------------------------------------
 
 /// One sub-theme seen by [MagicStarterManager.applyWindTheme]: what is active,
-/// what the previous call derived, what this call derived, and the stock
-/// default.
+/// what the previous call left to the palette, what this call derived, and the
+/// stock default.
+///
+/// With [record] off a pick answers the merged value; with it on, what the
+/// palette owns after the merge (the stock value for a field the host owns).
 class _WindMerge<S> {
   final S current;
   final S previous;
   final S derived;
   final S stock;
+  final bool record;
 
-  const _WindMerge(this.current, this.previous, this.derived, this.stock);
+  const _WindMerge(
+    this.current,
+    this.previous,
+    this.derived,
+    this.stock,
+    this.record,
+  );
+
+  /// Whether the host set [field]: it differs from the stock default and from
+  /// what the previous call left to the palette.
+  bool _hostSet<T>(T Function(S theme) field) {
+    final T value = field(current);
+
+    return value != field(stock) && value != field(previous);
+  }
 
   /// The value of [field] after the merge: the active one when the host set
-  /// it (it differs from the stock default and from what the previous call
-  /// derived), the derived one otherwise.
+  /// it, the derived one otherwise.
   T pick<T>(T Function(S theme) field) {
-    final T value = field(current);
-    final bool hostSet = value != field(stock) && value != field(previous);
+    final S source = _hostSet(field) ? (record ? stock : current) : derived;
 
-    return hostSet ? value : field(derived);
+    return field(source);
+  }
+
+  /// [first] and [second] decided as one value: both from the host when it
+  /// set either, both derived otherwise.
+  (A, B) pickPair<A, B>(A Function(S theme) first, B Function(S theme) second) {
+    final bool hostSet = _hostSet(first) || _hostSet(second);
+    final S source = hostSet ? (record ? stock : current) : derived;
+
+    return (first(source), second(source));
   }
 }
 
@@ -1056,6 +1101,25 @@ MagicStarterPageHeaderTheme _mergePageHeader(
 }
 
 MagicStarterLayoutTheme _mergeLayout(_WindMerge<MagicStarterLayoutTheme> m) {
+  // `wColor` reads a colour with its shade, so a host that set one half of a
+  // background keeps the other half it had rather than the palette's.
+  final (contentLightColor, contentLightShade) = m.pickPair(
+    (t) => t.contentBackgroundLightColor,
+    (t) => t.contentBackgroundLightShade,
+  );
+  final (contentDarkColor, contentDarkShade) = m.pickPair(
+    (t) => t.contentBackgroundDarkColor,
+    (t) => t.contentBackgroundDarkShade,
+  );
+  final (drawerLightColor, drawerLightShade) = m.pickPair(
+    (t) => t.drawerBackgroundLightColor,
+    (t) => t.drawerBackgroundLightShade,
+  );
+  final (drawerDarkColor, drawerDarkShade) = m.pickPair(
+    (t) => t.drawerBackgroundDarkColor,
+    (t) => t.drawerBackgroundDarkShade,
+  );
+
   return MagicStarterLayoutTheme(
     sidebarClassName: m.pick((t) => t.sidebarClassName),
     sidebarWidth: m.pick((t) => t.sidebarWidth),
@@ -1066,14 +1130,14 @@ MagicStarterLayoutTheme _mergeLayout(_WindMerge<MagicStarterLayoutTheme> m) {
     sidebarCollapsedByDefault: m.pick((t) => t.sidebarCollapsedByDefault),
     headerClassName: m.pick((t) => t.headerClassName),
     headerHeight: m.pick((t) => t.headerHeight),
-    contentBackgroundLightColor: m.pick((t) => t.contentBackgroundLightColor),
-    contentBackgroundLightShade: m.pick((t) => t.contentBackgroundLightShade),
-    contentBackgroundDarkColor: m.pick((t) => t.contentBackgroundDarkColor),
-    contentBackgroundDarkShade: m.pick((t) => t.contentBackgroundDarkShade),
-    drawerBackgroundLightColor: m.pick((t) => t.drawerBackgroundLightColor),
-    drawerBackgroundLightShade: m.pick((t) => t.drawerBackgroundLightShade),
-    drawerBackgroundDarkColor: m.pick((t) => t.drawerBackgroundDarkColor),
-    drawerBackgroundDarkShade: m.pick((t) => t.drawerBackgroundDarkShade),
+    contentBackgroundLightColor: contentLightColor,
+    contentBackgroundLightShade: contentLightShade,
+    contentBackgroundDarkColor: contentDarkColor,
+    contentBackgroundDarkShade: contentDarkShade,
+    drawerBackgroundLightColor: drawerLightColor,
+    drawerBackgroundLightShade: drawerLightShade,
+    drawerBackgroundDarkColor: drawerDarkColor,
+    drawerBackgroundDarkShade: drawerDarkShade,
     brandBarClassName: m.pick((t) => t.brandBarClassName),
     bottomNavClassName: m.pick((t) => t.bottomNavClassName),
     contentClassName: m.pick((t) => t.contentClassName),

@@ -2,7 +2,7 @@
 
 ## Controllers
 
-Each is a `MagicController` with `MagicStateMixin`, reached through `.instance` (`Magic.findOrPut`), except billing. A view resolves its controller; it never constructs one.
+Each is a `MagicController` reached through `.instance` (`Magic.findOrPut`), except billing, which the host registers with `Magic.put`. All but four mix in `MagicStateMixin`: support, feedback, handoff and billing do not. A view resolves its controller; it never constructs one.
 
 | Controller | Owns |
 |:-----------|:-----|
@@ -39,6 +39,7 @@ Build a link with the matching `MagicStarterConfig.*Route()` (`settingsHubRoute(
 
 - `EnsureAuthenticated` (`auth`): a signed-out visitor goes to `routes.login`, and the location is recorded with `MagicRouter.setIntendedUrl` (not for the guest-only auth routes themselves). The redirect runs before the page builds.
 - `RedirectIfAuthenticated` (`guest`): a signed-in account goes to `routes.home`; a guest session (`is_guest`) is let through, since the auth pages are where it becomes an account.
+- Both describe the package classes. `starter:install` registers its own `handle`-based copies from `lib/app/middleware/`, which redirect after the build, record no intended URL and do not let a guest through.
 
 ## What the provider wires
 

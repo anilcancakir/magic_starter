@@ -563,17 +563,21 @@ class MagicStarter {
   /// by hand. The button and field themes carry shape and size only and have
   /// nothing to derive.
   ///
-  /// ### Call order does not matter for a field you set
+  /// ### Setters before and after this call
   ///
-  /// The derived values land only on the fields the host has not set, so this
-  /// call can come before or after [useLayoutTheme], [useNavigationTheme] and
-  /// the other `use*Theme()` setters. A field counts as host-set when its
-  /// current value differs both from its sub-theme's default constructor value
-  /// and from what the previous [useWindTheme] call derived for it; every other
-  /// field takes the derived value. So a second call with another palette
-  /// re-skins what the first one derived, and a field set to exactly its stock
-  /// default reads as unset (set it after this call to keep the stock value
-  /// over a palette). See [MagicStarterManager.applyWindTheme].
+  /// The derived values land only on the fields the host has not set, so a
+  /// [useLayoutTheme], [useNavigationTheme] or other `use*Theme()` call made
+  /// before this one is kept field by field. A setter called after it assigns
+  /// its whole struct: build that struct from the active theme
+  /// (`useLayoutTheme(MagicStarter.layoutTheme.copyWith(...))`), or every
+  /// field it omits, the derived colours included, goes back to its stock
+  /// default. A field counts as host-set when its current value differs both
+  /// from its sub-theme's default constructor value and from what the previous
+  /// [useWindTheme] call derived for it; every other field takes the derived
+  /// value. So a second call with another palette re-skins what the first one
+  /// derived, and a field set to exactly its stock default reads as unset (set
+  /// it after this call to keep the stock value over a palette). See
+  /// [MagicStarterManager.applyWindTheme].
   ///
   /// [useTheme] is different: it replaces every sub-theme whole.
   ///

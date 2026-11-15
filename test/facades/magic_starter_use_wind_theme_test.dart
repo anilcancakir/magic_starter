@@ -623,6 +623,98 @@ void main() {
         expect(MagicStarter.navigationTheme.focusItemClassName, hostFocus);
       });
 
+      // A host value that a later palette happens to derive too must stay the
+      // host's: the palette that derived it may be replaced by one that does
+      // not, and the host never changed its value.
+      test('keeps a host value a palette between two calls also derived', () {
+        final matching = MagicStarterTheme.fromWind(windTheme)
+            .layout
+            .sidebarClassName;
+        MagicStarter.useLayoutTheme(
+          MagicStarterLayoutTheme(sidebarClassName: matching),
+        );
+
+        MagicStarter.useWindTheme(WindThemeData());
+        MagicStarter.useWindTheme(windTheme);
+        MagicStarter.useWindTheme(WindThemeData());
+
+        expect(MagicStarter.layoutTheme.sidebarClassName, matching);
+      });
+
+      // A background is a colour and a shade read together by `wColor`, so a
+      // host that set one half owns the pair: taking the other half from the
+      // palette paints a shade the host never chose.
+      test('keeps a background colour and its shade as one pair', () {
+        const ink = MaterialColor(0xFF223344, <int, Color>{
+          50: Color(0xFFF1F2F4),
+          200: Color(0xFFCCD0D8),
+          800: Color(0xFF1A2230),
+        });
+        MagicStarter.useLayoutTheme(
+          const MagicStarterLayoutTheme(
+            contentBackgroundDarkColor: 'red',
+            drawerBackgroundLightShade: 100,
+          ),
+        );
+
+        MagicStarter.useWindTheme(
+          WindThemeData(
+            colors: const {'ink': ink},
+            aliases: const {'bg-surface': 'bg-ink-200 dark:bg-ink-800'},
+          ),
+        );
+        final layout = MagicStarter.layoutTheme;
+        const stock = MagicStarterLayoutTheme();
+
+        expect(
+          (
+            layout.contentBackgroundDarkColor,
+            layout.contentBackgroundDarkShade,
+          ),
+          ('red', stock.contentBackgroundDarkShade),
+        );
+        expect(
+          (
+            layout.drawerBackgroundLightColor,
+            layout.drawerBackgroundLightShade,
+          ),
+          (stock.drawerBackgroundLightColor, 100),
+        );
+        expect(
+          (
+            layout.contentBackgroundLightColor,
+            layout.contentBackgroundLightShade,
+          ),
+          ('ink', 200),
+        );
+      });
+
+      // What the docs tell a host: after `useWindTheme` a setter takes its
+      // whole struct, so a fresh one hands back the stock colours it omits
+      // and `copyWith` on the active theme keeps them.
+      test('loses the derived fields to a fresh struct set after it', () {
+        MagicStarter.useWindTheme(windTheme);
+        MagicStarter.useLayoutTheme(
+          const MagicStarterLayoutTheme(navigationBreakpoint: 'sm'),
+        );
+
+        expect(
+          MagicStarter.layoutTheme.sidebarClassName,
+          const MagicStarterLayoutTheme().sidebarClassName,
+        );
+
+        MagicStarter.manager.reset();
+        MagicStarter.useWindTheme(windTheme);
+        MagicStarter.useLayoutTheme(
+          MagicStarter.layoutTheme.copyWith(navigationBreakpoint: 'sm'),
+        );
+
+        expect(
+          hasToken(MagicStarter.layoutTheme.sidebarClassName, 'bg-surface'),
+          isTrue,
+        );
+      });
+
       test('treats a field left on its default as the host not setting it', () {
         MagicStarter.useLayoutTheme(const MagicStarterLayoutTheme());
         MagicStarter.useWindTheme(windTheme);
