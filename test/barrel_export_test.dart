@@ -156,5 +156,18 @@ void main() {
     test('the changelog view is reachable', () {
       expect(const MagicStarterChangelogView(), isA<Widget>());
     });
+
+    test('what a published view or layout reads is reachable', () {
+      // `starter:publish` points a published file at the barrel, so every
+      // name a publishable view or layout uses has to come through it: the
+      // login and register views read the safe `next` path, the app layout
+      // the breakpoint helper, the profile view the account-deletion flow and
+      // the billing view the confirm dialog.
+      expect(MagicStarterNextPath.parse('/teams'), '/teams');
+      expect(MagicStarterBreakpoints.isAtLeast, isA<Function>());
+      expect(confirmAndDeleteAccount, isA<Function>());
+      expect(MSConfirmDialog.show, isA<Function>());
+      expect(<Type>[NavigatesRoutes], hasLength(1));
+    });
   });
 }

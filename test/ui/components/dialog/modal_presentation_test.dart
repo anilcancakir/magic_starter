@@ -7,7 +7,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:magic/magic.dart';
 import 'package:magic_starter/magic_starter.dart';
 import 'package:magic_starter/src/ui/components/bottom_sheet/bottom_sheet_panel.dart';
-import 'package:magic_starter/src/ui/components/confirm_dialog/index.dart';
 
 /// `MagicStarterModalTheme.presentation`: every modal the starter opens is a
 /// dialog by default and the same bottom sheet in `sheet` mode, with the same
