@@ -15,7 +15,7 @@ paths:
 
 ## Colour
 
-- Colour through the semantic alias layer (`bg-surface*`, `text-fg*`, `border-color-border*`, `bg-primary`, `text-on-primary`, `bg-destructive`), as the views already do, not raw `gray-*` or `red-*` palette classes, so a host's alias map re-skins the screen.
+- Colour through the semantic alias layer (`bg-surface*`, `text-fg*`, `border-color-border*`, `bg-primary`, `text-on-primary`, `bg-destructive`), as the views already do, not raw `gray-*` or `red-*` palette classes, so a host's alias map re-skins the screen. The alias map is the host's to supply (`aliases: MagicStarterTokens.defaultAliases` or a `design:sync` map): a theme without it has no `bg-surface` and Wind drops the token, so code that may run under a theme without the role resolves through `MagicStarterTokens.role`.
 - Wind drops an unknown alias silently, so a token that does not exist renders exactly like no token. Assert the resolved colour in a test, not the className string.
 - There is no destructive text alias: `text-destructive` resolves to nothing unless the host defines it. Use `MagicStarterTokens.role(WindTheme.maybeDataOf(context), 'text-destructive')`, which keeps a host alias and falls back to the red pair. A recipe with no context to resolve against keeps a raw `text-red-*` pair and says why in its docblock (`errorStateIconClassName`, the `MSStringValueList` critical chip).
 - A raw palette token needs its `dark:` pair in the same className; an alias carries both modes itself. The exception is `MagicStarterTokens.readableOn(context, fill:, role:)`: it returns a host-defined role as written, otherwise a bare `text-white` or `text-gray-950` measured by contrast against the fill of the mode being built, and the widget rebuilds when the brightness changes.
@@ -23,5 +23,5 @@ paths:
 ## Sub-themes
 
 - Read a themeable className from its sub-theme at build time (`MagicStarter.manager.modalTheme`, `MagicStarter.formTheme`, `navigationTheme`, `dropdownTheme`, `buttonTheme`, `fieldTheme`, `pageHeaderTheme`), never a literal copy of its default. A modal never hardcodes a className: it reads `modalTheme` (`titleClassName`, `primaryButtonClassName`, `dangerButtonClassName`, ...).
-- Every `use*Theme()` setter assigns its whole struct, so one field changes with `MagicStarter.<x>Theme.copyWith(...)`. `useTheme()` replaces every sub-theme; `useWindTheme()` writes derived colours only into the fields a host has not set.
+- Every `use*Theme()` setter assigns its whole struct, so one field changes with `MagicStarter.<x>Theme.copyWith(...)`. `useTheme()` replaces every sub-theme; `useWindTheme()` writes derived colours only into the fields a host has not set: a host value equal to the stock default reads as unset and is derived over, and a value the previous palette derived is derived again on the next call, so a stock value wanted on top of a palette is set after `useWindTheme()`.
 - That is why strings a host sets on their own get their own sub-theme (`dropdownTheme`, `buttonTheme`, `fieldTheme`) instead of new fields on one a host already refines and replaces whole: a field it omitted would fall back to the stock default.

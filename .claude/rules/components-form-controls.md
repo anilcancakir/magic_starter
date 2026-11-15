@@ -14,9 +14,9 @@ paths:
 
 ## `MagicStarter.fieldTheme`
 
-- `MagicStarterFieldTheme` sets the padding, minimum height and type of `MSInput`, `MSSelect`, `MSCombobox`, `MSSegmentedControl` and the `MagicStarterTimezoneSelect` trigger (the last three share `selectSizeClassName`). `useTheme()` resets it; `useWindTheme()` keeps a field you set.
+- `MagicStarterFieldTheme` sets the padding, minimum height and type of `MSInput`, `MSSelect`, `MSCombobox`, `MSSegmentedControl` and the `MagicStarterTimezoneSelect` trigger (`MSSelect`, `MSCombobox` and the timezone trigger share `selectSizeClassName`; `MSSegmentedControl` reads `segmentedSmClassName` and `segmentedMdClassName`). `useTheme()` resets it; `useWindTheme()` keeps a field you set.
 - The input recipe is `buildInputRecipe(theme)`; `selectRecipe`, `comboboxRecipe` and `segmentedControlRecipe` take `theme:`, which the widgets fill from the facade.
-- Each field replaces one run of tokens in its recipe, so the side padding (`px-3`), the colours and the border stay outside it, and a host string states the whole size. The placeholder inherits the field's type, so there is no placeholder field.
+- Each field replaces one run of tokens in its recipe, so the side padding (`px-3`), the colours and the border stay outside it, and a host string states the whole size. The segmented fields are the exception: the recipe appends them after the item's base `px-3 py-1.5 text-sm` and the last class of a family wins, so a token the host omits keeps the base value (`py-[7px]` alone leaves `text-sm` in place). The placeholder inherits the field's type, so there is no placeholder field.
 - The default theme emits the previous classNames byte for byte (tests pin them), with one exception: the input's `text-fg` moved ahead of the size run (`px-3 text-fg py-3 lg:py-2.5 text-sm leading-5`) so the run is contiguous, which parses to the same style.
 - A caller `className` or `classNames` is appended after the theme and wins.
 
