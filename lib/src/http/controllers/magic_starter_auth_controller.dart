@@ -18,8 +18,8 @@ import '../../support/social_failure_message.dart';
 /// Supports 3 identity modes for login and registration:
 ///   - Email-only (default): `auth.email=true`, `auth.phone=false`
 ///   - Phone-only: `auth.email=false`, `auth.phone=true`
-///   - Both: `auth.email=true`, `auth.phone=true` — caller selects by passing the
-///     populated field; phone takes precedence when non-empty.
+///   - Both: `auth.email=true`, `auth.phone=true` — every non-empty identity
+///     field is sent.
 class MagicStarterAuthController extends MagicController
     with
         MagicStateMixin<bool>,
@@ -63,7 +63,7 @@ class MagicStarterAuthController extends MagicController
   /// Builds the identity payload dynamically based on [MagicStarterConfig]:
   ///   - Email-only mode → `email` field is sent.
   ///   - Phone-only mode → `phone` field is sent.
-  ///   - Both mode → `phone` takes precedence when non-empty; otherwise `email`.
+  ///   - Both mode → every non-empty `email` and `phone` field is sent.
   ///
   /// At least one of [email] or [phone] must be provided depending on the
   /// active identity mode. Providing neither in the applicable mode is a

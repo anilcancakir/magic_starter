@@ -63,6 +63,8 @@ await MagicStarterAuthController.instance.doLogin(
 );
 ```
 
+`rememberMe` is sent as `remember_me`. `magic-starter-laravel` up to 0.0.64 ignores it, so the "remember me" checkbox changes nothing there; a backend that reads it sets the Sanctum token lifetime from it.
+
 The login flow has three possible outcomes:
 
 1. **Success**: the controller hands the body to `CompletesSignIn.completeSignIn()`, the one path every token takes (password, social, two-factor challenge, OTP and guest): it extracts `token` and `user` from the nested `data` key, calls `Auth.login()`, shows the `social.deletion_cancelled` toast when `data.deletion_cancelled` is `true` (a sign-in during the grace period of a scheduled account deletion cancels it), sets success state, and calls `navigateHome()`. That is the intended url a bounced deep link recorded, read once through `MagicRouter.pullIntendedUrl()`, and `MagicStarterConfig.homeRoute()` only as the fallback when nothing was recorded or the recorded value is not an in-app path. An intent belongs to the session that asked for it: `MagicStarterServiceProvider` listens to `Auth.stateNotifier` and discards it whenever the state goes to signed-out, so it never reaches the next person on the device. That covers the sign-out a user asks for, the account deletion, and the one the app performs on its own when a token refresh fails, since all three go through the same notifier. No host wiring is needed; the provider boots in every starter app.

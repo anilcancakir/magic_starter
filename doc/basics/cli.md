@@ -265,7 +265,7 @@ dart run magic:dowel starter:publish --force
 
 | Tag | What It Publishes |
 |:----|:------------------|
-| `config` | `lib/config/magic_starter.dart`, copied from the package's template, which turns `registration`, `extended_profile`, `social_login` and `notifications` on (unlike `starter:install`, which writes every unchosen feature `false`). It matters only when the host has no config yet, since an existing file is skipped without `--force` |
+| `config` | `lib/config/magic_starter.dart`, copied from the package's template, which writes every feature `false` (`starter:install` writes the features you chose `true`). It matters when the host has no config yet; an existing file is skipped, and `--force` replaces it with this template, which turns every feature off |
 | `views` | View files to `lib/resources/views/starter/` |
 | `layouts` | `app` and `guest` layouts to `lib/resources/layouts/starter/` |
 | `middleware` | Auth middleware files to `lib/app/middleware/` |
