@@ -229,11 +229,11 @@ MagicStarter.useNavigationTheme(
 
 ### Theme setters and `useWindTheme`
 
-`MagicStarter.useWindTheme(windTheme)` derives the colours of every sub-theme from your Wind palette, and it lands them only on the fields you have not set yourself. So it can run before or after `useLayoutTheme`, `useNavigationTheme` and the other `use*Theme()` setters: a field you set keeps your value either way.
+`MagicStarter.useWindTheme(windTheme)` derives the colours of every sub-theme from your Wind palette, and it lands them only on the fields you have not set yourself. So a `useLayoutTheme`, `useNavigationTheme` or other `use*Theme()` call made before it is kept field by field. A setter called after it assigns its whole struct: build that struct from the active theme with `copyWith` (below), or every field it omits, the derived colours included, goes back to its stock default.
 
 The rule is per field. A field counts as yours when its current value differs both from its sub-theme's default constructor value and from what the previous `useWindTheme` call derived for it. Your fields are kept; every other field takes the derived value. Two things follow from that:
 
-- A second `useWindTheme` with another palette re-skins what the first one derived, and still leaves your fields alone.
+- A second `useWindTheme` with another palette re-skins what the first one derived, and still leaves your fields alone, including a field whose value a palette in between happened to derive too.
 - A field you set to exactly its stock default reads as not set, so the palette derives over it. To keep a stock value on top of a palette, set it after `useWindTheme`.
 
 `useTheme(MagicStarterTheme(...))` is not a merge: it replaces every sub-theme whole.
@@ -252,7 +252,7 @@ MagicStarter.useNavigationTheme(
 );
 ```
 
-`useWindTheme` also derives the drawer and content area backgrounds (`drawerBackground*` and `contentBackground*`) from the `bg-surface` role the sidebar and header use. Those fields are `wColor` keys rather than classNames, so each half of the role (`bg-ink-50`, `dark:bg-[#0E0F11]`) becomes a colour name, or a hex, and a shade. A half that does not resolve, an opacity step or a colour the Wind theme does not carry, keeps the stock key.
+`useWindTheme` also derives the drawer and content area backgrounds (`drawerBackground*` and `contentBackground*`) from the `bg-surface` role the sidebar and header use. Those fields are `wColor` keys rather than classNames, so each half of the role (`bg-ink-50`, `dark:bg-[#0E0F11]`) becomes a colour name, or a hex, and a shade; where the role names two backgrounds for one brightness, the last one is read, as Wind paints it. A half that does not resolve, an opacity step or a colour the Wind theme does not carry, keeps the stock key. A colour and its shade count as one field: set either and the pair is yours.
 
 ### Where the sidebar starts, and where it grows labels
 

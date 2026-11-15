@@ -62,7 +62,7 @@ Every key with its condition and widget: `references/views-and-layouts.md`.
 
 ## Theming rules
 
-1. `MagicStarter.useWindTheme(windTheme)` keeps every field a setter set, so the single setters may come before or after it. `useTheme(MagicStarterTheme)` replaces every sub-theme, so `useButtonTheme()` and `useFieldTheme()` come after it or the host's standard is lost without an error.
+1. `MagicStarter.useWindTheme(windTheme)` keeps, field by field, what a single setter called before it set. A setter called after it assigns its whole struct, so build that struct from the active theme (`MagicStarter.useLayoutTheme(MagicStarter.layoutTheme.copyWith(...))`) or every field it omits, the Wind-derived colours included, goes back to its stock default. `useTheme(MagicStarterTheme)` replaces every sub-theme, so `useButtonTheme()` and `useFieldTheme()` come after it or the host's standard is lost without an error.
 2. Every `use*Theme()` assigns the whole struct: a field you leave out goes back to its default. Change one string with `MagicStarter.formTheme.copyWith(...)`, `MagicStarter.modalTheme.copyWith(...)` or the `copyWith` of any other sub-theme.
 3. Page geometry is the host's: set `MagicStarter.manager.pageContainerClassName` once from the string your own pages use (default `'max-w-7xl px-4 lg:px-8 pt-6 sm:pt-8 pb-16'`), and never put a `max-w-*` or page `px-*` on a starter page or component.
 4. Style with the semantic aliases (`bg-surface`, `text-fg`, `bg-primary`, `border-color-border`, ...) from `MagicStarterTokens.defaultAliases`, passed as `WindThemeData(aliases: ...)`. Wind drops an alias the theme lacks silently, so the class paints nothing.

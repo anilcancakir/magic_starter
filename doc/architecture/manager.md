@@ -295,7 +295,7 @@ MagicStarter.useModalTheme(
 - Return values do not change: `true` or `false` from a confirm, the proof map or `null` from the step up.
 - A sheet is full width on a phone. On a wide screen Flutter's Material 3 default caps it at 640 px; `maxWidth` applies to the dialog only.
 - The setting is read when a modal opens. An `MSDialog` widget draws the sheet panel when it is built inside a bottom sheet route, and its dialog shell otherwise, so a dialog a host opens with its own `showDialog` keeps the shell.
-- `useWindTheme()` keeps a modal field you set, `presentation` included, on either side of it; `useTheme()` resets the modal theme, so set it after that.
+- `useWindTheme()` keeps a modal field set before it, `presentation` included. After it, set the field with `MagicStarter.modalTheme.copyWith(...)`, since a fresh `MagicStarterModalTheme` puts the derived colours it omits back on their defaults. `useTheme()` resets the modal theme, so set it after that.
 
 The theme is stored on `MagicStarterManager` as `modalTheme` and reset to defaults by `manager.reset()`. The active theme is read at widget build time, so `useModalTheme()` can be called at any point before a dialog is shown.
 

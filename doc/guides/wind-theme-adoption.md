@@ -37,8 +37,10 @@ MagicStarter.useWindTheme(
 ```
 
 `useWindTheme` builds a `MagicStarterTheme` via `MagicStarterTheme.fromWind(...)`
-and applies it to every field you have not set yourself, so its place against
-the individual setters does not matter for a field you set:
+and applies it to every field you have not set yourself. A setter called before
+it is kept field by field; a setter called after it assigns its whole struct,
+so build that struct from the active theme with `copyWith`, or every field it
+omits, the derived colours included, goes back to its stock default:
 
 - A field counts as yours when its current value differs both from its
   sub-theme's default constructor value and from what the previous
@@ -177,8 +179,10 @@ spacing, radius, and dimension tokens are preserved as-is.
 The content and drawer backgrounds are `wColor()` colour keys rather than
 classNames, so each half of the `bg-surface` role is read down to a colour name
 (or a `#hex`) and a shade: `bg-ink-50 dark:bg-[#0E0F11]` gives a light
-`ink`/`50` and a dark `#0E0F11`. A role with no `dark:` utility uses its light
-one in both modes. A half that does not resolve (an opacity step, a colour the
+`ink`/`50` and a dark `#0E0F11`. Where the role names two backgrounds for one
+brightness, the last one is read, as Wind paints it. A role with no `dark:`
+utility uses its light one in both modes. A host that sets a colour or its shade
+keeps both halves of that pair. A half that does not resolve (an opacity step, a colour the
 theme does not carry), or a theme that does not define `bg-surface`, keeps the
 stock key. Numeric dimensions (`sidebarWidth`, `headerHeight`) keep their
 defaults.
