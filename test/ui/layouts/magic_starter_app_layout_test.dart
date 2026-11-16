@@ -2000,6 +2000,13 @@ void main() {
       expect(find.bySemanticsLabel('Expand sidebar'), findsOneWidget);
       expect(find.bySemanticsLabel('nav.expand_sidebar'), findsNothing);
 
+      // The expanded form prints the collapse label as text.
+      await tester.tap(find.bySemanticsLabel('Expand sidebar'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Collapse sidebar'), findsOneWidget);
+      expect(find.text('nav.collapse_sidebar'), findsNothing);
+
       semantics.dispose();
     });
 
