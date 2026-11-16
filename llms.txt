@@ -12,7 +12,7 @@ dart run magic:dowel plugin:install magic_starter --no-bootstrap
 dart run magic:dowel starter:install --features=registration,teams,notifications
 ```
 
-`plugin:install` registers `MagicStarterDowelProvider` and injects `MagicStarterServiceProvider` into `lib/config/app.dart`. Pass `--no-bootstrap`: the chained `starter:install` always gets `--non-interactive`, so it writes every feature `false`, and a later `starter:install --features=...` skips the config file that exists by then and still reports success (recover with `starter:configure`, a hand edit, or `--force`). Run `starter:install` yourself; an unlisted key is written `false`. `starter:install` writes the config, middleware, models, dashboard, routes, the `MagicStarter.bootstrap(...)` call and `assets/lang/en.json`.
+`plugin:install` registers `MagicStarterDowelProvider` and injects `MagicStarterServiceProvider` into `lib/config/app.dart`. Pass `--no-bootstrap`: the chained `starter:install` always gets `--non-interactive`, so it writes every feature `false`, and a later `starter:install --features=...` finds the config that exists by then, leaves it alone and exits 1 naming the features it would have changed (recover with `starter:configure`, a hand edit, or `--force`). Run `starter:install` yourself; an unlisted key is written `false`. `starter:install` writes the config, middleware, models, dashboard, routes, the `MagicStarter.bootstrap(...)` call and `assets/lang/en.json`.
 
 ```dart
 import 'package:magic/magic.dart';

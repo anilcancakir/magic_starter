@@ -154,6 +154,19 @@ class MagicStarterInstallCommand extends DowelInstallCommand {
     // 2. Resolve features using interactive or non-interactive flow.
     final Map<String, bool> features = _resolveFeatureSelections(ctx);
 
+    // A selection the existing config would not carry fails here: skipping the
+    // config and printing success left every feature off after
+    // `plugin:install` had written the config with all of them disabled.
+    final String? unapplied = _unappliedFeatureSelection(
+      ctx,
+      features: features,
+      force: force,
+    );
+    if (unapplied != null) {
+      ctx.output.error(unapplied);
+      return 1;
+    }
+
     // 3. Resolve + parse the install.yaml manifest (the static layer).
     final manifestPath = await resolveManifestPath();
     if (manifestPath == null) {
@@ -298,6 +311,96 @@ class MagicStarterInstallCommand extends DowelInstallCommand {
     }
 
     return features;
+  }
+
+  /// The message for an explicit `--features` selection that the existing
+  /// `lib/config/magic_starter.dart` does not hold, or null when there is
+  /// nothing to refuse.
+  ///
+  /// Only an explicit `--features` is checked: without it the installer keeps
+  /// its old behaviour of leaving an existing config alone. A selection that
+  /// matches the file (a re-run) passes, and `--force` rewrites the file, so
+  /// both are left alone. A flag the file does not mention counts as off.
+  String? _unappliedFeatureSelection(
+    DowelContext ctx, {
+    required Map<String, bool> features,
+    required bool force,
+  }) {
+    if (force || ctx.input.option('features') == null) {
+      return null;
+    }
+
+    final String configPath = '$projectRoot/lib/config/magic_starter.dart';
+    if (!FileHelper.fileExists(configPath)) {
+      return null;
+    }
+
+    final String existing = FileHelper.readFile(configPath);
+    final List<String> differing = <String>[
+      for (final String key in dynamicFeatureKeys)
+        if (_configFlag(existing, key) != (features[key] ?? false)) key,
+    ];
+    if (differing.isEmpty) {
+      return null;
+    }
+
+    return 'lib/config/magic_starter.dart already exists, so --features was '
+        'not applied (it differs for: ${differing.join(', ')}). Commit your '
+        'changes and pass --force to rewrite the config from this list; '
+        '--force also replaces the generated files, AppServiceProvider '
+        'included. A feature that needs no scaffolding can be flipped with '
+        '`starter:configure` instead, but teams cannot: it also needs the '
+        'Team model, the User team accessors and the bootstrap callbacks. '
+        '`plugin:install` writes the config with every feature off unless '
+        'you pass --no-bootstrap to it.';
+  }
+
+  /// The `true` or `false` the config gives [key], or false when it names none.
+  ///
+  /// Comments are dropped first, so a commented-out flag is not read as the
+  /// setting, and both quote styles are accepted for a hand-edited key.
+  bool _configFlag(String source, String key) {
+    final RegExpMatch? match = RegExp('[\'"]$key[\'"]\\s*:\\s*(true|false)')
+        .firstMatch(_withoutComments(source));
+    return match?.group(1) == 'true';
+  }
+
+  /// [source] without its `//` and `/* */` comments. A `//` inside a string
+  /// literal (a URL) is text, so the scan tracks quotes and escapes.
+  String _withoutComments(String source) {
+    final StringBuffer out = StringBuffer();
+    String? quote;
+    for (int i = 0; i < source.length; i++) {
+      final String char = source[i];
+      final String next = i + 1 < source.length ? source[i + 1] : '';
+      if (quote != null) {
+        out.write(char);
+        if (char == r'\' && next.isNotEmpty) {
+          out.write(next);
+          i++;
+        } else if (char == quote) {
+          quote = null;
+        }
+      } else if (char == "'" || char == '"') {
+        quote = char;
+        out.write(char);
+      } else if (char == '/' && next == '/') {
+        while (i < source.length && source[i] != '\n') {
+          i++;
+        }
+        out.write('\n');
+      } else if (char == '/' && next == '*') {
+        i += 2;
+        while (i + 1 < source.length &&
+            !(source[i] == '*' && source[i + 1] == '/')) {
+          i++;
+        }
+        i++;
+      } else {
+        out.write(char);
+      }
+    }
+    return out.toString();
   }
 
   void _stageConfigFile(

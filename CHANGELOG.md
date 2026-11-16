@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- **`starter:install --features=...` no longer skips an existing config in silence.** `plugin:install` chains `starter:install --non-interactive`, which writes `lib/config/magic_starter.dart` with every feature off, and a later `starter:install --features=teams` then skipped the config that existed by then and still reported success, so the features stayed off. When the explicit `--features` selection differs from the flags in the existing config, the command now leaves the file alone, prints the features whose setting differs and the way out (edit the `features` map, or pass `--force`), and exits `1`. A selection the config already holds still succeeds (a re-run is idempotent), `--force` still rewrites the config, and a run without `--features` keeps leaving an existing config alone. A script that ran `starter:install --features=...` on top of an existing config and read exit `0` as applied now gets exit `1`. (`lib/src/cli/commands/magic_starter_install_command.dart`, `install.yaml`, `README.md`, `llms.txt`, `skills/magic-starter/SKILL.md`, `doc/getting-started/installation.md`)
+
 ## [1.1.1] - 2026-11-16
 
 ### Fixed
