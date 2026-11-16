@@ -63,7 +63,7 @@ await MagicStarterAuthController.instance.doLogin(
 );
 ```
 
-`rememberMe` is sent as `remember_me`. `anilcancakir/magic-starter-laravel` reads it from 1.0.0; up to 0.0.64 (published as `fluttersdk/magic-starter-laravel`) ignores it, so the "remember me" checkbox changes nothing there. A backend that reads it sets the Sanctum token lifetime from it.
+`rememberMe` is sent as `remember_me`. `anilcancakir/magic-starter-laravel` reads it from 1.0.0; up to 0.0.64 (published as `fluttersdk/magic-starter-laravel`) ignores it, so the "remember me" checkbox changes nothing there. On 1.0.0 the checkbox changes the token lifetime only once the backend sets `MAGIC_STARTER_REMEMBER_ME_EXPIRATION` (`remember_me_expiration_minutes`, in minutes). That setting and `MAGIC_STARTER_TOKEN_EXPIRATION` both default to `null`: a remembered sign-in then gets the ordinary lifetime, and when both are `null` the token does not expire unless `sanctum.expiration` says so.
 
 The login flow has three possible outcomes:
 
