@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-11-16
+
 ### Added
 
 - **`MagicStarterPasswordToggle`, the show-or-hide eye for a password field.** Pass it as a `WFormInput` `suffix` with `obscured` and `onToggle`. It carries the name from `magicStarterPasswordToggleName` and a 44 px box below `lg` (40 px from `lg` up) around the 20 px glyph. A published view uses it through the barrel. (`lib/src/ui/widgets/magic_starter_password_toggle.dart`)
