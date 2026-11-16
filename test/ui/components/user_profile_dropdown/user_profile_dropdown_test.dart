@@ -402,6 +402,93 @@ void main() {
     }
   });
 
+  group('menu height', () {
+    /// Opens the fullest menu a host can ship: notifications, support and the
+    /// feedback form on, two host rows, a verified email.
+    Future<ScrollableState> openFullMenu(
+      WidgetTester tester,
+      Size window,
+    ) async {
+      const flags = [
+        'magic_starter.features.notifications',
+        'magic_starter.features.support',
+        'magic_starter.features.support_feedback',
+      ];
+      for (final flag in flags) {
+        Config.set(flag, true);
+      }
+      addTearDown(() {
+        for (final flag in flags) {
+          Config.set(flag, false);
+        }
+      });
+
+      MagicStarter.useNavigation(
+        mainItems: [],
+        profileMenuItems: [
+          for (int i = 0; i < 2; i++)
+            MagicStarterNavItem(
+              icon: Icons.settings,
+              labelKey: 'Host item $i',
+              path: '/host-$i',
+            ),
+        ],
+      );
+      mockGuard.setUser(
+        MagicStarterAuthUser.fromMap({
+          'id': 1,
+          'name': 'Ada Lovelace',
+          'email': 'ada@example.com',
+          'email_verified_at': '2026-01-01T00:00:00Z',
+        }),
+      );
+
+      tester.view.physicalSize = window;
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(wrap(const MSUserProfileDropdown()));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(MSAvatar));
+      await tester.pumpAndSettle();
+
+      return tester.state<ScrollableState>(
+        find.descendant(
+          of: find.byType(MSUserProfileDropdown),
+          matching: find.byType(Scrollable),
+        ),
+      );
+    }
+
+    testWidgets('draws every row of a full menu on a desktop window', (
+      tester,
+    ) async {
+      // The popover capped itself at 400 px whatever the window offered, so the
+      // list inside it scrolled in a 233 px strip on a 900 px window and the
+      // rows below the fold had no scrollbar to give them away.
+      final list = await openFullMenu(tester, const Size(1440, 900));
+
+      expect(list.position.maxScrollExtent, 0);
+      final themeBottom = tester.getRect(find.text('Toggle theme')).bottom;
+      final logoutTop = tester.getRect(find.text('auth.logout')).top;
+      expect(themeBottom, lessThan(logoutTop));
+      // The panel hugs its rows. Given the whole window it stretched to 830 px
+      // for seven rows and left a blank band above sign out (found in a real
+      // browser, which a scroll-extent check cannot see).
+      expect(logoutTop - themeBottom, lessThan(60));
+    });
+
+    testWidgets('stays inside a short window and scrolls its rows', (
+      tester,
+    ) async {
+      final list = await openFullMenu(tester, const Size(1440, 400));
+
+      expect(list.position.maxScrollExtent, greaterThan(0));
+      expect(tester.getRect(find.text('auth.logout')).bottom, lessThan(400));
+    });
+  });
+
   testWidgets('shows theme toggle in dropdown and toggles without closing', (
     tester,
   ) async {
