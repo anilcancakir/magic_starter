@@ -10,10 +10,15 @@ import '../../support/control_name.dart';
 /// performs ([magicStarterPasswordToggleName]), so it flips with [obscured].
 ///
 /// The box is 44 px square below `lg` and 40 px from `lg` up, the touch and the
-/// pointer floors, while the glyph stays 20 px. Both fit inside the field's own
-/// height (44 px below `lg`, 40 px from `lg` up), and a suffix is centred in a
-/// `Row`, so the eye adds nothing to the height of the field it sits in.
+/// pointer floors, while the glyph stays 20 px. The sizes are spelled in pixels
+/// because Wind multiplies a numeric size by the theme's spacing unit, which
+/// would shrink the floor on a host that lowers it. A field with an eye is as
+/// tall as the box: the suffix is centred in the field's `Row`, so a field
+/// shorter than the box grows to it and a taller one is left alone.
 class MagicStarterPasswordToggle extends StatelessWidget {
+  static const _iconVisible = Icons.visibility;
+  static const _iconHidden = Icons.visibility_off;
+
   /// Creates the eye for a field that is [obscured] or shown.
   const MagicStarterPasswordToggle({
     super.key,
@@ -33,9 +38,11 @@ class MagicStarterPasswordToggle extends StatelessWidget {
       onTap: onToggle,
       semanticLabel: magicStarterPasswordToggleName(obscured: obscured),
       child: WDiv(
-        className: 'w-11 h-11 lg:w-10 lg:h-10 flex items-center justify-center',
+        className:
+            'w-[44px] h-[44px] lg:w-[40px] lg:h-[40px] '
+            'flex items-center justify-center',
         child: WIcon(
-          obscured ? Icons.visibility : Icons.visibility_off,
+          obscured ? _iconVisible : _iconHidden,
           className: 'text-fg-muted text-xl',
         ),
       ),

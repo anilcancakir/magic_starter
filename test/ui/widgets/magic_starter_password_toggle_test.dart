@@ -21,10 +21,10 @@ void main() {
     });
   }
 
-  Widget wrap(Widget child) {
+  Widget wrap(Widget child, {WindThemeData? theme}) {
     return MaterialApp(
       home: WindTheme(
-        data: WindThemeData(),
+        data: theme ?? WindThemeData(),
         child: Scaffold(body: child),
       ),
     );
@@ -95,6 +95,27 @@ void main() {
 
       handle.dispose();
     });
+
+    // Wind multiplies a numeric size by the theme's spacing unit, so the floor
+    // has to be spelled in pixels or a host with a smaller unit loses it.
+    for (final (width, floor) in const [(390.0, 44.0), (1440.0, 40.0)]) {
+      testWidgets('keeps its ${floor}px floor under a smaller spacing unit at '
+          '$width', (tester) async {
+        final handle = tester.ensureSemantics();
+        useViewport(tester, width);
+
+        await tester.pumpWidget(
+          wrap(toggle(), theme: WindThemeData(baseSpacingUnit: 3.0)),
+        );
+        await tester.pumpAndSettle();
+
+        final size = nodeSize(tester, 'Show password');
+        expect(size.width, greaterThanOrEqualTo(floor));
+        expect(size.height, greaterThanOrEqualTo(floor));
+
+        handle.dispose();
+      });
+    }
 
     testWidgets('taps through its whole box, not only the icon', (
       tester,
