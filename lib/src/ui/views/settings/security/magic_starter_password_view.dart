@@ -6,6 +6,7 @@ import '../../../../configuration/magic_starter_config.dart';
 import '../../../../facades/magic_starter.dart';
 import '../../../../http/controllers/magic_starter_profile_controller.dart';
 import '../../../../support/confirms_identity.dart';
+import '../../../../support/control_name.dart';
 import '../../../components/button/index.dart';
 import '../../../components/page_scaffold/page_scaffold.dart';
 import '../../../components/settings_section/settings_section.dart';
@@ -175,6 +176,9 @@ class _MagicStarterPasswordViewState
                             onTap: () => setState(
                               () => _obscureCurrent = !_obscureCurrent,
                             ),
+                            semanticLabel: magicStarterPasswordToggleName(
+                              obscured: _obscureCurrent,
+                            ),
                             child: WIcon(
                               _obscureCurrent ? _iconVisible : _iconHidden,
                               className: 'text-fg-muted text-xl',
@@ -194,6 +198,9 @@ class _MagicStarterPasswordViewState
                         suffix: WAnchor(
                           onTap: () =>
                               setState(() => _obscureNew = !_obscureNew),
+                          semanticLabel: magicStarterPasswordToggleName(
+                            obscured: _obscureNew,
+                          ),
                           child: WIcon(
                             _obscureNew ? _iconVisible : _iconHidden,
                             className: 'text-fg-muted text-xl',
@@ -214,6 +221,9 @@ class _MagicStarterPasswordViewState
                         suffix: WAnchor(
                           onTap: () => setState(
                             () => _obscureConfirmation = !_obscureConfirmation,
+                          ),
+                          semanticLabel: magicStarterPasswordToggleName(
+                            obscured: _obscureConfirmation,
                           ),
                           child: WIcon(
                             _obscureConfirmation ? _iconVisible : _iconHidden,

@@ -1,7 +1,23 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:magic/magic.dart';
 import 'package:magic_starter/magic_starter.dart';
+
+/// A host catalogue that names the auth controls in its own words, so a test
+/// can tell a translated label from the shipped English fallback.
+class _ControlCopyLoader implements TranslationLoader {
+  const _ControlCopyLoader();
+
+  @override
+  Future<Map<String, dynamic>> load(Locale _) async => <String, dynamic>{
+    'common.toggle_theme': 'Switch appearance',
+    'auth.show_password': 'Reveal password',
+    'auth.hide_password': 'Conceal password',
+  };
+}
 
 void main() {
   Widget wrap(Widget widget) {
@@ -246,6 +262,106 @@ void main() {
       await tester.pump();
 
       expect(find.byType(EditableText), findsNWidgets(2));
+    });
+  });
+
+  group('MagicStarterLoginView: icon-only control names', () {
+    setUp(() {
+      MagicApp.reset();
+      Magic.flush();
+      Magic.singleton('log', () => LogManager());
+      Magic.singleton('magic_starter', () => MagicStarterManager());
+      Magic.put(MagicStarterAuthController());
+    });
+
+    // A semantics node reads as a named button, never as `button ""`.
+    void expectNamedButton(WidgetTester tester, String label) {
+      final finder = find.bySemanticsLabel(label);
+
+      expect(finder, findsOneWidget, reason: 'no node is named "$label"');
+      expect(
+        tester.getSemantics(finder).getSemanticsData().flagsCollection.isButton,
+        isTrue,
+        reason: '"$label" is not announced as a button',
+      );
+    }
+
+    testWidgets('names the theme toggle and the password eye', (tester) async {
+      final handle = tester.ensureSemantics();
+
+      await tester.pumpWidget(wrap(const MagicStarterLoginView()));
+      await tester.pumpAndSettle();
+
+      expectNamedButton(tester, 'Toggle theme');
+      expectNamedButton(tester, 'Show password');
+      for (final key in const [
+        'common.toggle_theme',
+        'auth.show_password',
+        'auth.hide_password',
+      ]) {
+        expect(
+          find.bySemanticsLabel(RegExp(RegExp.escape(key))),
+          findsNothing,
+          reason: 'the raw key "$key" reached the tree',
+        );
+      }
+
+      handle.dispose();
+    });
+
+    testWidgets('the password eye label follows its state', (tester) async {
+      final handle = tester.ensureSemantics();
+
+      await tester.pumpWidget(wrap(const MagicStarterLoginView()));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.bySemanticsLabel('Show password'));
+      await tester.pumpAndSettle();
+
+      expectNamedButton(tester, 'Hide password');
+      expect(find.bySemanticsLabel('Show password'), findsNothing);
+
+      await tester.tap(find.bySemanticsLabel('Hide password'));
+      await tester.pumpAndSettle();
+
+      expectNamedButton(tester, 'Show password');
+      expect(find.bySemanticsLabel('Hide password'), findsNothing);
+
+      handle.dispose();
+    });
+
+    testWidgets('reads the names from the catalogue when it has them', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      Translator.instance.setLoader(const _ControlCopyLoader());
+      await Translator.instance.setLocale(const Locale('en'));
+      addTearDown(Translator.reset);
+
+      await tester.pumpWidget(wrap(const MagicStarterLoginView()));
+      await tester.pumpAndSettle();
+
+      expectNamedButton(tester, 'Switch appearance');
+      expectNamedButton(tester, 'Reveal password');
+
+      await tester.tap(find.bySemanticsLabel('Reveal password'));
+      await tester.pumpAndSettle();
+
+      expectNamedButton(tester, 'Conceal password');
+
+      handle.dispose();
+    });
+
+    test('the control names ship in the install stub', () {
+      final stub = jsonDecode(
+        File('assets/stubs/install/en.stub').readAsStringSync(),
+      ) as Map<String, dynamic>;
+      final auth = stub['auth'] as Map<String, dynamic>;
+      final common = stub['common'] as Map<String, dynamic>;
+
+      expect(auth['show_password'], 'Show password');
+      expect(auth['hide_password'], 'Hide password');
+      expect(common['toggle_theme'], 'Toggle theme');
     });
   });
 

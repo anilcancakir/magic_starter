@@ -5,6 +5,7 @@ import 'package:magic_starter/magic_starter.dart' show ButtonSize, MSButton;
 
 import '../../../facades/magic_starter.dart';
 import '../../../http/controllers/magic_starter_auth_controller.dart';
+import '../../../support/control_name.dart';
 import '../../widgets/magic_starter_auth_form_card.dart';
 
 class MagicStarterResetPasswordView
@@ -180,6 +181,9 @@ class _MagicStarterResetPasswordViewState
                 suffix: WAnchor(
                   onTap: () =>
                       setState(() => _obscurePassword = !_obscurePassword),
+                  semanticLabel: magicStarterPasswordToggleName(
+                    obscured: _obscurePassword,
+                  ),
                   child: WIcon(
                     _obscurePassword ? _iconVisible : _iconHidden,
                     className: 'text-fg-muted text-xl',
@@ -205,6 +209,9 @@ class _MagicStarterResetPasswordViewState
                 suffix: WAnchor(
                   onTap: () => setState(
                     () => _obscureConfirmation = !_obscureConfirmation,
+                  ),
+                  semanticLabel: magicStarterPasswordToggleName(
+                    obscured: _obscureConfirmation,
                   ),
                   child: WIcon(
                     _obscureConfirmation ? _iconVisible : _iconHidden,

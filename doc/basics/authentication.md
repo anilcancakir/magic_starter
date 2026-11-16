@@ -484,6 +484,10 @@ Views are instantiated through the registry (`MagicStarter.view.make('auth.login
 
 Views carry no business logic: async operations, state management and navigation decisions live in the controllers.
 
+### Names for a screen reader
+
+The icon-only controls on the auth screens read their names from the catalogue: `common.toggle_theme` for the theme toggle at the top of the auth card, and `auth.show_password` or `auth.hide_password` for the eye on a password field (the register, reset password and password settings screens and the password confirmation dialog carry it too). The eye names the action its next tap performs, so the label flips with the field. The install stub ships the three keys; an app installed before `auth.show_password` and `auth.hide_password` gets the English names (`Show password`, `Hide password`, `Toggle theme`) rather than the raw keys until it adds them to its own language files.
+
 <a name="gotchas"></a>
 ## Gotchas
 

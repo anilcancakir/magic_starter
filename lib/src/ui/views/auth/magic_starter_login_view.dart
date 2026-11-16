@@ -9,6 +9,7 @@ import '../../../facades/magic_starter.dart';
 import '../../../http/controllers/concerns/navigates_routes.dart';
 import '../../../http/controllers/magic_starter_auth_controller.dart';
 import '../../../http/controllers/magic_starter_guest_auth_controller.dart';
+import '../../../support/control_name.dart';
 import '../../widgets/magic_starter_auth_form_card.dart';
 import '../../widgets/magic_starter_social_buttons.dart';
 
@@ -145,6 +146,9 @@ class _MagicStarterLoginViewState
                 suffix: WAnchor(
                   onTap: () =>
                       setState(() => _obscurePassword = !_obscurePassword),
+                  semanticLabel: magicStarterPasswordToggleName(
+                    obscured: _obscurePassword,
+                  ),
                   child: WIcon(
                     _obscurePassword ? _iconVisible : _iconHidden,
                     className: 'text-fg-muted text-xl',

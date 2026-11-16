@@ -411,6 +411,29 @@ void main() {
       expect(scaffold.backFallback, MagicStarterConfig.settingsHubRoute());
     });
 
+    testWidgets('names the eye of each of its three password fields', (
+      WidgetTester tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      tester.view.physicalSize = const Size(1200, 1400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(wrap(const MagicStarterPasswordView()));
+      await tester.pump();
+
+      expect(find.bySemanticsLabel('Show password'), findsNWidgets(3));
+
+      await tester.tap(find.bySemanticsLabel('Show password').first);
+      await tester.pump();
+
+      expect(find.bySemanticsLabel('Hide password'), findsOneWidget);
+      expect(find.bySemanticsLabel('Show password'), findsNWidgets(2));
+
+      handle.dispose();
+    });
+
     testWidgets('submitting the form calls PUT /user/password', (
       WidgetTester tester,
     ) async {
