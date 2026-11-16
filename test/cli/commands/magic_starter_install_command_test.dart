@@ -130,6 +130,73 @@ void main() {
       expect(configFile.readAsStringSync(), '// existing config');
     });
 
+    group('--features against an existing config', () {
+      Future<(int, String)> install(
+        String features, {
+        bool force = false,
+      }) async {
+        final BufferedOutput output = BufferedOutput();
+        final int code = await command.handle(
+          DowelContext.bare(
+            MapInput(<String, dynamic>{
+              'force': force,
+              'dry-run': false,
+              'non-interactive': true,
+              'no-bootstrap': false,
+              'features': features,
+            }),
+            output,
+          ),
+        );
+        return (code, output.content);
+      }
+
+      test('fails instead of skipping when the config would not change as '
+          'asked, and names the features and the way out', () async {
+        setupMagicProjectFiles(tempDir);
+        // What `plugin:install` leaves behind: the config written with every
+        // feature off.
+        await runInstall(command);
+        final File configFile = File(
+          '${tempDir.path}/lib/config/magic_starter.dart',
+        );
+        final String before = configFile.readAsStringSync();
+
+        final (int code, String text) = await install('teams,registration');
+
+        expect(code, 1, reason: text);
+        expect(text, contains('lib/config/magic_starter.dart already exists'));
+        expect(text, contains('teams'));
+        expect(text, contains('registration'));
+        expect(text, contains('--force'));
+        expect(configFile.readAsStringSync(), before);
+      });
+
+      test('succeeds again when the config already holds the selection '
+          '(a re-run is idempotent)', () async {
+        setupMagicProjectFiles(tempDir);
+        final (int first, _) = await install('teams,registration');
+        expect(first, 0);
+
+        final (int second, String text) = await install('teams,registration');
+
+        expect(second, 0, reason: text);
+      });
+
+      test('--force applies the selection to the existing config', () async {
+        setupMagicProjectFiles(tempDir);
+        await runInstall(command);
+
+        final (int code, String text) = await install('teams', force: true);
+
+        expect(code, 0, reason: text);
+        final String config = File(
+          '${tempDir.path}/lib/config/magic_starter.dart',
+        ).readAsStringSync();
+        expect(config, contains("'teams': true"));
+      });
+    });
+
     test('overwrites config when --force set', () async {
       setupMagicProjectFiles(tempDir);
 

@@ -48,7 +48,8 @@ post_install:
     writes nothing else, so a feature that needs scaffolding (teams needs the
     Team model, the User team accessors, the bootstrap team callbacks and the
     team routes) still needs the install. `starter:install --features=...`
-    skips a config file that already exists unless you add `--force`, and
+    leaves a config file that already exists alone and exits 1 when the
+    features differ, unless you add `--force`, and
     `--force` also replaces AppServiceProvider and overwrites the translation
     file: commit or back up your changes first.
 

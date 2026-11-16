@@ -154,6 +154,19 @@ class MagicStarterInstallCommand extends DowelInstallCommand {
     // 2. Resolve features using interactive or non-interactive flow.
     final Map<String, bool> features = _resolveFeatureSelections(ctx);
 
+    // A selection the existing config would not carry fails here: skipping the
+    // config and printing success left every feature off after
+    // `plugin:install` had written the config with all of them disabled.
+    final String? unapplied = _unappliedFeatureSelection(
+      ctx,
+      features: features,
+      force: force,
+    );
+    if (unapplied != null) {
+      ctx.output.error(unapplied);
+      return 1;
+    }
+
     // 3. Resolve + parse the install.yaml manifest (the static layer).
     final manifestPath = await resolveManifestPath();
     if (manifestPath == null) {
@@ -298,6 +311,51 @@ class MagicStarterInstallCommand extends DowelInstallCommand {
     }
 
     return features;
+  }
+
+  /// The message for an explicit `--features` selection that the existing
+  /// `lib/config/magic_starter.dart` does not hold, or null when there is
+  /// nothing to refuse.
+  ///
+  /// Only an explicit `--features` is checked: without it the installer keeps
+  /// its old behaviour of leaving an existing config alone. A selection that
+  /// matches the file (a re-run) passes, and `--force` rewrites the file, so
+  /// both are left alone. A flag the file does not mention counts as off.
+  String? _unappliedFeatureSelection(
+    DowelContext ctx, {
+    required Map<String, bool> features,
+    required bool force,
+  }) {
+    if (force || ctx.input.option('features') == null) {
+      return null;
+    }
+
+    final String configPath = '$projectRoot/lib/config/magic_starter.dart';
+    if (!FileHelper.fileExists(configPath)) {
+      return null;
+    }
+
+    final String existing = FileHelper.readFile(configPath);
+    final List<String> differing = <String>[
+      for (final String key in dynamicFeatureKeys)
+        if (_configFlag(existing, key) != (features[key] ?? false)) key,
+    ];
+    if (differing.isEmpty) {
+      return null;
+    }
+
+    return 'lib/config/magic_starter.dart already exists, so --features was '
+        'not applied (it differs for: ${differing.join(', ')}). Edit the '
+        '`features` map in that file, or pass --force to overwrite it. '
+        '`plugin:install` writes the config with every feature off unless '
+        'you pass --no-bootstrap to it.';
+  }
+
+  /// The `true` or `false` the config gives [key], or false when it names none.
+  bool _configFlag(String source, String key) {
+    final RegExpMatch? match = RegExp("'$key'\\s*:\\s*(true|false)")
+        .firstMatch(source);
+    return match?.group(1) == 'true';
   }
 
   void _stageConfigFile(
