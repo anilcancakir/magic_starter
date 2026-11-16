@@ -84,6 +84,7 @@ export 'src/ui/components/card/index.dart';
 export 'src/ui/components/user_profile_dropdown/index.dart';
 export 'src/ui/components/social_divider/index.dart';
 export 'src/ui/widgets/magic_starter_password_confirm_dialog.dart';
+export 'src/ui/widgets/magic_starter_password_toggle.dart';
 export 'src/ui/widgets/magic_starter_step_up_dialog.dart';
 export 'src/ui/widgets/magic_starter_confirm_dialog.dart';
 export 'src/ui/widgets/magic_starter_two_factor_modal.dart';

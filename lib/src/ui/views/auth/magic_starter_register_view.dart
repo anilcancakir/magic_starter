@@ -1,14 +1,12 @@
-import 'package:material_ui/material_ui.dart' show Icons;
 import 'package:flutter/widgets.dart';
 import 'package:magic/magic.dart';
 import 'package:magic_starter/magic_starter.dart'
-    show ButtonSize, MSButton, MSSocialDivider;
+    show ButtonSize, MSButton, MSSocialDivider, MagicStarterPasswordToggle;
 
 import '../../../configuration/magic_starter_config.dart';
 import '../../../facades/magic_starter.dart';
 import '../../../http/controllers/concerns/navigates_routes.dart';
 import '../../../http/controllers/magic_starter_auth_controller.dart';
-import '../../../support/control_name.dart';
 import '../../widgets/magic_starter_auth_form_card.dart';
 import '../../widgets/magic_starter_social_buttons.dart';
 
@@ -32,9 +30,6 @@ class _MagicStarterRegisterViewState
           MagicStarterAuthController,
           MagicStarterRegisterView
         > {
-  static const _iconVisible = Icons.visibility;
-  static const _iconHidden = Icons.visibility_off;
-
   /// Both email and phone fields are always declared — the controller decides
   /// which one to include in the payload based on identity mode.
   late final form = MagicFormData({
@@ -165,16 +160,10 @@ class _MagicStarterRegisterViewState
                 type: _obscurePassword ? InputType.password : InputType.text,
                 autofillHints: const [AutofillHints.newPassword],
                 validator: rules([Required(), Min(8)], field: 'password'),
-                suffix: WAnchor(
-                  onTap: () =>
+                suffix: MagicStarterPasswordToggle(
+                  obscured: _obscurePassword,
+                  onToggle: () =>
                       setState(() => _obscurePassword = !_obscurePassword),
-                  semanticLabel: magicStarterPasswordToggleName(
-                    obscured: _obscurePassword,
-                  ),
-                  child: WIcon(
-                    _obscurePassword ? _iconVisible : _iconHidden,
-                    className: 'text-fg-muted text-xl',
-                  ),
                 ),
                 className: MagicStarter.formTheme.inputClassName,
                 placeholderClassName:
@@ -193,16 +182,10 @@ class _MagicStarterRegisterViewState
                     : InputType.text,
                 autofillHints: const [AutofillHints.newPassword],
                 validator: rules([Required()], field: 'password_confirmation'),
-                suffix: WAnchor(
-                  onTap: () => setState(
+                suffix: MagicStarterPasswordToggle(
+                  obscured: _obscureConfirmation,
+                  onToggle: () => setState(
                     () => _obscureConfirmation = !_obscureConfirmation,
-                  ),
-                  semanticLabel: magicStarterPasswordToggleName(
-                    obscured: _obscureConfirmation,
-                  ),
-                  child: WIcon(
-                    _obscureConfirmation ? _iconVisible : _iconHidden,
-                    className: 'text-fg-muted text-xl',
                   ),
                 ),
                 className: MagicStarter.formTheme.inputClassName,

@@ -6,11 +6,11 @@ import 'package:magic_picker/magic_picker.dart';
 import '../../../configuration/magic_starter_config.dart';
 import '../../../facades/magic_starter.dart';
 import '../../../http/controllers/magic_starter_profile_controller.dart';
-import '../../../support/control_name.dart';
 import '../../components/avatar/index.dart';
 import '../../components/button/index.dart';
 import '../../components/settings_section/index.dart';
 import '../../components/page_scaffold/index.dart';
+import '../../widgets/magic_starter_password_toggle.dart';
 
 /// Profile sub-page view (`profile.profile`).
 ///
@@ -53,9 +53,6 @@ class _MagicStarterProfileSubPageViewState
           MagicStarterProfileController,
           MagicStarterProfileSubPageView
         > {
-  static const _iconVisible = Icons.visibility;
-  static const _iconHidden = Icons.visibility_off;
-
   // -- Forms ------------------------------------------------------------------
 
   late final profileForm = MagicFormData({
@@ -504,16 +501,10 @@ class _MagicStarterProfileSubPageViewState
                     ? InputType.password
                     : InputType.text,
                 validator: rules([Required(), Min(8)], field: 'password'),
-                suffix: WAnchor(
-                  onTap: () => setState(
+                suffix: MagicStarterPasswordToggle(
+                  obscured: _obscureUpgradePassword,
+                  onToggle: () => setState(
                     () => _obscureUpgradePassword = !_obscureUpgradePassword,
-                  ),
-                  semanticLabel: magicStarterPasswordToggleName(
-                    obscured: _obscureUpgradePassword,
-                  ),
-                  child: WIcon(
-                    _obscureUpgradePassword ? _iconVisible : _iconHidden,
-                    className: 'text-fg-muted text-xl',
                   ),
                 ),
                 labelClassName: formTheme.labelClassName,
@@ -526,17 +517,11 @@ class _MagicStarterProfileSubPageViewState
                     ? InputType.password
                     : InputType.text,
                 validator: rules([Required()], field: 'password_confirmation'),
-                suffix: WAnchor(
-                  onTap: () => setState(
+                suffix: MagicStarterPasswordToggle(
+                  obscured: _obscureUpgradeConfirmation,
+                  onToggle: () => setState(
                     () => _obscureUpgradeConfirmation =
                         !_obscureUpgradeConfirmation,
-                  ),
-                  semanticLabel: magicStarterPasswordToggleName(
-                    obscured: _obscureUpgradeConfirmation,
-                  ),
-                  child: WIcon(
-                    _obscureUpgradeConfirmation ? _iconVisible : _iconHidden,
-                    className: 'text-fg-muted text-xl',
                   ),
                 ),
                 labelClassName: formTheme.labelClassName,
