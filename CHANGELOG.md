@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- **The password eyes on the profile screens are named for screen readers.** The seven show-or-hide toggles on the settings view (current, new and confirmation password, and the two guest upgrade fields) and the guest upgrade fields on the profile sub-page were bare icons, read as an unlabelled button; each now carries `magicStarterPasswordToggleName`, which flips between "Show password" and "Hide password" with the field. No new keys: the helper falls back to English. (`lib/src/ui/views/profile/`)
+- **Every icon-only control name goes through `magicStarterControlName`.** The app layout, the team selector and the account dropdown each carried their own copy of the "catalogue line or English default" check, and three labels called `trans()` with no fallback: the dropdown's "Toggle theme" row and the collapsible sidebar's expand and collapse control, so a host installed before those keys existed showed the raw key. They read "Toggle theme", "Expand sidebar" and "Collapse sidebar" now when the catalogue lacks the key. (`lib/src/ui/layouts/magic_starter_app_layout.dart`, `lib/src/ui/components/`)
+
 ## [1.2.0] - 2026-11-16
 
 ### Added

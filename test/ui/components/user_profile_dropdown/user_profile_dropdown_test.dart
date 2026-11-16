@@ -411,19 +411,21 @@ void main() {
     await tester.tap(find.byType(MSAvatar));
     await tester.pumpAndSettle();
 
-    // Light mode shows the dark-mode affordance, not both.
-    expect(find.text('common.toggle_theme'), findsOneWidget);
+    // Light mode shows the dark-mode affordance, not both. No catalogue is
+    // loaded, so the label is the English default and never the raw key.
+    expect(find.text('Toggle theme'), findsOneWidget);
+    expect(find.text('common.toggle_theme'), findsNothing);
     expect(find.byIcon(Icons.dark_mode_outlined), findsOneWidget);
     expect(find.byIcon(Icons.light_mode_outlined), findsNothing);
 
-    await tester.tap(find.text('common.toggle_theme'));
+    await tester.tap(find.text('Toggle theme'));
     await tester.pumpAndSettle();
 
     // The icon flips and the dropdown stays open: toggling the theme must not
     // dismiss the menu the operator is still reading.
     expect(find.byIcon(Icons.light_mode_outlined), findsOneWidget);
     expect(find.byIcon(Icons.dark_mode_outlined), findsNothing);
-    expect(find.text('common.toggle_theme'), findsOneWidget);
+    expect(find.text('Toggle theme'), findsOneWidget);
   });
 
   // ---------------------------------------------------------------------------
