@@ -1,12 +1,11 @@
-import 'package:material_ui/material_ui.dart' show Icons;
 import 'package:flutter/widgets.dart';
 import 'package:magic/magic.dart';
 
 import '../../facades/magic_starter.dart';
-import '../../support/control_name.dart';
 import '../components/dialog/dialog.dart';
 import '../components/dialog/modal_presenter.dart';
 import 'magic_starter_confirm_dialog.dart';
+import 'magic_starter_password_toggle.dart';
 
 /// A reusable dialog widget that prompts the user to confirm their password.
 ///
@@ -77,9 +76,6 @@ class MagicStarterPasswordConfirmDialog extends StatefulWidget {
 
 class _MagicStarterPasswordConfirmDialogState
     extends State<MagicStarterPasswordConfirmDialog> {
-  static const _iconVisible = Icons.visibility;
-  static const _iconHidden = Icons.visibility_off;
-
   final TextEditingController _passwordController = TextEditingController();
   bool _obscure = true;
   bool _isLoading = false;
@@ -146,13 +142,9 @@ class _MagicStarterPasswordConfirmDialogState
           WFormInput(
             controller: _passwordController,
             type: _obscure ? InputType.password : InputType.text,
-            suffix: WAnchor(
-              onTap: () => setState(() => _obscure = !_obscure),
-              semanticLabel: magicStarterPasswordToggleName(obscured: _obscure),
-              child: WIcon(
-                _obscure ? _iconVisible : _iconHidden,
-                className: 'text-fg-muted text-xl',
-              ),
+            suffix: MagicStarterPasswordToggle(
+              obscured: _obscure,
+              onToggle: () => setState(() => _obscure = !_obscure),
             ),
             className: '${theme.inputClassName} error:border-red-500',
           ),

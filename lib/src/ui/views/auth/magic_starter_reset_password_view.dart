@@ -1,11 +1,11 @@
 import 'package:material_ui/material_ui.dart' show Icons;
 import 'package:flutter/widgets.dart';
 import 'package:magic/magic.dart';
-import 'package:magic_starter/magic_starter.dart' show ButtonSize, MSButton;
+import 'package:magic_starter/magic_starter.dart'
+    show ButtonSize, MSButton, MagicStarterPasswordToggle;
 
 import '../../../facades/magic_starter.dart';
 import '../../../http/controllers/magic_starter_auth_controller.dart';
-import '../../../support/control_name.dart';
 import '../../widgets/magic_starter_auth_form_card.dart';
 
 class MagicStarterResetPasswordView
@@ -23,8 +23,6 @@ class _MagicStarterResetPasswordViewState
           MagicStarterAuthController,
           MagicStarterResetPasswordView
         > {
-  static const _iconVisible = Icons.visibility;
-  static const _iconHidden = Icons.visibility_off;
   static const _iconCheck = Icons.check_circle_outline;
 
   /// The `token` of the mailed link, a query parameter: the route has no
@@ -178,16 +176,10 @@ class _MagicStarterResetPasswordViewState
                 type: _obscurePassword ? InputType.password : InputType.text,
                 autofillHints: const [AutofillHints.newPassword],
                 validator: rules([Required(), Min(8)], field: 'password'),
-                suffix: WAnchor(
-                  onTap: () =>
+                suffix: MagicStarterPasswordToggle(
+                  obscured: _obscurePassword,
+                  onToggle: () =>
                       setState(() => _obscurePassword = !_obscurePassword),
-                  semanticLabel: magicStarterPasswordToggleName(
-                    obscured: _obscurePassword,
-                  ),
-                  child: WIcon(
-                    _obscurePassword ? _iconVisible : _iconHidden,
-                    className: 'text-fg-muted text-xl',
-                  ),
                 ),
                 className: MagicStarter.formTheme.inputClassName,
                 placeholderClassName:
@@ -206,16 +198,10 @@ class _MagicStarterResetPasswordViewState
                     : InputType.text,
                 autofillHints: const [AutofillHints.newPassword],
                 validator: rules([Required()], field: 'password_confirmation'),
-                suffix: WAnchor(
-                  onTap: () => setState(
+                suffix: MagicStarterPasswordToggle(
+                  obscured: _obscureConfirmation,
+                  onToggle: () => setState(
                     () => _obscureConfirmation = !_obscureConfirmation,
-                  ),
-                  semanticLabel: magicStarterPasswordToggleName(
-                    obscured: _obscureConfirmation,
-                  ),
-                  child: WIcon(
-                    _obscureConfirmation ? _iconVisible : _iconHidden,
-                    className: 'text-fg-muted text-xl',
                   ),
                 ),
                 className: MagicStarter.formTheme.inputClassName,

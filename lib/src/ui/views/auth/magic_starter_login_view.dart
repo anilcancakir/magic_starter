@@ -2,14 +2,18 @@ import 'package:material_ui/material_ui.dart' show Icons;
 import 'package:flutter/widgets.dart';
 import 'package:magic/magic.dart';
 import 'package:magic_starter/magic_starter.dart'
-    show ButtonIntent, ButtonSize, MSButton, MSSocialDivider;
+    show
+        ButtonIntent,
+        ButtonSize,
+        MSButton,
+        MSSocialDivider,
+        MagicStarterPasswordToggle;
 
 import '../../../configuration/magic_starter_config.dart';
 import '../../../facades/magic_starter.dart';
 import '../../../http/controllers/concerns/navigates_routes.dart';
 import '../../../http/controllers/magic_starter_auth_controller.dart';
 import '../../../http/controllers/magic_starter_guest_auth_controller.dart';
-import '../../../support/control_name.dart';
 import '../../widgets/magic_starter_auth_form_card.dart';
 import '../../widgets/magic_starter_social_buttons.dart';
 
@@ -32,9 +36,6 @@ class _MagicStarterLoginViewState
           MagicStarterAuthController,
           MagicStarterLoginView
         > {
-  static const _iconVisible = Icons.visibility;
-  static const _iconHidden = Icons.visibility_off;
-
   /// Both email and phone fields are always declared — the controller decides
   /// which one to include in the payload based on identity mode.
   late final form = MagicFormData({
@@ -143,16 +144,10 @@ class _MagicStarterLoginViewState
                 type: _obscurePassword ? InputType.password : InputType.text,
                 autofillHints: const [AutofillHints.password],
                 validator: rules([Required()], field: 'password'),
-                suffix: WAnchor(
-                  onTap: () =>
+                suffix: MagicStarterPasswordToggle(
+                  obscured: _obscurePassword,
+                  onToggle: () =>
                       setState(() => _obscurePassword = !_obscurePassword),
-                  semanticLabel: magicStarterPasswordToggleName(
-                    obscured: _obscurePassword,
-                  ),
-                  child: WIcon(
-                    _obscurePassword ? _iconVisible : _iconHidden,
-                    className: 'text-fg-muted text-xl',
-                  ),
                 ),
                 className: MagicStarter.formTheme.inputClassName,
                 placeholderClassName:
