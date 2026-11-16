@@ -19,6 +19,21 @@ class _ControlCopyLoader implements TranslationLoader {
   };
 }
 
+/// A host catalogue whose remember-me line is far wider than half the form in
+/// any font, so only the label can overflow.
+const _longRememberLabel =
+    'Keep me signed in on this device for thirty days, and remind me to '
+    'sign out whenever I leave a shared computer';
+
+class _LongRememberLoader implements TranslationLoader {
+  const _LongRememberLoader();
+
+  @override
+  Future<Map<String, dynamic>> load(Locale _) async => <String, dynamic>{
+    'auth.remember_me': _longRememberLabel,
+  };
+}
+
 void main() {
   Widget wrap(Widget widget) {
     return MaterialApp(
@@ -262,6 +277,64 @@ void main() {
       await tester.pump();
 
       expect(find.byType(EditableText), findsNWidgets(2));
+    });
+  });
+
+  group('MagicStarterLoginView: remember me label', () {
+    setUp(() {
+      MagicApp.reset();
+      Magic.flush();
+      Magic.singleton('log', () => LogManager());
+      Magic.singleton('magic_starter', () => MagicStarterManager());
+      Magic.put(MagicStarterAuthController());
+    });
+
+    testWidgets('wraps a long label instead of overflowing', (tester) async {
+      // The checkbox shares its row with the forgot-password link, so it gets
+      // about half the form; a label that was not flexible ran past it. 640 px
+      // keeps the rest of the screen, whose raw keys are long without a
+      // catalogue, inside the width.
+      tester.view.physicalSize = const Size(640 * 3, 900 * 3);
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.reset);
+      Translator.instance.setLoader(const _LongRememberLoader());
+      await Translator.instance.setLocale(const Locale('en'));
+      addTearDown(Translator.reset);
+
+      await tester.pumpWidget(wrap(const MagicStarterLoginView()));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(WFormCheckbox), findsOneWidget);
+      expect(
+        tester.getRect(find.text(_longRememberLabel)).right,
+        lessThanOrEqualTo(640),
+      );
+    });
+
+    testWidgets('survives a host theme whose label class flexes itself', (
+      tester,
+    ) async {
+      // `flex-1` makes WText wrap itself in Expanded, so a second Flexible
+      // around it throws "Incorrect use of ParentDataWidget".
+      tester.view.physicalSize = const Size(640 * 3, 900 * 3);
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.reset);
+      MagicStarter.useFormTheme(
+        const MagicStarterFormTheme(checkboxLabelClassName: 'text-sm flex-1'),
+      );
+      Translator.instance.setLoader(const _LongRememberLoader());
+      await Translator.instance.setLocale(const Locale('en'));
+      addTearDown(Translator.reset);
+
+      await tester.pumpWidget(wrap(const MagicStarterLoginView()));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(
+        tester.getRect(find.text(_longRememberLabel)).right,
+        lessThanOrEqualTo(640),
+      );
     });
   });
 

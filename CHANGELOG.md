@@ -6,7 +6,9 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- **The account menu uses the height of the window instead of stopping at 400 px.** `WPopover` caps its overlay at 400 px unless `maxHeight` says otherwise, and `MSUserProfileDropdown` never did, so a menu with notifications, support and feedback on kept its rows in a 233 px strip on a 1440 by 900 window, with the last ones behind a scroll. The popover now takes the window height as its ceiling and still shrinks to the room on its side of the trigger, so a short window scrolls the rows and sign out stays pinned. The language is not the cause: a row is 52 px in English and in the longer labels it was tried with. WPopover picks the side it opens on from the same ceiling, so a trigger in the middle of a tall window now opens towards the roomier side. `lib/src/ui/components/user_profile_dropdown/user_profile_dropdown.dart`.
 - **The password field in the confirm dialog has a name for screen readers.** `MagicStarterPasswordConfirmDialog` gave its `WFormInput` neither a label nor a placeholder, so every action that confirms an account's password announced an unnamed text field next to a named eye. The field now carries the `attributes.password` placeholder, which Wind also uses as its accessible name; the empty field shows that word. `lib/src/ui/widgets/magic_starter_password_confirm_dialog.dart`.
+- **The remember me label on the login screen wraps instead of overflowing.** The checkbox shares its row with the forgot-password link and gets about half of the form, and the label was not flexible, so a translation wider than that ran past the edge of a phone. The label now carries a `flex-initial` class token ahead of the theme's `checkboxLabelClassName`, so it wraps, and a host class with a `flex-*` token of its own still wins instead of landing in a second wrapper. `lib/src/ui/views/auth/magic_starter_login_view.dart`.
 
 ## [1.3.1] - 2026-11-16
 
