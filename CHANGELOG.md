@@ -4,9 +4,13 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- **`magicStarterControlName` and `magicStarterPasswordToggleName` name an icon-only control for a screen reader.** `magicStarterControlName(key, fallback)` answers the translation of `key` when the app's language files hold it and `fallback` otherwise, so a host that has not added the key reads an English name, never the raw key. `magicStarterPasswordToggleName(obscured:)` answers `auth.show_password` while the field is hidden and `auth.hide_password` while it is shown, each with an English default. Both are exported from the barrel so a published view and a host screen can use them. (`lib/src/support/control_name.dart`)
+
 ### Fixed
 
-- **The icon-only controls on the auth screens are named for screen readers.** The theme toggle on the auth form card and the show-or-hide eye on every password field (login, register, reset password, the password settings page and the password confirmation dialog) had no accessible name and read as an unlabelled button. The toggle takes `common.toggle_theme`; the eye takes `auth.show_password` or `auth.hide_password`, naming the action its next tap performs, so the label flips with the field. Both new keys ship in the install stub; an app installed before them gets the English names, never the raw keys, until it adds them to its own language files. `magicStarterControlName` and `magicStarterPasswordToggleName` join the barrel so a published view resolves them. (`lib/src/support/control_name.dart`)
+- **The icon-only controls on the auth screens are named for screen readers.** The theme toggle on the auth form card and the show-or-hide eye on every password field (login, register, reset password, the password settings page and the password confirmation dialog) had no accessible name and read as an unlabelled button. The toggle takes `common.toggle_theme`; the eye takes `auth.show_password` or `auth.hide_password`, naming the action its next tap performs, so the label flips with the field. Both new keys ship in the install stub; an app installed before them gets the English names, never the raw keys, until it adds them to its own language files. (`lib/src/ui/widgets/magic_starter_auth_form_card.dart`, `lib/src/ui/views/auth/`, `lib/src/ui/views/settings/security/magic_starter_password_view.dart`, `lib/src/ui/widgets/magic_starter_password_confirm_dialog.dart`)
 
 ## [1.1.2] - 2026-11-16
 
