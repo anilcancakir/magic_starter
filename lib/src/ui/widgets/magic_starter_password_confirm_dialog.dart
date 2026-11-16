@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart';
 import 'package:magic/magic.dart';
 
 import '../../facades/magic_starter.dart';
+import '../../support/control_name.dart';
 import '../components/dialog/dialog.dart';
 import '../components/dialog/modal_presenter.dart';
 import 'magic_starter_confirm_dialog.dart';
@@ -147,6 +148,7 @@ class _MagicStarterPasswordConfirmDialogState
             type: _obscure ? InputType.password : InputType.text,
             suffix: WAnchor(
               onTap: () => setState(() => _obscure = !_obscure),
+              semanticLabel: magicStarterPasswordToggleName(obscured: _obscure),
               child: WIcon(
                 _obscure ? _iconVisible : _iconHidden,
                 className: 'text-fg-muted text-xl',

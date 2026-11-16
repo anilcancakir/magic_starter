@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:magic/magic.dart';
 
 import '../../facades/magic_starter.dart';
+import '../../support/control_name.dart';
 
 /// Consistent card wrapper for all auth forms.
 ///
@@ -31,6 +32,10 @@ class MagicStarterAuthFormCard extends StatelessWidget {
           className: 'w-full flex flex-row justify-end mb-2',
           child: WAnchor(
             onTap: () => context.windTheme.toggleTheme(),
+            semanticLabel: magicStarterControlName(
+              'common.toggle_theme',
+              'Toggle theme',
+            ),
             child: WDiv(
               className: MagicStarter.authTheme.themeToggleClassName,
               child: WIcon(

@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- **The icon-only controls on the auth screens are named for screen readers.** The theme toggle on the auth form card and the show-or-hide eye on every password field (login, register, reset password, the password settings page and the password confirmation dialog) had no accessible name and read as an unlabelled button. The toggle takes `common.toggle_theme`; the eye takes `auth.show_password` or `auth.hide_password`, naming the action its next tap performs, so the label flips with the field. Both new keys ship in the install stub; an app installed before them gets the English names, never the raw keys, until it adds them to its own language files. `magicStarterControlName` and `magicStarterPasswordToggleName` join the barrel so a published view resolves them. (`lib/src/support/control_name.dart`)
+
 ## [1.1.2] - 2026-11-16
 
 ### Changed

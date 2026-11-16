@@ -35,6 +35,31 @@ void main() {
     Magic.put(MagicStarterAuthController());
   }
 
+  group('MagicStarterResetPasswordView: icon-only control names', () {
+    setUp(setUpApp);
+
+    tearDown(MagicRouter.reset);
+
+    testWidgets('names both password eyes and flips each on its own', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+
+      await mount(tester);
+
+      expect(find.bySemanticsLabel('Toggle theme'), findsOneWidget);
+      expect(find.bySemanticsLabel('Show password'), findsNWidgets(2));
+
+      await tester.tap(find.bySemanticsLabel('Show password').first);
+      await tester.pumpAndSettle();
+
+      expect(find.bySemanticsLabel('Hide password'), findsOneWidget);
+      expect(find.bySemanticsLabel('Show password'), findsOneWidget);
+
+      handle.dispose();
+    });
+  });
+
   group('MagicStarterResetPasswordView — slot injection', () {
     setUp(setUpApp);
 

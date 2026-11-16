@@ -22,6 +22,26 @@ void main() {
       Magic.put(MagicStarterAuthController());
     });
 
+    testWidgets('names both password eyes and flips each on its own', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+
+      await tester.pumpWidget(wrap(const MagicStarterRegisterView()));
+      await tester.pumpAndSettle();
+
+      expect(find.bySemanticsLabel('Toggle theme'), findsOneWidget);
+      expect(find.bySemanticsLabel('Show password'), findsNWidgets(2));
+
+      await tester.tap(find.bySemanticsLabel('Show password').first);
+      await tester.pumpAndSettle();
+
+      expect(find.bySemanticsLabel('Hide password'), findsOneWidget);
+      expect(find.bySemanticsLabel('Show password'), findsOneWidget);
+
+      handle.dispose();
+    });
+
     testWidgets('shows newsletter checkbox when feature enabled', (
       tester,
     ) async {

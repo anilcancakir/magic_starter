@@ -149,6 +149,7 @@ export 'src/ui/components/key_value_editor/index.dart';
 export 'src/ui/components/string_value_list/index.dart';
 export 'src/ui/components/switch_row/index.dart';
 export 'src/support/confirms_identity.dart';
+export 'src/support/control_name.dart';
 export 'src/support/session_device_title.dart';
 export 'src/support/plan_upgrade.dart';
 export 'src/support/upgrade_prompt.dart';

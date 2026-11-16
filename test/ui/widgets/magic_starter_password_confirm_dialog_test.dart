@@ -61,6 +61,28 @@ void main() {
     expect(find.byType(WButton), findsOneWidget);
   });
 
+  testWidgets('MagicStarterPasswordConfirmDialog names its password eye', (
+    WidgetTester tester,
+  ) async {
+    final handle = tester.ensureSemantics();
+    tester.view.physicalSize = const Size(1200, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() => tester.view.resetPhysicalSize());
+    addTearDown(() => tester.view.resetDevicePixelRatio());
+
+    await tester.pumpWidget(wrap(const MagicStarterPasswordConfirmDialog()));
+
+    expect(find.bySemanticsLabel('Show password'), findsOneWidget);
+
+    await tester.tap(find.bySemanticsLabel('Show password'));
+    await tester.pump();
+
+    expect(find.bySemanticsLabel('Hide password'), findsOneWidget);
+    expect(find.bySemanticsLabel('Show password'), findsNothing);
+
+    handle.dispose();
+  });
+
   testWidgets('MagicStarterPasswordConfirmDialog returns false on cancel', (
     WidgetTester tester,
   ) async {
