@@ -360,12 +360,47 @@ class MagicStarterInstallCommand extends DowelInstallCommand {
   /// Comments are dropped first, so a commented-out flag is not read as the
   /// setting, and both quote styles are accepted for a hand-edited key.
   bool _configFlag(String source, String key) {
-    final String active = source
-        .replaceAll(RegExp(r'/\*[\s\S]*?\*/'), '')
-        .replaceAll(RegExp(r'//[^\n]*'), '');
     final RegExpMatch? match = RegExp('[\'"]$key[\'"]\\s*:\\s*(true|false)')
-        .firstMatch(active);
+        .firstMatch(_withoutComments(source));
     return match?.group(1) == 'true';
+  }
+
+  /// [source] without its `//` and `/* */` comments. A `//` inside a string
+  /// literal (a URL) is text, so the scan tracks quotes and escapes.
+  String _withoutComments(String source) {
+    final StringBuffer out = StringBuffer();
+    String? quote;
+    for (int i = 0; i < source.length; i++) {
+      final String char = source[i];
+      final String next = i + 1 < source.length ? source[i + 1] : '';
+      if (quote != null) {
+        out.write(char);
+        if (char == r'\' && next.isNotEmpty) {
+          out.write(next);
+          i++;
+        } else if (char == quote) {
+          quote = null;
+        }
+      } else if (char == "'" || char == '"') {
+        quote = char;
+        out.write(char);
+      } else if (char == '/' && next == '/') {
+        while (i < source.length && source[i] != '\n') {
+          i++;
+        }
+        out.write('\n');
+      } else if (char == '/' && next == '*') {
+        i += 2;
+        while (i + 1 < source.length &&
+            !(source[i] == '*' && source[i + 1] == '/')) {
+          i++;
+        }
+        i++;
+      } else {
+        out.write(char);
+      }
+    }
+    return out.toString();
   }
 
   void _stageConfigFile(

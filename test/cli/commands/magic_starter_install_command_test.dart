@@ -201,6 +201,26 @@ final magicStarterConfig = {
         expect(code, 0, reason: text);
       });
 
+      test(
+        'keeps a // inside a string literal: a URL on the same line does not '
+        'hide the flag after it',
+        () async {
+          setupMagicProjectFiles(tempDir);
+          final File configFile = File(
+            '${tempDir.path}/lib/config/magic_starter.dart',
+          );
+          configFile.createSync(recursive: true);
+          configFile.writeAsStringSync(
+            "final magicStarterConfig = {'url': 'https://example.test', "
+            "'features': {'teams': true}};\n",
+          );
+
+          final (int code, String text) = await install('teams');
+
+          expect(code, 0, reason: text);
+        },
+      );
+
       test('ignores a commented-out flag and reads the active one', () async {
         setupMagicProjectFiles(tempDir);
         final File configFile = File(
