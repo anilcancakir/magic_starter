@@ -355,6 +355,56 @@ void main() {
     // Slot injection tests
     // -----------------------------------------------------------------------
 
+    group('password eye names', () {
+      // A tall surface keeps every form on screen, so the taps land.
+      void useTallView(WidgetTester tester) {
+        tester.view.physicalSize = const Size(900, 6000);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+      }
+
+      testWidgets('the three change-password eyes are named and follow their '
+          'state', (tester) async {
+        useTallView(tester);
+        final handle = tester.ensureSemantics();
+
+        await tester.pumpWidget(wrap(const MagicStarterProfileSettingsView()));
+        await tester.pumpAndSettle();
+
+        expect(find.bySemanticsLabel('Show password'), findsNWidgets(3));
+        expect(find.bySemanticsLabel('Hide password'), findsNothing);
+
+        await tester.tap(find.bySemanticsLabel('Show password').first);
+        await tester.pumpAndSettle();
+
+        expect(find.bySemanticsLabel('Show password'), findsNWidgets(2));
+        expect(find.bySemanticsLabel('Hide password'), findsOneWidget);
+
+        handle.dispose();
+      });
+
+      testWidgets('the two guest upgrade eyes are named and follow their '
+          'state', (tester) async {
+        useTallView(tester);
+        final handle = tester.ensureSemantics();
+        Gate.define('starter.delete-account', (user, [_]) => false);
+        Gate.define('starter.update-password', (user, [_]) => false);
+
+        await tester.pumpWidget(wrap(const MagicStarterProfileSettingsView()));
+        await tester.pumpAndSettle();
+
+        expect(find.bySemanticsLabel('Show password'), findsNWidgets(2));
+
+        await tester.tap(find.bySemanticsLabel('Show password').last);
+        await tester.pumpAndSettle();
+
+        expect(find.bySemanticsLabel('Show password'), findsOneWidget);
+        expect(find.bySemanticsLabel('Hide password'), findsOneWidget);
+
+        handle.dispose();
+      });
+    });
+
     group('slot injection', () {
       testWidgets('header slot renders injected widget', (tester) async {
         MagicStarter.view.slot(

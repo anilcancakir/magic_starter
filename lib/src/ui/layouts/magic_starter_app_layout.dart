@@ -11,6 +11,7 @@ import '../../configuration/magic_starter_theme.dart';
 import '../../facades/magic_starter.dart';
 import '../../magic_starter_manager.dart';
 import '../../models/magic_starter_nav_item.dart';
+import '../../support/control_name.dart';
 import '../components/avatar/index.dart';
 import '../components/team_selector/team_selector.dart';
 import '../components/user_profile_dropdown/user_profile_dropdown.dart';
@@ -159,17 +160,6 @@ class _MagicStarterAppLayoutState extends State<MagicStarterAppLayout> {
       name,
       setting: 'MagicStarterLayoutTheme.$field',
     );
-  }
-
-  /// The catalogue line for [key], or the English [fallback] when the host's
-  /// catalogue does not carry it.
-  ///
-  /// For the names of the icon-only controls: `trans` answers a missing key
-  /// with the key itself, and a screen reader would then announce
-  /// "nav dot open underscore menu" to someone installed before the key
-  /// shipped in the stub.
-  static String _controlName(String key, String fallback) {
-    return Lang.has(key) ? trans(key) : fallback;
   }
 
   // -------------------------------------------------------------------------
@@ -406,9 +396,9 @@ class _MagicStarterAppLayoutState extends State<MagicStarterAppLayout> {
   /// second copy of it.
   Widget _buildCollapseToggle({required bool compact}) {
     final navTheme = MagicStarter.navigationTheme;
-    final label = trans(
-      compact ? 'nav.expand_sidebar' : 'nav.collapse_sidebar',
-    );
+    final label = compact
+        ? magicStarterControlName('nav.expand_sidebar', 'Expand sidebar')
+        : magicStarterControlName('nav.collapse_sidebar', 'Collapse sidebar');
 
     return WAnchor(
       onTap: () => unawaited(_setCollapsed(!compact)),
@@ -486,7 +476,10 @@ class _MagicStarterAppLayoutState extends State<MagicStarterAppLayout> {
         Builder(
           builder: (drawerContext) => WAnchor(
             onTap: () => Scaffold.of(drawerContext).openDrawer(),
-            semanticLabel: _controlName('nav.open_menu', 'Open menu'),
+            semanticLabel: magicStarterControlName(
+              'nav.open_menu',
+              'Open menu',
+            ),
             child: WIcon(Icons.menu, className: 'text-fg-muted'),
           ),
         ),
@@ -550,7 +543,10 @@ class _MagicStarterAppLayoutState extends State<MagicStarterAppLayout> {
         if (showClose)
           WAnchor(
             onTap: () => Navigator.pop(context),
-            semanticLabel: _controlName('nav.close_menu', 'Close menu'),
+            semanticLabel: magicStarterControlName(
+              'nav.close_menu',
+              'Close menu',
+            ),
             child: WDiv(
               className: '''
                                 w-8 h-8 rounded-lg flex items-center justify-center
@@ -1031,7 +1027,7 @@ class _MagicStarterAppLayoutState extends State<MagicStarterAppLayout> {
     // feed panel lives in the overlay, outside this subtree, and is unaffected.
     return MergeSemantics(
       child: Semantics(
-        label: _controlName('nav.notifications', 'Notifications'),
+        label: magicStarterControlName('nav.notifications', 'Notifications'),
         child: _notificationDropdown(theme),
       ),
     );

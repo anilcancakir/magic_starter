@@ -519,6 +519,29 @@ void main() {
       });
     });
 
+    testWidgets('the guest upgrade eyes are named and follow their state', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(900, 6000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final handle = tester.ensureSemantics();
+      Gate.define('starter.delete-account', (user, [_]) => false);
+
+      await tester.pumpWidget(wrap(const MagicStarterProfileSubPageView()));
+      await tester.pumpAndSettle();
+
+      expect(find.bySemanticsLabel('Show password'), findsNWidgets(2));
+
+      await tester.tap(find.bySemanticsLabel('Show password').first);
+      await tester.pumpAndSettle();
+
+      expect(find.bySemanticsLabel('Show password'), findsOneWidget);
+      expect(find.bySemanticsLabel('Hide password'), findsOneWidget);
+
+      handle.dispose();
+    });
+
     testWidgets('does not render password / sessions / 2FA sections', (
       tester,
     ) async {

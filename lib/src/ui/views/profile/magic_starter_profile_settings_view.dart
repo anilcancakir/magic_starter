@@ -14,6 +14,7 @@ import '../../components/card/card.dart';
 import '../../components/page_scaffold/page_scaffold.dart';
 import '../../widgets/magic_starter_confirm_dialog.dart';
 import '../../../support/confirms_identity.dart';
+import '../../../support/control_name.dart';
 import '../../widgets/magic_starter_two_factor_modal.dart';
 import '../../../http/controllers/magic_starter_newsletter_controller.dart';
 import '../../widgets/magic_starter_timezone_select.dart';
@@ -610,6 +611,9 @@ class _MagicStarterProfileSettingsViewState
               validator: rules([Required()], field: 'current_password'),
               suffix: WAnchor(
                 onTap: () => setState(() => _obscureCurrent = !_obscureCurrent),
+                semanticLabel: magicStarterPasswordToggleName(
+                  obscured: _obscureCurrent,
+                ),
                 child: WIcon(
                   _obscureCurrent ? _iconVisible : _iconHidden,
                   className: 'text-fg-muted text-xl',
@@ -625,6 +629,9 @@ class _MagicStarterProfileSettingsViewState
               validator: rules([Required(), Min(8)], field: 'password'),
               suffix: WAnchor(
                 onTap: () => setState(() => _obscureNew = !_obscureNew),
+                semanticLabel: magicStarterPasswordToggleName(
+                  obscured: _obscureNew,
+                ),
                 child: WIcon(
                   _obscureNew ? _iconVisible : _iconHidden,
                   className: 'text-fg-muted text-xl',
@@ -641,6 +648,9 @@ class _MagicStarterProfileSettingsViewState
               suffix: WAnchor(
                 onTap: () => setState(
                   () => _obscureConfirmation = !_obscureConfirmation,
+                ),
+                semanticLabel: magicStarterPasswordToggleName(
+                  obscured: _obscureConfirmation,
                 ),
                 child: WIcon(
                   _obscureConfirmation ? _iconVisible : _iconHidden,
@@ -1247,6 +1257,9 @@ class _MagicStarterProfileSettingsViewState
                 onTap: () => setState(
                   () => _obscureUpgradePassword = !_obscureUpgradePassword,
                 ),
+                semanticLabel: magicStarterPasswordToggleName(
+                  obscured: _obscureUpgradePassword,
+                ),
                 child: WIcon(
                   _obscureUpgradePassword ? _iconVisible : _iconHidden,
                   className: 'text-fg-muted text-xl',
@@ -1266,6 +1279,9 @@ class _MagicStarterProfileSettingsViewState
                 onTap: () => setState(
                   () => _obscureUpgradeConfirmation =
                       !_obscureUpgradeConfirmation,
+                ),
+                semanticLabel: magicStarterPasswordToggleName(
+                  obscured: _obscureUpgradeConfirmation,
                 ),
                 child: WIcon(
                   _obscureUpgradeConfirmation ? _iconVisible : _iconHidden,

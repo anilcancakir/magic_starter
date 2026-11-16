@@ -6,6 +6,7 @@ import '../../../configuration/magic_starter_config.dart';
 import '../../../facades/magic_starter.dart';
 import '../../../http/controllers/magic_starter_auth_controller.dart';
 import '../../../routes/support_routes.dart';
+import '../../../support/control_name.dart';
 import '../../../support/store_review.dart';
 import '../avatar/index.dart';
 
@@ -108,9 +109,7 @@ class MSUserProfileDropdown extends StatelessWidget {
     // here and the initial or glyph under it is excluded. A host
     // `triggerBuilder` names its own trigger.
     return Semantics(
-      label: Lang.has('nav.account_menu')
-          ? trans('nav.account_menu')
-          : 'Account menu',
+      label: magicStarterControlName('nav.account_menu', 'Account menu'),
       excludeSemantics: true,
       child: WDiv(
         states: {if (isOpen) 'active', if (isHovering) 'hover'},
@@ -288,7 +287,10 @@ class MSUserProfileDropdown extends StatelessWidget {
               ),
             _buildMenuItem(
               icon: context.windIsDark ? _iconLightMode : _iconDarkMode,
-              label: trans('common.toggle_theme'),
+              label: magicStarterControlName(
+                'common.toggle_theme',
+                'Toggle theme',
+              ),
               onTap: () => context.windTheme.toggleTheme(),
             ),
           ],

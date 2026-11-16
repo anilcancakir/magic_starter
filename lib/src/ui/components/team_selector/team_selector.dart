@@ -6,6 +6,7 @@ import '../../../configuration/magic_starter_config.dart';
 import '../../../facades/magic_starter.dart';
 import '../../../models/magic_starter_team.dart';
 import '../../../magic_starter_manager.dart';
+import '../../../support/control_name.dart';
 
 /// Team selector widget.
 ///
@@ -94,7 +95,7 @@ class MSTeamSelector extends StatelessWidget {
     if (!compact) return trigger;
 
     return Semantics(
-      label: Lang.has('nav.team_menu') ? trans('nav.team_menu') : 'Team menu',
+      label: magicStarterControlName('nav.team_menu', 'Team menu'),
       value: currentTeam?.name,
       excludeSemantics: true,
       child: trigger,

@@ -6,6 +6,7 @@ import 'package:magic_picker/magic_picker.dart';
 import '../../../configuration/magic_starter_config.dart';
 import '../../../facades/magic_starter.dart';
 import '../../../http/controllers/magic_starter_profile_controller.dart';
+import '../../../support/control_name.dart';
 import '../../components/avatar/index.dart';
 import '../../components/button/index.dart';
 import '../../components/settings_section/index.dart';
@@ -507,6 +508,9 @@ class _MagicStarterProfileSubPageViewState
                   onTap: () => setState(
                     () => _obscureUpgradePassword = !_obscureUpgradePassword,
                   ),
+                  semanticLabel: magicStarterPasswordToggleName(
+                    obscured: _obscureUpgradePassword,
+                  ),
                   child: WIcon(
                     _obscureUpgradePassword ? _iconVisible : _iconHidden,
                     className: 'text-fg-muted text-xl',
@@ -526,6 +530,9 @@ class _MagicStarterProfileSubPageViewState
                   onTap: () => setState(
                     () => _obscureUpgradeConfirmation =
                         !_obscureUpgradeConfirmation,
+                  ),
+                  semanticLabel: magicStarterPasswordToggleName(
+                    obscured: _obscureUpgradeConfirmation,
                   ),
                   child: WIcon(
                     _obscureUpgradeConfirmation ? _iconVisible : _iconHidden,
