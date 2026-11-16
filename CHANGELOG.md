@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-11-16
+
 ### Added
 
 - **`magicStarterControlName` and `magicStarterPasswordToggleName` name an icon-only control for a screen reader.** `magicStarterControlName(key, fallback)` answers the translation of `key` when the app's language files hold it and `fallback` otherwise, so a host that has not added the key reads an English name, never the raw key. `magicStarterPasswordToggleName(obscured:)` answers `auth.show_password` while the field is hidden and `auth.hide_password` while it is shown, each with an English default. Both are exported from the barrel so a published view and a host screen can use them. (`lib/src/support/control_name.dart`)
