@@ -345,16 +345,26 @@ class MagicStarterInstallCommand extends DowelInstallCommand {
     }
 
     return 'lib/config/magic_starter.dart already exists, so --features was '
-        'not applied (it differs for: ${differing.join(', ')}). Edit the '
-        '`features` map in that file, or pass --force to overwrite it. '
+        'not applied (it differs for: ${differing.join(', ')}). Commit your '
+        'changes and pass --force to rewrite the config from this list; '
+        '--force also replaces the generated files, AppServiceProvider '
+        'included. A feature that needs no scaffolding can be flipped with '
+        '`starter:configure` instead, but teams cannot: it also needs the '
+        'Team model, the User team accessors and the bootstrap callbacks. '
         '`plugin:install` writes the config with every feature off unless '
         'you pass --no-bootstrap to it.';
   }
 
   /// The `true` or `false` the config gives [key], or false when it names none.
+  ///
+  /// Comments are dropped first, so a commented-out flag is not read as the
+  /// setting, and both quote styles are accepted for a hand-edited key.
   bool _configFlag(String source, String key) {
-    final RegExpMatch? match = RegExp("'$key'\\s*:\\s*(true|false)")
-        .firstMatch(source);
+    final String active = source
+        .replaceAll(RegExp(r'/\*[\s\S]*?\*/'), '')
+        .replaceAll(RegExp(r'//[^\n]*'), '');
+    final RegExpMatch? match = RegExp('[\'"]$key[\'"]\\s*:\\s*(true|false)')
+        .firstMatch(active);
     return match?.group(1) == 'true';
   }
 

@@ -183,6 +183,46 @@ void main() {
         expect(second, 0, reason: text);
       });
 
+      test('reads a double-quoted flag, so a matching selection still '
+          'succeeds', () async {
+        setupMagicProjectFiles(tempDir);
+        final File configFile = File(
+          '${tempDir.path}/lib/config/magic_starter.dart',
+        );
+        configFile.createSync(recursive: true);
+        configFile.writeAsStringSync('''
+final magicStarterConfig = {
+  "features": {"teams": true},
+};
+''');
+
+        final (int code, String text) = await install('teams');
+
+        expect(code, 0, reason: text);
+      });
+
+      test('ignores a commented-out flag and reads the active one', () async {
+        setupMagicProjectFiles(tempDir);
+        final File configFile = File(
+          '${tempDir.path}/lib/config/magic_starter.dart',
+        );
+        configFile.createSync(recursive: true);
+        configFile.writeAsStringSync('''
+final magicStarterConfig = {
+  'features': {
+    // 'teams': true,
+    /* 'teams': true, */
+    'teams': false,
+  },
+};
+''');
+
+        final (int code, String text) = await install('teams');
+
+        expect(code, 1, reason: text);
+        expect(text, contains('teams'));
+      });
+
       test('--force applies the selection to the existing config', () async {
         setupMagicProjectFiles(tempDir);
         await runInstall(command);
