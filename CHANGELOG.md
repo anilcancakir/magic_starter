@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.3.2] - 2026-11-16
+
 ### Fixed
 
 - **The account menu uses the height of the window instead of stopping at 400 px.** `WPopover` caps its overlay at 400 px unless `maxHeight` says otherwise, and `MSUserProfileDropdown` never did, so a menu with notifications, support and feedback on kept its rows in a 233 px strip on a 1440 by 900 window, with the last ones behind a scroll. The popover now takes the window height as its ceiling and still shrinks to the room on its side of the trigger, so a short window scrolls the rows and sign out stays pinned. The language is not the cause: a row is 52 px in English and in the longer labels it was tried with. WPopover picks the side it opens on from the same ceiling, so a trigger in the middle of a tall window now opens towards the roomier side. `lib/src/ui/components/user_profile_dropdown/user_profile_dropdown.dart`.
