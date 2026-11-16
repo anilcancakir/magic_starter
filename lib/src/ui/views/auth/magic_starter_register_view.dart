@@ -197,19 +197,19 @@ class _MagicStarterRegisterViewState
 
               if (MagicStarterConfig.hasNewsletterFeatures()) ...[
                 WDiv(
-                  className: 'flex flex-row items-center gap-2 mb-6',
-                  children: [
-                    WFormCheckbox(
-                      value: _subscribeNewsletter,
-                      onChanged: (value) =>
-                          setState(() => _subscribeNewsletter = value),
-                      label: WText(
+                  className: 'mb-6',
+                  child: WFormCheckbox(
+                    value: _subscribeNewsletter,
+                    onChanged: (value) =>
+                        setState(() => _subscribeNewsletter = value),
+                    label: Flexible(
+                      child: WText(
                         MagicStarter.manager.newsletterLabel ??
                             trans('magic_starter.newsletter.subscribe_label'),
                         className: 'text-sm text-fg-muted ml-1',
                       ),
                     ),
-                  ],
+                  ),
                 ),
               ],
 

@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- **The newsletter label on the register screen wraps instead of overflowing.** The checkbox sat in a row that gave it an unbounded width and the label was not flexible, so a label wider than a phone (the Turkish "Ürün güncellemelerine ve haberlere abone ol" at 390 px, or a longer `MagicStarter.useNewsletterLabel` text) ran 5 px past the card edge, was clipped and raised a `RenderFlex overflowed` error. The label is `Flexible` inside a bounded box now, so it breaks onto a second line. (`lib/src/ui/views/auth/magic_starter_register_view.dart`)
+
 ## [1.3.0] - 2026-11-16
 
 ### Added

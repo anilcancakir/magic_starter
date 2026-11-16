@@ -54,6 +54,27 @@ void main() {
       expect(find.byType(WFormCheckbox), findsOneWidget);
     });
 
+    testWidgets('wraps a long newsletter label instead of overflowing', (
+      tester,
+    ) async {
+      // 640 px keeps the footer row, whose raw keys are long without a
+      // catalogue, inside the width, so only the label can overflow.
+      tester.view.physicalSize = const Size(640 * 3, 900 * 3);
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.reset);
+      Config.set('magic_starter.features.newsletter', true);
+      MagicStarter.useNewsletterLabel(
+        'Ürün güncellemelerine, haberlere ve kampanya duyurularına abone ol; '
+        'her ay en çok okunan yazıları ve yeni özellikleri de e-postayla al',
+      );
+
+      await tester.pumpWidget(wrap(const MagicStarterRegisterView()));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(WFormCheckbox), findsOneWidget);
+    });
+
     testWidgets('hides newsletter checkbox when feature disabled', (
       tester,
     ) async {
