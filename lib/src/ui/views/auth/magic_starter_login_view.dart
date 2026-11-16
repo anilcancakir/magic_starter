@@ -161,9 +161,14 @@ class _MagicStarterLoginViewState
                   WFormCheckbox(
                     value: form.value<bool>('remember_me'),
                     onChanged: (value) => form.setValue('remember_me', value),
+                    // A class token rather than a Flexible: the theme's class
+                    // is the host's, and WText wraps itself when it carries a
+                    // flex token of its own, which a second wrapper would turn
+                    // into a ParentDataWidget error.
                     label: WText(
                       trans('auth.remember_me'),
-                      className: MagicStarter.formTheme.checkboxLabelClassName,
+                      className:
+                          'flex-initial ${MagicStarter.formTheme.checkboxLabelClassName}',
                     ),
                   ),
                   WAnchor(

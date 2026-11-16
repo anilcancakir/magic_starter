@@ -83,6 +83,29 @@ void main() {
     handle.dispose();
   });
 
+  testWidgets('MagicStarterPasswordConfirmDialog names its password field', (
+    WidgetTester tester,
+  ) async {
+    // The field had no label and no placeholder, so a screen reader announced
+    // an unnamed text field on every sensitive action. The eye beside it was
+    // named, which made the gap easy to miss.
+    final handle = tester.ensureSemantics();
+    tester.view.physicalSize = const Size(1200, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() => tester.view.resetPhysicalSize());
+    addTearDown(() => tester.view.resetDevicePixelRatio());
+
+    await tester.pumpWidget(wrap(const MagicStarterPasswordConfirmDialog()));
+    await tester.pumpAndSettle();
+
+    final label = tester.getSemantics(passwordInput).label;
+
+    expect(label, isNotEmpty);
+    expect(label, trans('attributes.password'));
+
+    handle.dispose();
+  });
+
   for (final (width, floor) in const [(390.0, 44.0), (1440.0, 40.0)]) {
     testWidgets('its password eye is at least ${floor}px square at $width', (
       WidgetTester tester,

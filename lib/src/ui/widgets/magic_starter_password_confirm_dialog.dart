@@ -141,6 +141,10 @@ class _MagicStarterPasswordConfirmDialogState
         children: [
           WFormInput(
             controller: _passwordController,
+            // The placeholder is the field's only name: the dialog title says
+            // what is being confirmed, and a visible label above the box would
+            // repeat it.
+            placeholder: trans('attributes.password'),
             type: _obscure ? InputType.password : InputType.text,
             suffix: MagicStarterPasswordToggle(
               obscured: _obscure,

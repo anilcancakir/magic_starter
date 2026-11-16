@@ -59,6 +59,12 @@ class MSUserProfileDropdown extends StatelessWidget {
     // paint over its corners.
     return WPopover(
       alignment: alignment,
+      // `WPopover` stops at 400 px unless told otherwise, which cut a full menu
+      // short on a tall window and left its last rows behind a scroll. The
+      // window height is a finite ceiling: the popover still shrinks to the
+      // room its side of the trigger has, so on a short window the rows scroll
+      // and sign out stays pinned.
+      maxHeight: MediaQuery.sizeOf(context).height,
       className:
           '''
                 ${MagicStarter.dropdownTheme.panelClassName}
@@ -167,7 +173,10 @@ class MSUserProfileDropdown extends StatelessWidget {
     final theme = MagicStarter.dropdownTheme;
 
     return WDiv(
-      className: 'flex flex-col py-2 w-full',
+      // `axis-min` and a loose list below: with a window-high ceiling the column
+      // would otherwise take the whole ceiling and leave a blank band above
+      // sign out.
+      className: 'flex flex-col py-2 w-full axis-min',
       children: [
         WDiv(
           className:
@@ -214,7 +223,7 @@ class MSUserProfileDropdown extends StatelessWidget {
           ),
         ],
         WDiv(
-          className: 'flex-1 overflow-y-auto',
+          className: 'flex-initial overflow-y-auto',
           children: [
             _buildMenuItem(
               icon: Icons.settings_outlined,
