@@ -101,10 +101,14 @@ void main() {
   ]) {
     group('a persistent shell built with $layoutKey', () {
       setUp(() {
-        manager().view.registerLayout(
-          'layout.host',
-          (Widget child) => _HostShell(child: child),
-        );
+        // The guest layout ships with the starter; only the host key needs
+        // registering.
+        if (layoutKey == 'layout.host') {
+          manager().view.registerLayout(
+            layoutKey,
+            (Widget child) => _HostShell(child: child),
+          );
+        }
       });
 
       testWidgets('leaves a page that reads GoRouterState in build', (
