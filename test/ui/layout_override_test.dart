@@ -60,49 +60,22 @@ void main() {
       },
     );
 
-    testWidgets('hands the override a route-keyed child, not the bare one', (
-      WidgetTester tester,
-    ) async {
-      // The mechanism a host app cannot be expected to reproduce. Both default
-      // layouts key their child by route path, and the app layout's own
-      // comment records why: a persistent shell reuses the same child slot
-      // across routes, so swapping one scrollable view for another tears down
-      // render objects in a confused order under accumulated navigation
-      // (markNeedsLayout on an already-dirty relayout boundary, a double
-      // detach). The guest layout's reason is the sibling of it: under
-      // RouteTransition.none the outgoing and incoming routes are briefly
-      // mounted together, so a guest to guest move reparents the previous
-      // page's element tree instead of unmounting it.
-      //
-      // Neither lives in the router, so registerLayout was the exact moment a
-      // host app dropped both, silently. A consumer app shipped a replacement
-      // without the key and only found out by reading the layout it replaced.
-      manager.view.registerLayout(
-        'layout.app',
-        (child) => _CustomAppShell(child: child),
-      );
+    test('hands the override the child it was given, unwrapped', () {
+      // Under a route group the child is go_router's shell navigator. A
+      // wrapper keyed on the route path above it recreates the navigator's
+      // state on every route change under go_router 18, which freezes a page
+      // that reads GoRouterState in build (layout_shell_child_test.dart).
+      Widget? received;
+      manager.view.registerLayout('layout.app', (child) {
+        received = child;
 
-      // Pumped rather than inspected, because the wrapper is a `Builder` and
-      // the `KeyedSubtree` only exists once it has built. An earlier version
-      // asserted `isNot(isA<SizedBox>())` on the widget handed to the builder,
-      // which would have passed for any wrapper at all, including one that
-      // applied no key.
-      await tester.pumpWidget(
-        manager.view.makeLayout(
-          'layout.app',
-          child: const SizedBox(key: Key('page')),
-        ),
-      );
+        return _CustomAppShell(child: child);
+      });
 
-      expect(
-        find.ancestor(
-          of: find.byKey(const Key('page')),
-          matching: find.byWidgetPredicate(
-            (Widget w) => w is KeyedSubtree && w.key is ValueKey<String>,
-          ),
-        ),
-        findsOneWidget,
-      );
+      const Widget page = SizedBox(key: Key('page'));
+      manager.view.makeLayout('layout.app', child: page);
+
+      expect(received, same(page));
     });
 
     test('the key stays "layout.app" after an override is registered', () {

@@ -8,11 +8,10 @@ import '../../facades/magic_starter.dart';
 ///
 /// Simple centered wrapper for authentication pages.
 ///
-/// **Construct this through `MagicStarter.view.makeLayout('layout.guest', child:
-/// ...)` rather than directly.** That is where the route-keyed `KeyedSubtree`
-/// is applied, and this widget no longer carries its own: a host that reaches
-/// past the registry gets the unkeyed shell the keying exists to prevent. See
-/// `MagicStarterViewRegistry.makeLayout` for what the key is for.
+/// Route groups build it through `MagicStarter.view.makeLayout('layout.guest',
+/// child: ...)`, so a host's registered replacement takes its place. [child]
+/// is go_router's shell navigator and is rendered unkeyed; see
+/// `MagicStarterViewRegistry.makeLayout` for why it must stay that way.
 class MagicStarterGuestLayout extends StatelessWidget {
   final Widget child;
 
@@ -33,13 +32,6 @@ class MagicStarterGuestLayout extends StatelessWidget {
           // briefly mounted together, and two `primary: true` scroll views
           // contending for the single PrimaryScrollController detach each
           // other mid-layout (the dropChild / "wrong build scope" cascade).
-          // The page subtree is keyed by route path, which is what makes a
-          // guest -> guest navigation (login -> register -> forgot, under
-          // RouteTransition.none) a clean unmount/mount instead of a reparent
-          // of the previous page's element tree, which tears down mid-build
-          // ("wrong build scope" / dropChild cascade). That key is applied by
-          // MagicStarterViewRegistry.makeLayout rather than here, so a host
-          // app replacing this layout keeps it; see that method's doc block.
           child: SingleChildScrollView(
             primary: false,
             child: WDiv(className: 'p-4 lg:p-8', child: child),

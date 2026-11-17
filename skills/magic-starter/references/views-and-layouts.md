@@ -45,7 +45,7 @@ Every key below is registered by `MagicStarterManager.registerDefaultViews()`, w
 | `modal.password_confirm` | `MagicStarterPasswordConfirmDialog` |
 | `modal.two_factor` | `MagicStarterTwoFactorModal` |
 
-`makeLayout(key, child:)` hands your builder the child already wrapped in a subtree keyed on the route path, so a replacement layout keeps the remount between routes. Render that child inside the routed subtree.
+`makeLayout(key, child:)` hands your builder the child unchanged; under a route group it is go_router's shell navigator, which mounts each route as its own page. Render it once and do not key it on the route path: under go_router 18 a path key recreates the navigator's state on every route change, and a page that reads `GoRouterState.of` in `build` never returns when it is left.
 
 ## Slots
 

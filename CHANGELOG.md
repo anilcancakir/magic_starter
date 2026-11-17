@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Leaving a page that reads `GoRouterState.of` in `build` no longer freezes the app under go_router 18.** `MagicStarter.view.makeLayout` wrapped the child in a `KeyedSubtree` keyed on the route path, and that child is go_router's shell navigator. go_router 18.1.4 keys the navigator's state on its navigator key, so the path key recreated that state on every route change while the `Navigator` survived, and the outgoing page rebuilt against a state registry that did not know it: `GoRouterState.of` looped forever. `makeLayout` now hands the layout the child unchanged, which go_router already mounts as one page per route. A host that registered its own layout through `registerLayout` no longer gets a path key it did not add, and must not add one. `lib/src/ui/magic_starter_view_registry.dart`.
+
 ## [1.3.2] - 2026-11-16
 
 ### Fixed

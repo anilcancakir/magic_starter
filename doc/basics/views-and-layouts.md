@@ -574,7 +574,7 @@ final widget = MagicStarter.view.makeLayout(
 );
 ```
 
-`makeLayout` hands the builder a `child` already wrapped in a route-keyed `KeyedSubtree`, so a replaced layout keeps the remount behaviour the default layouts carry. To test a view in isolation, register a minimal layout: `MagicStarter.view.registerLayout('layout.guest', (child) => child);`.
+`makeLayout` hands the builder `child` unchanged: under a route group it is go_router's shell navigator. Do not key it on the route path, because under go_router 18 that freezes a page that reads `GoRouterState.of` when you leave it. To test a view in isolation, register a minimal layout: `MagicStarter.view.registerLayout('layout.guest', (child) => child);`.
 
 <a name="overriding-the-app-shell"></a>
 ## Overriding the App Shell

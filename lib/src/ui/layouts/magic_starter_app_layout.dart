@@ -31,11 +31,10 @@ import '../widgets/magic_starter_nav_badge.dart';
 /// - Bottom navigation bar for mobile
 /// - Content Area
 ///
-/// **Construct this through `MagicStarter.view.makeLayout('layout.app', child:
-/// ...)` rather than directly.** That is where the route-keyed `KeyedSubtree`
-/// is applied, and this widget no longer carries its own: a host that reaches
-/// past the registry gets the unkeyed shell the keying exists to prevent. See
-/// `MagicStarterViewRegistry.makeLayout` for what the key is for.
+/// Route groups build it through `MagicStarter.view.makeLayout('layout.app',
+/// child: ...)`, so a host's registered replacement takes its place. [child]
+/// is go_router's shell navigator and is rendered unkeyed; see
+/// `MagicStarterViewRegistry.makeLayout` for why it must stay that way.
 class MagicStarterAppLayout extends StatefulWidget {
   final Widget child;
 
@@ -174,7 +173,7 @@ class _MagicStarterAppLayoutState extends State<MagicStarterAppLayout> {
     final hasBottomNav = navConfig != null && navConfig.bottomItems.isNotEmpty;
 
     // An immersive route keeps the shell mounted (polling, auth listeners, the
-    // route key) and gives the window to its child: no bar and no safe-area
+    // shell navigator) and gives the window to its child: no bar and no safe-area
     // inset, since a player or a map sizes itself to the whole window.
     final hideChrome = MagicStarterHideChrome.of(context);
 
@@ -228,19 +227,9 @@ class _MagicStarterAppLayoutState extends State<MagicStarterAppLayout> {
         drawer: (isDesktop || hideChrome)
             ? null
             : _buildDrawer(context, currentPath),
-        // The route content is keyed by path so each route mounts as a
-        // distinct subtree. Without it the persistent shell reuses the scroll
-        // container's child slot across different route views; swapping a
-        // scrollable view for another then tears down render objects in a
-        // confused order (markNeedsLayout on an already-dirty relayout
-        // boundary, double detach) under accumulated navigation. Debug-only
-        // asserts, but they surface the red ErrorWidget in dev.
-        //
-        // That key is applied by MagicStarterViewRegistry.makeLayout rather
-        // than here, so a host app replacing this layout keeps it; see that
-        // method's doc block. It survives the immersive branch below too,
-        // because the key IS `widget.child` rather than something this shell
-        // wraps around it.
+        // `widget.child` is the shell navigator, so each route is its own page
+        // under it and a route change mounts and unmounts pages there. It is
+        // deliberately not keyed by path: see MagicStarterViewRegistry.makeLayout.
         body: hideChrome
             ? widget.child
             : SafeArea(
