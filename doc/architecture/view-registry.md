@@ -214,11 +214,11 @@ The layout builder receives the page as `child` and must render it somewhere in 
 > [!NOTE]
 > When you override `layout.app`, your layout is responsible for navigation, header and responsive behaviour. The controllers still work; only the shell changes. Keep your authenticated route groups on the `MagicStarterLayoutIds.app` layout id so they share one shell with the starter's pages.
 
-### The child arrives route-keyed
+### The child is the shell navigator
 
-`makeLayout` wraps `child` in a `KeyedSubtree` keyed on the current route path before the builder sees it, so your layout renders it wherever you like and keeps the per-route remount the default layouts carry. You do not add the key yourself and should not strip it.
+`makeLayout` hands your builder `child` as it was passed. Under a route group that is go_router's shell child, the nested `Navigator` that holds the group's pages, so each route is already its own page and a route change mounts and unmounts pages inside it. Render it once, inside the routed subtree.
 
-It matters because a layout is persistent: one element holds one child slot that every route in the group takes turns in. Without the key that slot is reused across routes, and swapping one scrollable view for another tears down render objects in a confused order under accumulated navigation. The wrap goes around the child rather than around your layout's result, so your navigation chrome is not torn down on a route change.
+Do not key `child` on the route path. go_router 18 keys the shell navigator's state on its navigator key, so a path key above it recreates that state on every route change while the `Navigator` survives, and a page that reads `GoRouterState.of(context)` in `build` never returns when you leave it.
 
 <a name="overriding-modals"></a>
 ## Overriding Modals

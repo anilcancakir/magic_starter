@@ -94,13 +94,12 @@ void main() {
 
         expect(result, isA<Column>());
 
-        // The builder receives the route scope rather than `child` itself,
-        // which is what carries the per-route key into a host app's own
-        // layout: see `makeLayout`'s doc block. This used to assert
-        // `contains(child)` and had to change with the behaviour.
+        // The builder receives `child` itself, unwrapped: under a route group
+        // it is go_router's shell navigator, which must not be keyed on the
+        // route path (see `makeLayout`'s doc block).
         final List<Widget> children = (result as Column).children;
         expect(children, hasLength(1));
-        expect(children.single, isNot(same(child)));
+        expect(children.single, same(child));
       });
 
       test('throws StateError for unregistered key', () {
