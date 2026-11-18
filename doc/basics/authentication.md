@@ -353,7 +353,7 @@ The claim does not ride the `Http` facade. Its body is the guest's live bearer t
 <a name="logout"></a>
 ## Logout
 
-There are two sign-out entry points. The controller's ends in `Auth.logout()`, and so does `MagicStarter.signOut()` when your `onLogout` calls it (it has to):
+There are two sign-out entry points. The controller's ends in `Auth.logout()`, and so does `MagicStarter.signOut()` when your `onLogout` callback calls `Auth.logout()`, which it must:
 
 - `MagicStarterAuthController.instance.logout()`: runs the before-logout hooks, stops notification polling and the push identity (when the `notifications` feature is on), calls `Auth.logout()`, then navigates to `MagicStarterConfig.loginRoute()`.
 - `MagicStarter.signOut()`: calls your `MagicStarter.useLogout()` callback when one is registered, after running the before-logout hooks, and the controller path above otherwise. The hooks run once either way. The profile dropdown's sign-out item and the handoff's Continue over an open session both go through it.
