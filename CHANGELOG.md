@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-11-18
+
 ### Added
 
 - **`MagicStarter.signOut()` signs a user out the way the starter's own button does.** It runs the before-logout hooks once, then the `useLogout()` callback when one is set, or `MagicStarterAuthController.instance.logout()` otherwise (which runs the hooks itself). The profile dropdown now calls it instead of its own copy of that branch. `lib/src/magic_starter_manager.dart`, `lib/src/facades/magic_starter.dart`.
