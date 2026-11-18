@@ -467,8 +467,8 @@ class MagicStarterProfileController extends MagicController
         return false;
       }
 
-      // No before-logout hooks here, unlike the other two sign-out paths
-      // (the profile dropdown, `MagicStarterAuthController.logout`): the
+      // No before-logout hooks here, unlike the other sign-out paths
+      // (`MagicStarter.signOut`, `MagicStarterAuthController.logout`): the
       // server has already deleted every token for this user
       // (`magic-starter-laravel`'s `DeleteUser` action), so a hook that makes
       // its own authenticated request (a device-release call, say) answers

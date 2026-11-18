@@ -512,6 +512,38 @@ void main() {
       });
     });
 
+    group('isGuest()', () {
+      tearDown(Auth.unfake);
+
+      test('is true for a guest session', () {
+        Auth.fake(user: MagicStarter.createUser({'id': 1, 'is_guest': true}));
+
+        expect(MagicStarter.isGuest(), isTrue);
+      });
+
+      test('is false for an account, flagged or not', () {
+        Auth.fake(user: MagicStarter.createUser({'id': 1, 'is_guest': false}));
+        expect(MagicStarter.isGuest(), isFalse);
+
+        Auth.fake(user: MagicStarter.createUser({'id': 2}));
+        expect(MagicStarter.isGuest(), isFalse);
+      });
+
+      test('is false with nobody signed in', () {
+        Auth.fake();
+
+        expect(MagicStarter.isGuest(), isFalse);
+      });
+
+      test('reads the host user model registered with useUserModel()', () {
+        MagicStarter.useUserModel(_HostUser.fromMap);
+        Auth.fake(user: MagicStarter.createUser({'id': 1, 'is_guest': true}));
+
+        expect(Auth.user(), isA<_HostUser>());
+        expect(MagicStarter.isGuest(), isTrue);
+      });
+    });
+
     group('modal registry defaults', () {
       test('default modal.confirm is registered after manager init', () {
         expect(MagicStarter.view.hasModal('modal.confirm'), isTrue);
@@ -546,6 +578,19 @@ void main() {
       });
     });
   });
+}
+
+/// Stand-in for a host app's own `User` model.
+class _HostUser extends Model with Authenticatable {
+  @override
+  String get table => 'host_users';
+
+  @override
+  String get resource => 'host_users';
+
+  static _HostUser fromMap(Map<String, dynamic> map) {
+    return _HostUser()..setRawAttributes(map, sync: true);
+  }
 }
 
 /// A bridge that is only ever registered, never driven.

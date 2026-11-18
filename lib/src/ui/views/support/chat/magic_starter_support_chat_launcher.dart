@@ -129,7 +129,7 @@ class _MagicStarterSupportChatLauncherState
     if (!MagicStarterConfig.hasSupportChatFeatures()) return false;
     if (!Auth.check()) return false;
 
-    return Auth.user()?.get<bool>('is_guest') != true;
+    return !MagicStarter.isGuest();
   }
 
   void _onAuthChanged() {

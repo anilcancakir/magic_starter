@@ -85,6 +85,8 @@ class AppServiceProvider extends ServiceProvider {
 | `MagicStarter.bootstrap(userFactory:, onLogout:, locales:)` | The identity contract in one call. Optional: `onLogin`, `onGuestClaimed`, and the team trio `currentTeam`, `allTeams`, `onSwitch`. |
 | `MagicStarter.switchTeam(id)` | Switches the current team on the backend and re-identifies the store billing rail; route the `onSwitch` callback through it. |
 | `MagicStarter.beforeLogout(hook)` | Runs before the sign-out, while the token still works. |
+| `MagicStarter.signOut()` | The starter's sign-out: runs the hooks once, then your `onLogout` when set, the built-in sign-out otherwise. |
+| `MagicStarter.isGuest()` | Whether the signed-in user is a guest session; `false` with nobody signed in. |
 | `MagicStarter.isReady` | `false` while `teams` is on and no team resolver is registered. |
 
 Failure modes:

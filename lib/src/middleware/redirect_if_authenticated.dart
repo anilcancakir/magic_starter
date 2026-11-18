@@ -1,6 +1,7 @@
 import 'package:magic/magic.dart';
 
 import '../configuration/magic_starter_config.dart';
+import '../facades/magic_starter.dart';
 
 /// Middleware that redirects authenticated users away from guest-only pages.
 ///
@@ -34,9 +35,8 @@ class RedirectIfAuthenticated extends MagicMiddleware {
   ///
   /// A guest is authenticated, so `Auth.check()` alone sent it home from the
   /// login and registration pages, which are exactly where a guest becomes an
-  /// account. The same `is_guest` flag the `starter.delete-account` ability
-  /// reads.
+  /// account. The same flag the `starter.delete-account` ability reads.
   bool _isGuestAccount() {
-    return Auth.user()?.get<bool>('is_guest') == true;
+    return MagicStarter.isGuest();
   }
 }

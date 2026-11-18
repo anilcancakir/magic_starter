@@ -268,8 +268,14 @@ class MagicStarter {
 
   /// Register a custom logout callback.
   ///
-  /// When set, the app layout's logout button calls this instead of
-  /// the default `MagicStarterAuthController.instance.logout()`.
+  /// When set, [signOut] (the profile menu's sign-out and the handoff's
+  /// switch of account) calls this instead of the default
+  /// `MagicStarterAuthController.instance.logout()`.
+  ///
+  /// The callback has to end the session itself: call `Auth.logout()` (it is
+  /// what fires the logout listeners) and route to the login page. Do not call
+  /// `MagicStarterAuthController.instance.logout()` from it, which would run
+  /// the [beforeLogout] hooks a second time.
   ///
   /// ```dart
   /// MagicStarter.useLogout(() async {
@@ -296,6 +302,25 @@ class MagicStarter {
   static void beforeLogout(Future<void> Function() hook) {
     manager.beforeLogout(hook);
   }
+
+  /// Sign the user out the way the starter's own sign-out button does.
+  ///
+  /// The [beforeLogout] hooks run exactly once. A [useLogout] callback replaces
+  /// the default; without one, `MagicStarterAuthController.instance.logout()`
+  /// stops the notification services (when that feature is on), calls
+  /// `Auth.logout()` and opens the login route. See [MagicStarterManager.signOut].
+  ///
+  /// ```dart
+  /// await MagicStarter.signOut();
+  /// ```
+  static Future<void> signOut() => manager.signOut();
+
+  /// Whether the signed-in user is a device-bound guest session.
+  ///
+  /// Reads the `is_guest` flag from `Auth.user()`, whichever model
+  /// [useUserModel] registered. `false` with nobody signed in and for a user
+  /// without the flag.
+  static bool isGuest() => Auth.user()?.get<bool>('is_guest') ?? false;
 
   /// Switch the active team and answer whether the backend accepted it.
   ///

@@ -4,6 +4,7 @@ import 'package:magic/magic.dart';
 
 import 'concerns/completes_sign_in.dart';
 import 'concerns/navigates_routes.dart';
+import '../../facades/magic_starter.dart';
 
 /// Controller managing guest authentication and device-ID-based upgrade flows.
 ///
@@ -140,10 +141,8 @@ class MagicStarterGuestAuthController extends MagicController
 
   /// Returns `true` when the currently authenticated user is a guest.
   ///
-  /// Reads `is_guest` from the authenticated user model provided by the host.
-  bool get isGuestUser {
-    return Auth.user()?.get<bool>('is_guest') ?? false;
-  }
+  /// Reads the flag through [MagicStarter.isGuest].
+  bool get isGuestUser => MagicStarter.isGuest();
 
   // -------------------------------------------------------------------------
   // Private helpers

@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:magic/magic.dart';
 
+import '../facades/magic_starter.dart';
 import '../http/controllers/magic_starter_profile_controller.dart';
 import '../ui/components/confirm_dialog/confirm_dialog.dart';
 import '../ui/widgets/magic_starter_password_confirm_dialog.dart';
@@ -37,7 +38,7 @@ Future<Map<String, String>?> confirmIdentity(
   final hasPassword = user?.get<bool>('has_password') ?? true;
 
   // 1. A guest has nothing to confirm with, and the backend lets it through.
-  if (!hasPassword && user?.get<bool>('is_guest') == true) {
+  if (!hasPassword && MagicStarter.isGuest()) {
     final error = await attempt?.call(const <String, String>{});
     if (error == null) return const <String, String>{};
 

@@ -263,8 +263,8 @@ class MagicStarterServiceProvider extends ServiceProvider {
   }
 
   /// Revokes the session's token on the server before every sign-out that
-  /// runs the before-logout hooks: the starter controller, the profile
-  /// dropdown ahead of a custom `onLogout`, and a host that calls
+  /// runs the before-logout hooks: the starter controller, `MagicStarter.signOut`
+  /// ahead of a custom `onLogout`, and a host that calls
   /// `runBeforeLogoutHooks` itself.
   ///
   /// Without it a sign-out only forgot the token on the device, and the server
@@ -409,7 +409,7 @@ class MagicStarterServiceProvider extends ServiceProvider {
     // that follows a declared person with no sign-out between must not inherit
     // that person's subscription. A guest's promotion bumps the notifier with
     // the full account, which declares it here.
-    if (Auth.user()?.get<bool>('is_guest') == true) {
+    if (MagicStarter.isGuest()) {
       unawaited(_releaseForGuest());
       return;
     }

@@ -216,7 +216,7 @@ class MagicStarterGuestClaim {
     final int session = _session;
     final Authenticatable? user = Auth.user<Authenticatable>();
 
-    if (user == null || user.get<bool>('is_guest') == true) {
+    if (user == null || MagicStarter.isGuest()) {
       return GuestClaimOutcome.none;
     }
 

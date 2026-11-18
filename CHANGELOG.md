@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- **`MagicStarter.signOut()` signs a user out the way the starter's own button does.** It runs the before-logout hooks once, then the `useLogout()` callback when one is set, or `MagicStarterAuthController.instance.logout()` otherwise (which runs the hooks itself). The profile dropdown now calls it instead of its own copy of that branch. `lib/src/magic_starter_manager.dart`, `lib/src/facades/magic_starter.dart`.
+- **`MagicStarter.isGuest()` answers whether the signed-in user is a guest session.** It reads `is_guest` from `Auth.user()`, whichever model `useUserModel()` registered, and is `false` with nobody signed in. The starter's own reads of the flag on the signed-in user go through it. `lib/src/facades/magic_starter.dart`.
+
+### Changed
+
+- **The handoff's Continue over an open session signs out through `MagicStarter.signOut()`.** Every host that passes `onLogout` to `bootstrap()` (it is required there) or calls `useLogout()` now has that callback run on the handoff, after the before-logout hooks, where before the handoff always took `MagicStarterAuthController.instance.logout()` and skipped it. The callback therefore has to end the session itself with `Auth.logout()`, as it already did for the profile dropdown. `lib/src/http/controllers/magic_starter_handoff_controller.dart`.
+
 ## [1.3.3] - 2026-11-17
 
 ### Fixed

@@ -377,6 +377,30 @@ void main() {
       },
     );
 
+    test(
+      'Continue signs out through a custom onLogout, not the controller',
+      () async {
+        int callbacks = 0;
+        MagicStarter.useLogout(() async {
+          callbacks++;
+          await Auth.logout();
+        });
+        arrange();
+        signInBob();
+        await controller.handOff(code: _code);
+
+        await controller.confirm();
+
+        expect(callbacks, 1);
+        // The controller's logout runs the hooks too: twice would mean both
+        // sign-outs ran.
+        expect(signOuts, 1);
+        auth.assertLoginCount(1);
+        expect(Auth.user<Authenticatable>()?.authIdentifier, 'user-ada');
+        expect(MagicRouter.instance.pullIntendedUrl(), '/monitors/42');
+      },
+    );
+
     test('Cancel keeps the session and drops the answer', () async {
       arrange();
       signInBob();

@@ -4,6 +4,7 @@ import 'package:in_app_review/in_app_review.dart';
 import 'package:magic/magic.dart';
 
 import '../configuration/magic_starter_config.dart';
+import '../facades/magic_starter.dart';
 import '../http/controllers/magic_starter_feedback_controller.dart';
 
 /// Asks for a native store review at moments the host chooses, and opens the
@@ -138,7 +139,7 @@ class MagicStarterStoreReview {
     if (_isWeb || _feedbackCardShown) return false;
 
     final user = Auth.user();
-    if (user == null || user.get<bool>('is_guest') == true) return false;
+    if (user == null || MagicStarter.isGuest()) return false;
 
     // An account whose age is unknown is treated as too young to ask.
     final createdAt = DateTime.tryParse(user.get<String>('created_at') ?? '');

@@ -86,6 +86,40 @@ void main() {
     });
   });
 
+  group('MagicStarter.signOut()', () {
+    test('runs the hooks once, then a custom onLogout in place of the '
+        'controller sign-out', () async {
+      int hooks = 0;
+      int callbacks = 0;
+      MagicStarter.beforeLogout(() async {
+        hooks++;
+        order.add('hook');
+      });
+      MagicStarter.useLogout(() async {
+        callbacks++;
+        order.add('onLogout');
+      });
+
+      await MagicStarter.signOut();
+
+      expect(hooks, 1);
+      expect(callbacks, 1);
+      // The controller's logout would have dropped the session.
+      expect(order, ['hook', 'onLogout']);
+      expect(Auth.check(), isTrue);
+    });
+
+    test('without a custom onLogout signs out through the controller, running '
+        'the hooks once', () async {
+      MagicStarter.beforeLogout(() async => order.add('hook'));
+
+      await MagicStarter.signOut();
+
+      expect(order, ['hook', 'Auth.logout']);
+      expect(Auth.check(), isFalse);
+    });
+  });
+
   group('the controller sign-out', () {
     test('runs the hooks before Auth.logout, in registration order', () async {
       MagicStarter.beforeLogout(() async => order.add('hook'));

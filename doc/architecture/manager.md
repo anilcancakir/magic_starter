@@ -346,15 +346,15 @@ MagicStarter.useLogout(() async {
 });
 ```
 
-When set, the profile dropdown's logout item calls this callback instead of `MagicStarterAuthController.instance.logout()`. This is useful for apps that need to unregister push tokens, sign out of social providers, or perform other cleanup before navigating to the login screen.
+When set, `MagicStarter.signOut()` calls this callback instead of `MagicStarterAuthController.instance.logout()`; the profile dropdown's logout item and the handoff's Continue over an open session both sign out through it. This is useful for apps that need to unregister push tokens, sign out of social providers, or perform other cleanup before navigating to the login screen.
 
-Work that has to happen while the session token still works belongs in a before-logout hook, which runs ahead of both sign-out paths (the profile dropdown, ahead of a custom `onLogout`, and `MagicStarterAuthController.logout()`, ahead of `Auth.logout()`):
+Work that has to happen while the session token still works belongs in a before-logout hook, which runs ahead of both sign-out paths (`MagicStarter.signOut()`, ahead of a custom `onLogout`, and `MagicStarterAuthController.logout()`, ahead of `Auth.logout()`):
 
 ```dart
 MagicStarter.beforeLogout(() => SocialAuth.signOut());
 ```
 
-Hooks run in registration order, each isolated and bounded to five seconds (`MagicStarterManager.beforeLogoutTimeout`); one that throws or times out is logged and the next still runs, because a sign-out the user asked for has to happen whatever a hook's network does. The same hook is not added twice. `MagicStarterServiceProvider` registers its token-revoke hook in `boot()`, so a hook your own provider registers after that runs on a revoked token: list the provider whose hook needs the session token before `MagicStarterServiceProvider` in `providers`. A host with its own sign-out button calls `MagicStarter.manager.runBeforeLogoutHooks()` before its own `Auth.logout()`. A sign-out the app performs on its own, such as magic's `AuthInterceptor` after a failed token refresh, does not run them: the token is already dead. The provider registers two of its own, see [Before-Logout Hooks](service-provider.md#before-logout-hooks).
+Hooks run in registration order, each isolated and bounded to five seconds (`MagicStarterManager.beforeLogoutTimeout`); one that throws or times out is logged and the next still runs, because a sign-out the user asked for has to happen whatever a hook's network does. The same hook is not added twice. `MagicStarterServiceProvider` registers its token-revoke hook in `boot()`, so a hook your own provider registers after that runs on a revoked token: list the provider whose hook needs the session token before `MagicStarterServiceProvider` in `providers`. A host with its own sign-out button awaits `MagicStarter.signOut()`, which follows the configured `onLogout` flow and its cleanup; a host that deliberately bypasses that flow calls `MagicStarter.manager.runBeforeLogoutHooks()` before its own `Auth.logout()`. A sign-out the app performs on its own, such as magic's `AuthInterceptor` after a failed token refresh, does not run them: the token is already dead. The provider registers two of its own, see [Before-Logout Hooks](service-provider.md#before-logout-hooks).
 
 <a name="login-callback"></a>
 ## Login Callback
@@ -743,6 +743,8 @@ The facade provides a shortcut: `MagicStarter.view` delegates to `manager.view`.
 | `MagicStarter.useHeader(builder)` | `manager.headerBuilder = builder` |
 | `MagicStarter.useLogout(callback)` | `manager.onLogout = callback` |
 | `MagicStarter.beforeLogout(hook)` | Adds a before-logout hook |
+| `MagicStarter.signOut()` | `manager.signOut()`: the hooks once, then `onLogout` or `MagicStarterAuthController.instance.logout()` |
+| `MagicStarter.isGuest()` | `Auth.user()?.get<bool>('is_guest') ?? false` |
 | `MagicStarter.useLogin(callback)` | `manager.onLogin = callback` |
 | `MagicStarter.useGuestClaimed(callback)` | `manager.onGuestClaimed = callback` |
 | `MagicStarter.useSocialAuth(socialAuth)` | `manager.socialAuth = socialAuth` |

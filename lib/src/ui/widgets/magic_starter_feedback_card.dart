@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:magic/magic.dart';
 
 import '../../configuration/magic_starter_config.dart';
+import '../../facades/magic_starter.dart';
 import '../../http/controllers/magic_starter_feedback_controller.dart';
 import '../../support/store_review.dart';
 import '../components/button/index.dart';
@@ -149,7 +150,7 @@ class _MagicStarterFeedbackCardState extends State<MagicStarterFeedbackCard> {
     if (!MagicStarterConfig.hasSupportFeedbackFeatures()) return false;
     if (!Auth.check()) return false;
 
-    return Auth.user()?.get<bool>('is_guest') != true;
+    return !MagicStarter.isGuest();
   }
 
   void _noteShown() {

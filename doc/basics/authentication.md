@@ -353,10 +353,16 @@ The claim does not ride the `Http` facade. Its body is the guest's live bearer t
 <a name="logout"></a>
 ## Logout
 
-There are two sign-out paths a user can take, and both end in `Auth.logout()`:
+There are two sign-out entry points. The controller's ends in `Auth.logout()`, and so does `MagicStarter.signOut()` when your `onLogout` callback calls `Auth.logout()`, which it must:
 
 - `MagicStarterAuthController.instance.logout()`: runs the before-logout hooks, stops notification polling and the push identity (when the `notifications` feature is on), calls `Auth.logout()`, then navigates to `MagicStarterConfig.loginRoute()`.
-- The profile dropdown's sign-out item: calls your `MagicStarter.useLogout()` callback when one is registered, after running the before-logout hooks, and the controller path above otherwise. The hooks run once either way.
+- `MagicStarter.signOut()`: calls your `MagicStarter.useLogout()` callback when one is registered, after running the before-logout hooks, and the controller path above otherwise. The hooks run once either way. The profile dropdown's sign-out item and the handoff's Continue over an open session both go through it.
+
+```dart
+await MagicStarter.signOut();
+```
+
+`MagicStarter.isGuest()` answers whether the signed-in user is a guest session (`is_guest` on `Auth.user()`, whichever model `useUserModel()` registered); it is `false` with nobody signed in.
 
 <a name="before-logout-hooks"></a>
 ### Before-Logout Hooks
@@ -373,7 +379,7 @@ The contract:
 - Each hook is isolated: a throw is logged with `Log.error` and the next hook runs.
 - Each hook is bounded to five seconds (`MagicStarterManager.beforeLogoutTimeout`); a dead network cannot trap somebody who asked to leave.
 - Registering the same hook twice keeps one copy.
-- A sign-out button of your own calls `await MagicStarter.manager.runBeforeLogoutHooks()` before its own `Auth.logout()`.
+- A sign-out button of your own awaits `MagicStarter.signOut()`, which runs the hooks once and then your `onLogout` or the default sign-out. Only a host that deliberately bypasses that configured flow calls `await MagicStarter.manager.runBeforeLogoutHooks()` before its own `Auth.logout()`.
 
 When the `magic_notifications` package is bound and its push-state reporting is configured (`notifications.push_state.report_path`), `MagicStarterServiceProvider` registers `Notify.pushState.release` as a default hook, so the backend stops treating this device as reachable for the person who just left it. Nothing to wire.
 
