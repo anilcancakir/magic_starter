@@ -353,10 +353,16 @@ The claim does not ride the `Http` facade. Its body is the guest's live bearer t
 <a name="logout"></a>
 ## Logout
 
-There are two sign-out paths a user can take, and both end in `Auth.logout()`:
+There are two sign-out entry points. The controller's ends in `Auth.logout()`, and so does `MagicStarter.signOut()` when your `onLogout` calls it (it has to):
 
 - `MagicStarterAuthController.instance.logout()`: runs the before-logout hooks, stops notification polling and the push identity (when the `notifications` feature is on), calls `Auth.logout()`, then navigates to `MagicStarterConfig.loginRoute()`.
-- The profile dropdown's sign-out item: calls your `MagicStarter.useLogout()` callback when one is registered, after running the before-logout hooks, and the controller path above otherwise. The hooks run once either way.
+- `MagicStarter.signOut()`: calls your `MagicStarter.useLogout()` callback when one is registered, after running the before-logout hooks, and the controller path above otherwise. The hooks run once either way. The profile dropdown's sign-out item and the handoff's Continue over an open session both go through it.
+
+```dart
+await MagicStarter.signOut();
+```
+
+`MagicStarter.isGuest()` answers whether the signed-in user is a guest session (`is_guest` on `Auth.user()`, whichever model `useUserModel()` registered); it is `false` with nobody signed in.
 
 <a name="before-logout-hooks"></a>
 ### Before-Logout Hooks

@@ -5,7 +5,6 @@ import 'package:magic/magic.dart';
 
 import 'concerns/completes_sign_in.dart';
 import 'concerns/navigates_routes.dart';
-import 'magic_starter_auth_controller.dart';
 import '../../configuration/magic_starter_config.dart';
 import '../../facades/magic_starter.dart';
 
@@ -166,8 +165,8 @@ class MagicStarterHandoffController extends MagicController
     refreshUI();
   }
 
-  /// Leaves any open session through the starter's own sign-out, then
-  /// concludes the handed sign-in.
+  /// Leaves any open session through [MagicStarter.signOut] (a custom
+  /// `useLogout` callback included), then concludes the handed sign-in.
   Future<void> confirm() async {
     final _HandedSignIn? signIn = _awaiting;
     if (signIn == null) return;
@@ -178,7 +177,7 @@ class MagicStarterHandoffController extends MagicController
     try {
       _awaiting = null;
       refreshUI();
-      if (Auth.check()) await MagicStarterAuthController.instance.logout();
+      if (Auth.check()) await MagicStarter.signOut();
       await _signIn(signIn);
     } finally {
       _working--;

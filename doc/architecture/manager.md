@@ -346,9 +346,9 @@ MagicStarter.useLogout(() async {
 });
 ```
 
-When set, the profile dropdown's logout item calls this callback instead of `MagicStarterAuthController.instance.logout()`. This is useful for apps that need to unregister push tokens, sign out of social providers, or perform other cleanup before navigating to the login screen.
+When set, `MagicStarter.signOut()` calls this callback instead of `MagicStarterAuthController.instance.logout()`; the profile dropdown's logout item and the handoff's Continue over an open session both sign out through it. This is useful for apps that need to unregister push tokens, sign out of social providers, or perform other cleanup before navigating to the login screen.
 
-Work that has to happen while the session token still works belongs in a before-logout hook, which runs ahead of both sign-out paths (the profile dropdown, ahead of a custom `onLogout`, and `MagicStarterAuthController.logout()`, ahead of `Auth.logout()`):
+Work that has to happen while the session token still works belongs in a before-logout hook, which runs ahead of both sign-out paths (`MagicStarter.signOut()`, ahead of a custom `onLogout`, and `MagicStarterAuthController.logout()`, ahead of `Auth.logout()`):
 
 ```dart
 MagicStarter.beforeLogout(() => SocialAuth.signOut());
@@ -743,6 +743,8 @@ The facade provides a shortcut: `MagicStarter.view` delegates to `manager.view`.
 | `MagicStarter.useHeader(builder)` | `manager.headerBuilder = builder` |
 | `MagicStarter.useLogout(callback)` | `manager.onLogout = callback` |
 | `MagicStarter.beforeLogout(hook)` | Adds a before-logout hook |
+| `MagicStarter.signOut()` | `manager.signOut()`: the hooks once, then `onLogout` or `MagicStarterAuthController.instance.logout()` |
+| `MagicStarter.isGuest()` | `Auth.user()?.get<bool>('is_guest') ?? false` |
 | `MagicStarter.useLogin(callback)` | `manager.onLogin = callback` |
 | `MagicStarter.useGuestClaimed(callback)` | `manager.onGuestClaimed = callback` |
 | `MagicStarter.useSocialAuth(socialAuth)` | `manager.socialAuth = socialAuth` |

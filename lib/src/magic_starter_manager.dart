@@ -140,8 +140,8 @@ class MagicStarterManager {
   /// Registers [hook] to run before every sign-out the user asks for, while
   /// the session token is still valid.
   ///
-  /// Both starter sign-out paths await it (the profile dropdown, ahead of a
-  /// custom [onLogout], and [MagicStarterAuthController.logout], ahead of
+  /// Both starter sign-out paths await it ([signOut], ahead of a custom
+  /// [onLogout], and [MagicStarterAuthController.logout], ahead of
   /// `Auth.logout()`), so a hook can still make authenticated requests: a
   /// push-device release, a server-side session revoke.
   ///
@@ -177,6 +177,26 @@ class MagicStarterManager {
         );
       }
     }
+  }
+
+  /// Ends the session the user asked to leave, running the [beforeLogout]
+  /// hooks exactly once.
+  ///
+  /// With a custom [onLogout], the hooks run here and the callback replaces the
+  /// default sign-out entirely. Without one, [MagicStarterAuthController.logout]
+  /// runs the hooks itself, stops the notification services when that feature
+  /// is on, calls `Auth.logout()` and navigates to the login route; running the
+  /// hooks here too would release a push device twice.
+  Future<void> signOut() async {
+    final customLogout = onLogout;
+
+    if (customLogout != null) {
+      await runBeforeLogoutHooks();
+      await customLogout();
+      return;
+    }
+
+    await MagicStarterAuthController.instance.logout();
   }
 
   /// The team a switch was just accepted for, held only while that switch

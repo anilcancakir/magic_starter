@@ -4,7 +4,6 @@ import 'package:magic/magic.dart';
 
 import '../../../configuration/magic_starter_config.dart';
 import '../../../facades/magic_starter.dart';
-import '../../../http/controllers/magic_starter_auth_controller.dart';
 import '../../../routes/support_routes.dart';
 import '../../../support/control_name.dart';
 import '../../../support/store_review.dart';
@@ -168,7 +167,7 @@ class MSUserProfileDropdown extends StatelessWidget {
     // Sign in reaches the login page (which lets a guest through), and create
     // account reaches the profile page's in-place upgrade, the same door the
     // settings hub's upgrade row opens, so the guest keeps its own data.
-    final isGuest = Auth.user()?.get<bool>('is_guest') == true;
+    final isGuest = MagicStarter.isGuest();
     final canSendFeedback = !isGuest && _hasVerifiedEmail();
     final theme = MagicStarter.dropdownTheme;
 
@@ -311,7 +310,7 @@ class MSUserProfileDropdown extends StatelessWidget {
           isDanger: true,
           onTap: () {
             close();
-            _handleLogout();
+            MagicStarter.signOut();
           },
         ),
       ],
@@ -388,22 +387,5 @@ class MSUserProfileDropdown extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  /// Signs out through the host's custom callback when there is one, the
-  /// controller otherwise.
-  ///
-  /// The before-logout hooks run here for the custom path only: the controller
-  /// runs them itself, and running them here too would release a device twice.
-  Future<void> _handleLogout() async {
-    final customLogout = MagicStarter.manager.onLogout;
-
-    if (customLogout != null) {
-      await MagicStarter.manager.runBeforeLogoutHooks();
-      await customLogout();
-      return;
-    }
-
-    await MagicStarterAuthController.instance.logout();
   }
 }
