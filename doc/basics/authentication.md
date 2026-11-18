@@ -379,7 +379,7 @@ The contract:
 - Each hook is isolated: a throw is logged with `Log.error` and the next hook runs.
 - Each hook is bounded to five seconds (`MagicStarterManager.beforeLogoutTimeout`); a dead network cannot trap somebody who asked to leave.
 - Registering the same hook twice keeps one copy.
-- A sign-out button of your own calls `await MagicStarter.manager.runBeforeLogoutHooks()` before its own `Auth.logout()`.
+- A sign-out button of your own awaits `MagicStarter.signOut()`, which runs the hooks once and then your `onLogout` or the default sign-out. Only a host that deliberately bypasses that configured flow calls `await MagicStarter.manager.runBeforeLogoutHooks()` before its own `Auth.logout()`.
 
 When the `magic_notifications` package is bound and its push-state reporting is configured (`notifications.push_state.report_path`), `MagicStarterServiceProvider` registers `Notify.pushState.release` as a default hook, so the backend stops treating this device as reachable for the person who just left it. Nothing to wire.
 
