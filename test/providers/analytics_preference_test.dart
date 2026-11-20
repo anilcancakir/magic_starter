@@ -149,6 +149,60 @@ void main() {
     });
   });
 
+  group('with a host applyAnalyticsOptOut hook', () {
+    late List<bool> applied;
+
+    /// Boots the provider with the hook set between register and boot, where
+    /// a host's own provider sets it: `register()` binds a fresh manager.
+    Future<void> bootWithHook() async {
+      final provider = MagicStarterServiceProvider(MagicApp.instance);
+      provider.register();
+      MagicStarter.manager.applyAnalyticsOptOut = (bool optedOut) async {
+        applied.add(optedOut);
+      };
+      await provider.boot();
+    }
+
+    setUp(() => applied = <bool>[]);
+
+    tearDown(() => MagicStarter.manager.applyAnalyticsOptOut = null);
+
+    test('boot hands a cached opt-out to the hook instead', () async {
+      Vault.fake({_cacheKey: '1'});
+
+      await bootWithHook();
+
+      expect(applied, <bool>[true]);
+      expect(Analytics.isOptedOut, isFalse);
+    });
+
+    test('a sign-in hands the account choice to the hook instead', () async {
+      await bootWithHook();
+      await Auth.login({'token': 'account-token'}, _user());
+      fakeBackend();
+
+      await Event.dispatch(AuthRestored(_user()));
+      await pumpEventQueue();
+
+      expect(applied, <bool>[false]);
+      expect(await Vault.get(_cacheKey), isNull);
+    });
+
+    test('a sign-out hands the lifted opt-out to the hook instead', () async {
+      Vault.fake({_cacheKey: '1'});
+      await bootWithHook();
+      await Auth.login({'token': 'account-token'}, _user());
+      await Analytics.setOptOut(true);
+      applied.clear();
+
+      await Auth.logout();
+      await pumpEventQueue();
+
+      expect(applied, <bool>[false]);
+      expect(Analytics.isOptedOut, isTrue);
+    });
+  });
+
   group('on sign-out', () {
     test('clears the cache and lifts the opt-out', () async {
       Vault.fake({_cacheKey: '1'});

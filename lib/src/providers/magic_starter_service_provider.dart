@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 import 'package:magic/magic.dart';
-import 'package:magic_analytics/magic_analytics.dart';
 import 'package:magic_notifications/magic_notifications.dart';
 import 'package:magic_payments/magic_payments.dart';
 
@@ -280,7 +279,7 @@ class MagicStarterServiceProvider extends ServiceProvider {
       );
       if (cached != '1') return;
 
-      await Analytics.setOptOut(true);
+      await MagicStarterAnalyticsPreferenceController.applyOptOut(true);
     } catch (error, stackTrace) {
       Log.error(
         '[MagicStarter] cached analytics opt-out could not be applied: '
@@ -334,7 +333,7 @@ class MagicStarterServiceProvider extends ServiceProvider {
 
       await Vault.delete(key);
       if (wasOptedOut) {
-        await Analytics.setOptOut(false);
+        await MagicStarterAnalyticsPreferenceController.applyOptOut(false);
       }
     } catch (error, stackTrace) {
       Log.error(

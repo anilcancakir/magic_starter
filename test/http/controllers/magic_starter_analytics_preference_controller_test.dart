@@ -168,6 +168,22 @@ void main() {
       expect(Analytics.isOptedOut, isTrue);
     });
 
+    test('a host applyAnalyticsOptOut hook replaces the facade call', () async {
+      final List<bool> applied = <bool>[];
+      MagicStarter.manager.applyAnalyticsOptOut = (bool optedOut) async {
+        applied.add(optedOut);
+      };
+      addTearDown(() => MagicStarter.manager.applyAnalyticsOptOut = null);
+      fakeBackend();
+
+      await controller.updateAnalyticsPreference(optedOut: true);
+
+      expect(applied, <bool>[true]);
+      expect(Analytics.isOptedOut, isFalse);
+      expect(await Vault.get(_cacheKey), '1');
+      expect(hookCalls, <bool>[true]);
+    });
+
     test(
       'without the analytics provider the save lands and nothing throws',
       () async {
@@ -184,9 +200,11 @@ void main() {
     );
   });
 
-  test('reset() clears onAnalyticsPreferenceChanged', () {
+  test('reset() clears both analytics hooks', () {
+    MagicStarter.manager.applyAnalyticsOptOut = (bool _) async {};
     MagicStarter.manager.reset();
 
     expect(MagicStarter.manager.onAnalyticsPreferenceChanged, isNull);
+    expect(MagicStarter.manager.applyAnalyticsOptOut, isNull);
   });
 }

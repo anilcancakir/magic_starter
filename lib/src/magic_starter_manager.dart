@@ -298,6 +298,17 @@ class MagicStarterManager {
   /// a throw is logged and the save still counts.
   Future<void> Function(bool optedOut)? onAnalyticsPreferenceChanged;
 
+  /// Replaces the starter's own `Analytics.setOptOut(accountOptedOut)` wherever
+  /// it applies the account's "Share usage data" choice on this device: the
+  /// cached choice on boot, the account's answer after a sign-in or restore,
+  /// a saved switch, and the lift on sign-out (`false`).
+  ///
+  /// Set it when the host has its own reason to stay opted out, such as a
+  /// device-level consent refusal, and combine the two there; otherwise the
+  /// account's choice would overwrite the host's. Awaited; a throw propagates
+  /// to the caller, which logs it.
+  Future<void> Function(bool accountOptedOut)? applyAnalyticsOptOut;
+
   /// Custom header builder. When set, replaces the default header.
   Widget Function(BuildContext context, bool isDesktop)? headerBuilder;
 
@@ -971,6 +982,7 @@ class MagicStarterManager {
     onLogin = null;
     onGuestClaimed = null;
     onAnalyticsPreferenceChanged = null;
+    applyAnalyticsOptOut = null;
     headerBuilder = null;
     sidebarFooterBuilder = null;
     socialAuth = null;

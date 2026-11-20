@@ -404,6 +404,16 @@ With the `analytics` feature on, `MagicStarterAnalyticsPreferenceController.upda
 
 When `onAnalyticsPreferenceChanged` is `null` (the default), nothing runs.
 
+A host with its own reason to stay opted out, such as a device-level consent refusal, sets `applyAnalyticsOptOut` and combines the two there:
+
+```dart
+MagicStarter.manager.applyAnalyticsOptOut = (bool accountOptedOut) async {
+  await Analytics.setOptOut(accountOptedOut || await deviceRefusedConsent());
+};
+```
+
+When it is set, the starter calls it instead of `Analytics.setOptOut` everywhere it applies the account's choice: the cached choice on boot, the answer after a sign-in or restore, a saved switch, and the lift on sign-out (with `false`). Without it the account's choice would overwrite the host's own opt-out. It is awaited, and a failure is logged by the caller.
+
 <a name="locale-application"></a>
 ## Locale Application
 

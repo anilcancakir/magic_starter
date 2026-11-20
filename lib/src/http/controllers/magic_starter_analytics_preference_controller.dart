@@ -103,17 +103,34 @@ class MagicStarterAnalyticsPreferenceController extends MagicController
     }
   }
 
-  /// Applies the account's choice on this device: `magic_analytics`' opt-out
-  /// when its provider is registered, and the [deviceCacheKey] copy either
-  /// way.
+  /// Hands the account's choice to the host's
+  /// `MagicStarterManager.applyAnalyticsOptOut` hook when one is set, and to
+  /// `magic_analytics` otherwise (only when its provider is registered).
+  ///
+  /// The one place the starter changes the opt-out, so a host that combines
+  /// the account's choice with its own consent sees every change.
+  static Future<void> applyOptOut(bool accountOptedOut) async {
+    final Future<void> Function(bool)? hook =
+        MagicStarter.manager.applyAnalyticsOptOut;
+
+    if (hook != null) {
+      await hook(accountOptedOut);
+      return;
+    }
+
+    if (Magic.bound('analytics')) {
+      await Analytics.setOptOut(accountOptedOut);
+    }
+  }
+
+  /// Applies the account's choice on this device through [applyOptOut], and
+  /// keeps the [deviceCacheKey] copy either way.
   ///
   /// Shared with `MagicStarterServiceProvider`, which applies the account's
   /// answer after a sign-in or a restore. It never calls the host hook:
   /// applying a choice nobody just changed is not a change.
   static Future<void> applyOnDevice(bool optedOut) async {
-    if (Magic.bound('analytics')) {
-      await Analytics.setOptOut(optedOut);
-    }
+    await applyOptOut(optedOut);
 
     if (optedOut) {
       await Vault.put(deviceCacheKey, '1');
