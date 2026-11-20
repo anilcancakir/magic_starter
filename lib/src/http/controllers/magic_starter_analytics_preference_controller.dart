@@ -198,14 +198,24 @@ class MagicStarterAnalyticsPreferenceController extends MagicController
   /// answer after a sign-in or a restore. It never calls the host hook:
   /// applying a choice nobody just changed is not a change.
   static Future<void> applyOnDevice(bool optedOut) async {
-    // The copy first: it records the account's choice, so a host hook that
-    // throws below must not leave the next cold start on the old one.
-    if (optedOut) {
-      await Vault.put(deviceCacheKey, '1');
-    } else {
-      await Vault.delete(deviceCacheKey);
+    // 1. The copy first: it records the account's choice, so a host hook that
+    //    throws below must not leave the next cold start on the old one. A
+    //    vault that cannot be written is logged: the opt-out below still
+    //    applies for this run, and the next sign-in writes the copy again.
+    try {
+      if (optedOut) {
+        await Vault.put(deviceCacheKey, '1');
+      } else {
+        await Vault.delete(deviceCacheKey);
+      }
+    } catch (e, stackTrace) {
+      Log.error(
+        '[MagicStarterAnalyticsPreferenceController] the device copy could '
+        'not be written: $e\n$stackTrace',
+      );
     }
 
+    // 2. The opt-out itself, through the host's hook when it set one.
     await applyOptOut(optedOut);
   }
 

@@ -229,6 +229,16 @@ void main() {
       },
     );
 
+    test('a vault that fails to write still applies the opt-out', () async {
+      Vault.fake().throwOnPut(StateError('keychain locked'));
+      fakeBackend();
+
+      await controller.updateAnalyticsPreference(optedOut: true);
+
+      expect(Analytics.isOptedOut, isTrue);
+      expect(controller.isSuccess, isTrue);
+    });
+
     test('a throwing device apply still caches the accepted choice', () async {
       fakeBackend();
       MagicStarter.manager.applyAnalyticsOptOut = (bool _) async {
