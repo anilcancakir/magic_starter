@@ -100,7 +100,7 @@ Failure modes:
 
 ## Features
 
-Every toggle in `lib/config/magic_starter.dart` defaults to `false`. A toggle that is off registers no route and no view key and shows no UI.
+Every toggle in `lib/config/magic_starter.dart` defaults to `false`. A toggle that is off registers no route and no view key and shows no UI; the one shared page is Email & privacy, whose route and `settings.newsletter` key register while either `newsletter` or `analytics` is on.
 
 | Toggle | Turns on |
 |--------|----------|

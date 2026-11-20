@@ -28,6 +28,13 @@ class MagicStarterAnalyticsPreferenceController extends MagicController
 
   bool _isSubmitting = false;
 
+  /// Bumped by every save, so a sign-in read that started before a save and
+  /// answers after it is dropped instead of overwriting the newer choice.
+  static int _saves = 0;
+
+  /// The number of saves started so far; see `MagicStarterServiceProvider`.
+  static int get saveGeneration => _saves;
+
   bool? _optedOut;
 
   /// The account [_optedOut] was answered for.
@@ -98,6 +105,7 @@ class MagicStarterAnalyticsPreferenceController extends MagicController
     // The account the choice belongs to: an answer landing after a sign-out
     // or another sign-in must not be applied to whoever holds the device now.
     final Object? account = Auth.id();
+    _saves++;
 
     try {
       final MagicResponse response = await Http.put(
@@ -112,14 +120,27 @@ class MagicStarterAnalyticsPreferenceController extends MagicController
 
       if (Auth.id() != account) return;
 
-      // 1. Apply on this device only now, so a refused save leaves the device
-      //    collecting exactly as the account still says.
-      await applyOnDevice(optedOut);
+      // 1. The account holds the choice now, so the save counts whatever the
+      //    device does next.
       _optedOut = optedOut;
       _answeredFor = account;
       setSuccess(response.data as Map<String, dynamic>);
 
-      // 2. Last, so the host re-applies identity on a device already opted in.
+      // 2. Apply on this device only now, so a refused save leaves the device
+      //    collecting exactly as the account still says. A failure here is
+      //    logged; the next sign-in applies the account's choice again.
+      try {
+        await applyOnDevice(optedOut);
+      } catch (e, stackTrace) {
+        Log.error(
+          '[MagicStarterAnalyticsPreferenceController] the saved choice could '
+          'not be applied on this device: $e\n$stackTrace',
+        );
+      }
+
+      // 3. Last, so the host re-applies identity on a device already opted
+      //    in, and only for the account that saved.
+      if (Auth.id() != account) return;
       await _notifyHost(optedOut);
     } catch (e, stackTrace) {
       Log.error(

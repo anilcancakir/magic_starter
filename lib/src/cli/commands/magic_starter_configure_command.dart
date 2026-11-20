@@ -116,12 +116,17 @@ class MagicStarterConfigureCommand extends DowelCommand {
 
     // 4. Apply each update sequentially to the content string.
     String updated = content;
-    for (final entry in updates.entries) {
-      updated = MagicStarterConfigHelper.updateFeature(
-        updated,
-        entry.key,
-        entry.value,
-      );
+    try {
+      for (final entry in updates.entries) {
+        updated = MagicStarterConfigHelper.updateFeature(
+          updated,
+          entry.key,
+          entry.value,
+        );
+      }
+    } on ArgumentError {
+      ctx.output.error('No features map found in $_configPath');
+      return 1;
     }
 
     // 5. Write the updated content back to the config file.

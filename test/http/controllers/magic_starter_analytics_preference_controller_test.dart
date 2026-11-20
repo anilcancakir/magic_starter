@@ -186,6 +186,35 @@ void main() {
       expect(hookCalls, isEmpty);
     });
 
+    test('an accepted save counts even when applying it throws', () async {
+      fakeBackend();
+      MagicStarter.manager.applyAnalyticsOptOut = (bool _) async {
+        throw StateError('device apply failed');
+      };
+      addTearDown(() => MagicStarter.manager.applyAnalyticsOptOut = null);
+
+      await controller.updateAnalyticsPreference(optedOut: true);
+
+      expect(controller.isSuccess, isTrue);
+      expect(controller.optedOut, isTrue);
+    });
+
+    test(
+      'a session change during the device apply skips the host hook',
+      () async {
+        Auth.fake(user: MagicStarterAuthUser.fromMap({'id': 1, 'name': 'A'}));
+        fakeBackend();
+        MagicStarter.manager.applyAnalyticsOptOut = (bool _) async {
+          Auth.fake(user: MagicStarterAuthUser.fromMap({'id': 2, 'name': 'B'}));
+        };
+        addTearDown(() => MagicStarter.manager.applyAnalyticsOptOut = null);
+
+        await controller.updateAnalyticsPreference(optedOut: true);
+
+        expect(hookCalls, isEmpty);
+      },
+    );
+
     test('a host applyAnalyticsOptOut hook replaces the facade call', () async {
       final List<bool> applied = <bool>[];
       MagicStarter.manager.applyAnalyticsOptOut = (bool optedOut) async {

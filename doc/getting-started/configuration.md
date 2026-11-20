@@ -165,7 +165,7 @@ To enable features, set their values to `true`:
 ```
 
 > [!TIP]
-> A disabled feature registers no route and no view, so asking the view registry for its key (`MagicStarter.view.make('teams.create')`) throws a `StateError`. Check `MagicStarterConfig.hasTeamFeatures()` and its siblings before building a link to a gated page.
+> A disabled feature registers no route and no view, so asking the view registry for its key (`MagicStarter.view.make('teams.create')`) throws a `StateError`. Check `MagicStarterConfig.hasTeamFeatures()` and its siblings before building a link to a gated page. The one shared page is Email & privacy: its route and `settings.newsletter` key register while either `newsletter` or `analytics` is on, so turning `newsletter` off alone does not remove it.
 
 <a name="route-customization"></a>
 ## Route Customisation

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart' hide EventDispatcher;
 import 'package:magic/magic.dart';
 import 'package:magic_analytics/magic_analytics.dart';
@@ -155,6 +157,31 @@ void main() {
       expect(Analytics.isOptedOut, isFalse);
       expect(await Vault.get(_cacheKey), isNull);
     });
+  });
+
+  test('a sign-in read answered after a save applies nothing', () async {
+    await bootProvider();
+    await Auth.login({'token': 'account-token'}, _user());
+    final Completer<void> readGate = Completer<void>();
+    Http.fake((MagicRequest request) async {
+      if (request.method == 'PUT') {
+        return Http.response({'opted_out': true});
+      }
+
+      // The read started before the save and answers after it.
+      await readGate.future;
+
+      return Http.response({'opted_out': false});
+    });
+
+    await Event.dispatch(AuthRestored(_user()));
+    await MagicStarterAnalyticsPreferenceController.instance
+        .updateAnalyticsPreference(optedOut: true);
+    readGate.complete();
+    await pumpEventQueue();
+
+    expect(Analytics.isOptedOut, isTrue);
+    expect(await Vault.get(_cacheKey), '1');
   });
 
   group('with a host applyAnalyticsOptOut hook', () {

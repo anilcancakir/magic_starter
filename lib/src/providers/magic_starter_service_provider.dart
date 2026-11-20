@@ -298,6 +298,7 @@ class MagicStarterServiceProvider extends ServiceProvider {
 
     final Object? accountId = Auth.id();
     if (accountId == null) return;
+    final int saves = MagicStarterAnalyticsPreferenceController.saveGeneration;
 
     try {
       final MagicResponse response = await Http.get('/user/analytics');
@@ -306,6 +307,11 @@ class MagicStarterServiceProvider extends ServiceProvider {
       // The answer belongs to the account that asked: a sign-out or another
       // sign-in while it was in flight must not inherit it.
       if (Auth.id() != accountId) return;
+
+      // A save that started meanwhile is newer than this answer.
+      if (MagicStarterAnalyticsPreferenceController.saveGeneration != saves) {
+        return;
+      }
 
       final Map<String, dynamic> data = response.data as Map<String, dynamic>;
       await MagicStarterAnalyticsPreferenceController.applyOnDevice(

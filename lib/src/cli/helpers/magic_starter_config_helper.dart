@@ -112,9 +112,32 @@ abstract class MagicStarterConfigHelper {
       r"(" + featureName + r"':\s*)(true|false)",
       caseSensitive: false,
     );
-    return content.replaceAll(
-      pattern,
-      '${RegExp.escape(featureName + r"': ")}${value.toString()}',
+
+    if (pattern.hasMatch(content)) {
+      return content.replaceAll(
+        pattern,
+        '${RegExp.escape(featureName + r"': ")}${value.toString()}',
+      );
+    }
+
+    // A config written before the feature existed has no key for it: add one
+    // as the first entry of the `features` map, at its entries' indentation.
+    final RegExp featuresMap = RegExp(r"('features':\s*\{\n)([ \t]*)");
+    final RegExpMatch? match = featuresMap.firstMatch(content);
+    if (match == null) {
+      throw ArgumentError.value(
+        featureName,
+        'featureName',
+        'No features map to add the key to',
+      );
+    }
+
+    final String indent = match.group(2)!;
+
+    return content.replaceRange(
+      match.start,
+      match.end,
+      "${match.group(1)}$indent'$featureName': $value,\n$indent",
     );
   }
 
