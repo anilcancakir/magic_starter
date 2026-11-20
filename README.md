@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/anilcancakir/magic_starter/master/screenshots/logo.png" width="120" alt="Magic Starter logo" />
+  <img src="https://raw.githubusercontent.com/anilcancakir/magic_starter/master/.github/logo.png" width="120" alt="Magic Starter logo" />
 </p>
 
 <h1 align="center">Magic Starter</h1>

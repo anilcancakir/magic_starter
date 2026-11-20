@@ -11,10 +11,6 @@ topics:
   - magic-framework
   - admin-panel
 
-screenshots:
-  - description: "The Magic Starter logo."
-    path: screenshots/logo.png
-
 # Inherited from `magic`, not chosen here: magic 1.0.0 declares
 # `sdk: ">=3.13.0 <4.0.0"` and `flutter: ">=3.47.0"` (the floor `wind_kit`
 # 1.12.0 and `material_ui` 1.11.0 need), and a package cannot resolve below its
