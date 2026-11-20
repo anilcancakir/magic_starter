@@ -4,7 +4,7 @@
 
 Ready-made Magic screens for sign-in, profile and security settings, teams, notifications, billing and support, each behind an opt-in toggle (all default `false`) and each replaceable by key through `MagicStarter.view`. The controllers are the client of `magic-starter-laravel`'s `api/v1` routes (`src/routes/api.php` there); change one side of that contract, keep the other in sync.
 
-**Version:** 1.4.0 · **Dart:** >=3.13.0 · **Flutter:** >=3.47.0 · **Requires:** `magic` ^1.0.0, `magic_notifications` ^1.0.0, `magic_payments` ^1.0.0
+**Version:** 1.4.0 · **Dart:** >=3.13.0 · **Flutter:** >=3.47.0 · **Requires:** `magic` ^1.0.0, `magic_notifications` ^1.0.0, `magic_payments` ^1.0.0, `magic_analytics` ^1.0.1
 
 ## Commands
 
