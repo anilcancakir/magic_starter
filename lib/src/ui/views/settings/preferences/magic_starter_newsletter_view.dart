@@ -9,6 +9,7 @@ import '../../../components/settings_row/index.dart';
 import '../../../components/page_scaffold/index.dart';
 import '../../../components/settings_section/index.dart';
 import '../../../components/switch/index.dart';
+import '../../../../support/control_name.dart';
 
 /// The "Email & privacy" settings sub-page: the newsletter subscription and
 /// the account-level "Share usage data" switch.
@@ -105,8 +106,14 @@ class _MagicStarterNewsletterViewState
   @override
   Widget build(BuildContext context) {
     return MSPageScaffold(
-      title: trans('magic_starter.privacy.title'),
-      subtitle: trans('magic_starter.privacy.description'),
+      title: magicStarterControlName(
+        'magic_starter.privacy.title',
+        'Email & privacy',
+      ),
+      subtitle: magicStarterControlName(
+        'magic_starter.privacy.description',
+        'Choose what we email you and what usage data you share.',
+      ),
       backLabel: trans('profile.settings'),
       backFallback: MagicStarterConfig.settingsHubRoute(),
       children: [
@@ -169,12 +176,21 @@ class _MagicStarterNewsletterViewState
 
   Widget _buildAnalyticsRow({String? error}) {
     final bool? optedOut = _analytics.optedOut;
-    final String title = trans('magic_starter.analytics.toggle_label');
+    final String title = magicStarterControlName(
+      'magic_starter.analytics.toggle_label',
+      'Share usage data',
+    );
 
     return MSSettingsRow(
       icon: _iconAnalytics,
       title: title,
-      subtitle: error ?? trans('magic_starter.analytics.toggle_description'),
+      subtitle:
+          error ??
+          magicStarterControlName(
+            'magic_starter.analytics.toggle_description',
+            'Helps us improve the app. Turning it off applies to your whole '
+                'account, on every device.',
+          ),
       trailing: MSSwitch(
         value: optedOut == false,
         disabled: optedOut == null || _analytics.isLoading,

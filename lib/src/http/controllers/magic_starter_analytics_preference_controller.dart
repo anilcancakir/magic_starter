@@ -2,6 +2,7 @@ import 'package:magic/magic.dart';
 import 'package:magic_analytics/magic_analytics.dart';
 
 import '../../facades/magic_starter.dart';
+import '../../support/control_name.dart';
 
 /// Controller for the account-level "Share usage data" choice on the Email &
 /// privacy page.
@@ -81,7 +82,10 @@ class MagicStarterAnalyticsPreferenceController extends MagicController
       if (!response.successful) {
         handleApiError(
           response,
-          fallback: trans('magic_starter.analytics.fetch_error'),
+          fallback: magicStarterControlName(
+            'magic_starter.analytics.fetch_error',
+            'Failed to load your usage data preference.',
+          ),
         );
         return;
       }
@@ -122,7 +126,12 @@ class MagicStarterAnalyticsPreferenceController extends MagicController
       );
 
       if (!response.successful) {
-        setError(trans('magic_starter.analytics.update_error'));
+        setError(
+          magicStarterControlName(
+            'magic_starter.analytics.update_error',
+            'Failed to update your usage data preference.',
+          ),
+        );
         return;
       }
 

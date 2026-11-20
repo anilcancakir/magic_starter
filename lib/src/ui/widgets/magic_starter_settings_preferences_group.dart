@@ -5,6 +5,7 @@ import 'package:magic/magic.dart';
 import '../../configuration/magic_starter_config.dart';
 import '../components/settings_nav_row/index.dart';
 import '../components/settings_section/index.dart';
+import '../../support/control_name.dart';
 import '../views/settings/preferences/magic_starter_newsletter_view.dart';
 
 /// The Preferences group of the settings hub, gating included.
@@ -64,7 +65,10 @@ class MagicStarterSettingsPreferencesGroup extends StatelessWidget {
         if (MagicStarterNewsletterView.hasSections())
           MSSettingsNavRow(
             icon: _iconNewsletter,
-            title: trans('magic_starter.privacy.title'),
+            title: magicStarterControlName(
+              'magic_starter.privacy.title',
+              'Email & privacy',
+            ),
             to: MagicStarterConfig.settingsNewsletterRoute(),
           ),
         if (MagicStarterConfig.hasReleasesFeatures())

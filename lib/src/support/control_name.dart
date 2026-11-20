@@ -3,10 +3,11 @@ import 'package:magic/magic.dart';
 /// The catalogue line for [key], or the English [fallback] when the host's
 /// catalogue does not carry it.
 ///
-/// For the names of the icon-only controls: `trans` answers a missing key with
-/// the key itself, and a screen reader would then announce "auth dot show
-/// underscore password" to someone installed before the key shipped in the
-/// stub.
+/// For a line added to the install stub after hosts copied it: `trans`
+/// answers a missing key with the key itself, so an icon-only control would
+/// be announced as "auth dot show underscore password" and a new settings row
+/// would read `magic_starter.privacy.title` to someone installed before the
+/// key shipped.
 String magicStarterControlName(String key, String fallback) {
   return Lang.has(key) ? trans(key) : fallback;
 }

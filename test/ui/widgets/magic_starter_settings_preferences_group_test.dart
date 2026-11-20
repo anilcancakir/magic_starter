@@ -180,22 +180,20 @@ void main() {
       );
     });
 
-    testWidgets('the row is titled with the Email & privacy key', (
+    testWidgets('a host catalogue without the new key still reads English', (
       tester,
     ) async {
+      // A host that copied the install stub before Email & privacy shipped has
+      // no `magic_starter.privacy.title`; the row must not show the raw key.
       enableEverything();
+      expect(Lang.has('magic_starter.privacy.title'), isFalse);
 
       await tester.pumpWidget(
         wrap(const MagicStarterSettingsPreferencesGroup()),
       );
 
-      final MSSettingsNavRow row = tester
-          .widgetList<MSSettingsNavRow>(find.byType(MSSettingsNavRow))
-          .singleWhere(
-            (MSSettingsNavRow row) =>
-                row.to == MagicStarterConfig.settingsNewsletterRoute(),
-          );
-      expect(row.title, trans('magic_starter.privacy.title'));
+      expect(find.text('Email & privacy'), findsOneWidget);
+      expect(find.text('magic_starter.privacy.title'), findsNothing);
     });
 
     testWidgets('carries no version caption of its own', (tester) async {
