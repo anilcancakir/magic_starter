@@ -229,6 +229,18 @@ void main() {
       },
     );
 
+    test('a throwing device apply still caches the accepted choice', () async {
+      fakeBackend();
+      MagicStarter.manager.applyAnalyticsOptOut = (bool _) async {
+        throw StateError('device apply failed');
+      };
+      addTearDown(() => MagicStarter.manager.applyAnalyticsOptOut = null);
+
+      await controller.updateAnalyticsPreference(optedOut: true);
+
+      expect(await Vault.get(_cacheKey), '1');
+    });
+
     test('a host applyAnalyticsOptOut hook replaces the facade call', () async {
       final List<bool> applied = <bool>[];
       MagicStarter.manager.applyAnalyticsOptOut = (bool optedOut) async {

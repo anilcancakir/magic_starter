@@ -184,6 +184,30 @@ void main() {
     expect(await Vault.get(_cacheKey), '1');
   });
 
+  test('a failed save leaves a pending sign-in read in force', () async {
+    await bootProvider();
+    await Auth.login({'token': 'account-token'}, _user());
+    final Completer<void> readGate = Completer<void>();
+    Http.fake((MagicRequest request) async {
+      if (request.method == 'PUT') {
+        return Http.response({'message': 'Server Error'}, 500);
+      }
+
+      await readGate.future;
+
+      return Http.response({'opted_out': true});
+    });
+
+    await Event.dispatch(AuthRestored(_user()));
+    await MagicStarterAnalyticsPreferenceController.instance
+        .updateAnalyticsPreference(optedOut: false);
+    readGate.complete();
+    await pumpEventQueue();
+
+    expect(Analytics.isOptedOut, isTrue);
+    expect(await Vault.get(_cacheKey), '1');
+  });
+
   group('with a host applyAnalyticsOptOut hook', () {
     late List<bool> applied;
 

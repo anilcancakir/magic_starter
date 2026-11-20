@@ -29,8 +29,9 @@ class MagicStarterAnalyticsPreferenceController extends MagicController
 
   bool _isSubmitting = false;
 
-  /// Bumped by every save, so a sign-in read that started before a save and
-  /// answers after it is dropped instead of overwriting the newer choice.
+  /// Bumped by every accepted save, so a sign-in read that started before it
+  /// and answers after it is dropped instead of overwriting the newer choice.
+  /// A refused save leaves it alone: the read is then still the newest.
   static int _saves = 0;
 
   /// The number of saves started so far; see `MagicStarterServiceProvider`.
@@ -117,7 +118,6 @@ class MagicStarterAnalyticsPreferenceController extends MagicController
     // The account the choice belongs to: an answer landing after a sign-out
     // or another sign-in must not be applied to whoever holds the device now.
     final Object? account = Auth.id();
-    _saves++;
 
     try {
       final MagicResponse response = await Http.put(
@@ -138,7 +138,8 @@ class MagicStarterAnalyticsPreferenceController extends MagicController
       if (Auth.id() != account) return;
 
       // 1. The account holds the choice now, so the save counts whatever the
-      //    device does next.
+      //    device does next, and a sign-in read still in flight is older.
+      _saves++;
       _optedOut = optedOut;
       _answeredFor = account;
       setSuccess(response.data as Map<String, dynamic>);
@@ -197,14 +198,15 @@ class MagicStarterAnalyticsPreferenceController extends MagicController
   /// answer after a sign-in or a restore. It never calls the host hook:
   /// applying a choice nobody just changed is not a change.
   static Future<void> applyOnDevice(bool optedOut) async {
-    await applyOptOut(optedOut);
-
+    // The copy first: it records the account's choice, so a host hook that
+    // throws below must not leave the next cold start on the old one.
     if (optedOut) {
       await Vault.put(deviceCacheKey, '1');
-      return;
+    } else {
+      await Vault.delete(deviceCacheKey);
     }
 
-    await Vault.delete(deviceCacheKey);
+    await applyOptOut(optedOut);
   }
 
   /// Calls the host's `onAnalyticsPreferenceChanged` hook.

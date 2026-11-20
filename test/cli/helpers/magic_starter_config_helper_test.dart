@@ -133,6 +133,29 @@ Map<String, dynamic> get magicStarterConfig => {
         expect(updated, contains("          'analytics': true,\n"));
       });
 
+      test('adds a missing feature to a CRLF config', () {
+        const String content =
+            "Map<String, dynamic> get magicStarterConfig => {\r\n"
+            "      'magic_starter': {\r\n"
+            "        'features': {\r\n"
+            "          'teams': true,\r\n"
+            "        },\r\n"
+            "      },\r\n"
+            "    };\r\n";
+
+        final updated = MagicStarterConfigHelper.updateFeature(
+          content,
+          'analytics',
+          true,
+        );
+
+        expect(
+          MagicStarterConfigHelper.parseFeatures(updated)['analytics'],
+          true,
+        );
+        expect(updated, contains("          'analytics': true,\r\n"));
+      });
+
       test('throws when the content has no features map', () {
         expect(
           () => MagicStarterConfigHelper.updateFeature(

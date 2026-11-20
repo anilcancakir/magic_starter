@@ -122,7 +122,7 @@ abstract class MagicStarterConfigHelper {
 
     // A config written before the feature existed has no key for it: add one
     // as the first entry of the `features` map, at its entries' indentation.
-    final RegExp featuresMap = RegExp(r"('features':\s*\{\n)([ \t]*)");
+    final RegExp featuresMap = RegExp(r"('features':\s*\{(\r?\n))([ \t]*)");
     final RegExpMatch? match = featuresMap.firstMatch(content);
     if (match == null) {
       throw ArgumentError.value(
@@ -132,12 +132,13 @@ abstract class MagicStarterConfigHelper {
       );
     }
 
-    final String indent = match.group(2)!;
+    final String newline = match.group(2)!;
+    final String indent = match.group(3)!;
 
     return content.replaceRange(
       match.start,
       match.end,
-      "${match.group(1)}$indent'$featureName': $value,\n$indent",
+      "${match.group(1)}$indent'$featureName': $value,$newline$indent",
     );
   }
 
