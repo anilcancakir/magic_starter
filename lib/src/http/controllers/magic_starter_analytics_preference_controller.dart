@@ -67,8 +67,16 @@ class MagicStarterAnalyticsPreferenceController extends MagicController
     _isSubmitting = true;
     setLoading();
 
+    // The account asking: an answer landing after another sign-in is not its.
+    final Object? account = Auth.id();
+
     try {
       final MagicResponse response = await Http.get('/user/analytics');
+
+      if (Auth.id() != account) {
+        setEmpty();
+        return;
+      }
 
       if (!response.successful) {
         handleApiError(
@@ -80,7 +88,7 @@ class MagicStarterAnalyticsPreferenceController extends MagicController
 
       final Map<String, dynamic> data = response.data as Map<String, dynamic>;
       _optedOut = data['opted_out'] as bool;
-      _answeredFor = Auth.id();
+      _answeredFor = account;
       setSuccess(data);
     } catch (e, stackTrace) {
       Log.error(

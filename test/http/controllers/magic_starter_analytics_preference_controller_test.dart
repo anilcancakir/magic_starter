@@ -76,6 +76,20 @@ void main() {
       expect(hookCalls, isEmpty);
     });
 
+    test('a read answered after the account changed keeps nothing', () async {
+      Auth.fake(user: MagicStarterAuthUser.fromMap({'id': 1, 'name': 'A'}));
+      Http.fake((MagicRequest request) {
+        // Another account signs in while the read is in flight.
+        Auth.fake(user: MagicStarterAuthUser.fromMap({'id': 2, 'name': 'B'}));
+
+        return Http.response({'opted_out': true});
+      });
+
+      await controller.getAnalyticsPreference();
+
+      expect(controller.optedOut, isNull);
+    });
+
     test('a failed read sets the fetch error', () async {
       fakeBackend(statusCode: 500);
 
