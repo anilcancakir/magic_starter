@@ -39,6 +39,7 @@ export 'src/http/controllers/magic_starter_billing_controller.dart';
 export 'package:magic_payments/magic_payments.dart' show BillingCycle;
 
 export 'src/http/controllers/magic_starter_newsletter_controller.dart';
+export 'src/http/controllers/magic_starter_analytics_preference_controller.dart';
 export 'src/http/controllers/magic_starter_feedback_controller.dart';
 export 'src/http/controllers/magic_starter_support_controller.dart';
 export 'src/http/controllers/magic_starter_releases_controller.dart';

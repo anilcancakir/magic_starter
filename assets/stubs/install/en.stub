@@ -280,6 +280,16 @@
       "unsubscribed_status": "You are not subscribed.",
       "update_error": "Failed to update newsletter preferences."
     },
+    "privacy": {
+      "description": "Choose what we email you and what usage data you share.",
+      "title": "Email & privacy"
+    },
+    "analytics": {
+      "fetch_error": "Failed to load your usage data preference.",
+      "toggle_description": "Helps us improve the app. Turning it off applies to your whole account, on every device.",
+      "toggle_label": "Share usage data",
+      "update_error": "Failed to update your usage data preference."
+    },
     "otp": {
       "back_button": "Back",
       "code_label": "Verification Code",
@@ -447,7 +457,7 @@
       "handoff": "Signing In",
       "language": "Language",
       "login": "Sign In",
-      "newsletter": "Newsletter",
+      "newsletter": "Email & privacy",
       "notification_preferences": "Notification Preferences",
       "notifications": "Notifications",
       "otp": "Verification Code",

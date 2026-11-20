@@ -156,6 +156,7 @@ dart run magic:dowel starter:configure --teams --notifications
 | `--sessions` | `sessions` |
 | `--phone-otp` | `phone_otp` |
 | `--newsletter` | `newsletter` |
+| `--analytics` | `analytics` |
 | `--notifications` | `notifications` |
 | `--email-verification` | `email_verification` |
 

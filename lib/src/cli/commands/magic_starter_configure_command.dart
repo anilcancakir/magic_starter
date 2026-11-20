@@ -25,6 +25,7 @@ class MagicStarterConfigureCommand extends DowelCommand {
     'sessions': 'sessions',
     'phone-otp': 'phone_otp',
     'newsletter': 'newsletter',
+    'analytics': 'analytics',
     'notifications': 'notifications',
     'email-verification': 'email_verification',
   };
@@ -39,6 +40,7 @@ class MagicStarterConfigureCommand extends DowelCommand {
       '{--sessions : Enable or disable the sessions feature} '
       '{--phone-otp : Enable or disable the phone_otp feature} '
       '{--newsletter : Enable or disable the newsletter feature} '
+      '{--analytics : Enable or disable the analytics feature} '
       '{--notifications : Enable or disable the notifications feature} '
       '{--email-verification : Enable or disable the email_verification feature}';
 

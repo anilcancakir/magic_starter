@@ -1,6 +1,11 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:material_ui/material_ui.dart' hide Switch;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:magic/magic.dart';
+import 'package:magic_analytics/magic_analytics.dart';
 import 'package:magic_starter/magic_starter.dart';
 // The preference sub-page views are registered via the view registry
 // (keys `settings.appearance` / `settings.language` / `settings.timezone` /
@@ -546,4 +551,218 @@ void main() {
       expect((mockDriver.lastData as Map)['subscribe'], true);
     });
   });
+
+  // -------------------------------------------------------------------------
+  // Email & privacy (the newsletter page with the analytics switch)
+  // -------------------------------------------------------------------------
+
+  group('MagicStarterNewsletterView as Email & privacy', () {
+    late FakeNetworkDriver backend;
+
+    /// Answers both preference endpoints the way magic-starter-laravel does;
+    /// a PUT to `/user/analytics` echoes the value it carried.
+    FakeNetworkDriver fakeBackend({Future<void>? analyticsReadGate}) {
+      return Http.fake((MagicRequest request) async {
+        if (request.url.contains('user/newsletter')) {
+          return Http.response({'subscribed': false});
+        }
+
+        if (request.method == 'PUT') {
+          final Map<String, dynamic> body =
+              request.data as Map<String, dynamic>;
+
+          return Http.response({'opted_out': body['opted_out']});
+        }
+
+        await analyticsReadGate;
+
+        return Http.response({'opted_out': false});
+      });
+    }
+
+    bool sentTo(String path) {
+      return backend.recorded.any(
+        ((MagicRequest, MagicResponse) pair) => pair.$1.url.contains(path),
+      );
+    }
+
+    MSSwitch analyticsSwitch(WidgetTester tester) {
+      return tester.widget<MSSwitch>(
+        find.byWidgetPredicate(
+          (Widget widget) =>
+              widget is MSSwitch &&
+              widget.semanticLabel ==
+                  trans('magic_starter.analytics.toggle_label'),
+        ),
+      );
+    }
+
+    setUp(() async {
+      Config.set('magic_starter.features.analytics', true);
+      Vault.fake();
+      Analytics.fake();
+      backend = fakeBackend();
+
+      Translator.instance.setLoader(const _ShippedStarterCopyLoader());
+      await Translator.instance.setLocale(const Locale('en'));
+    });
+
+    tearDown(() {
+      Translator.reset();
+      Http.unfake();
+      Vault.unfake();
+      Analytics.unfake();
+    });
+
+    testWidgets('is titled Email & privacy', (tester) async {
+      await tester.pumpWidget(wrap(const MagicStarterNewsletterView()));
+      await tester.pumpAndSettle();
+
+      final scaffold = tester.widget<MSPageScaffold>(
+        find.byType(MSPageScaffold),
+      );
+      expect(scaffold.title, 'Email & privacy');
+      expect(
+        scaffold.subtitle,
+        'Choose what we email you and what usage data you share.',
+      );
+    });
+
+    testWidgets('shows both sections when both features are on', (
+      tester,
+    ) async {
+      await tester.pumpWidget(wrap(const MagicStarterNewsletterView()));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(MSSwitch), findsNWidgets(2));
+      expect(find.text('Receive Newsletter'), findsOneWidget);
+      expect(find.text('Share usage data'), findsOneWidget);
+    });
+
+    testWidgets('drops the newsletter section when only analytics is on', (
+      tester,
+    ) async {
+      Config.set('magic_starter.features.newsletter', false);
+
+      await tester.pumpWidget(wrap(const MagicStarterNewsletterView()));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Receive Newsletter'), findsNothing);
+      expect(find.byType(MSSwitch), findsOneWidget);
+      expect(sentTo('user/newsletter'), isFalse);
+    });
+
+    testWidgets('drops the analytics section when analytics is off', (
+      tester,
+    ) async {
+      Config.set('magic_starter.features.analytics', false);
+
+      await tester.pumpWidget(wrap(const MagicStarterNewsletterView()));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Share usage data'), findsNothing);
+      expect(find.byType(MSSwitch), findsOneWidget);
+      expect(sentTo('user/analytics'), isFalse);
+    });
+
+    testWidgets('shows no switch without the analytics provider', (
+      tester,
+    ) async {
+      Analytics.unfake();
+      Config.set('magic_starter.features.newsletter', false);
+
+      await tester.pumpWidget(wrap(const MagicStarterNewsletterView()));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(MSSwitch), findsNothing);
+      expect(sentTo('user/analytics'), isFalse);
+    });
+
+    testWidgets('the switch reads GET /user/analytics and shows sharing on', (
+      tester,
+    ) async {
+      await tester.pumpWidget(wrap(const MagicStarterNewsletterView()));
+      await tester.pumpAndSettle();
+
+      backend.assertSent(
+        (MagicRequest request) =>
+            request.method == 'GET' && request.url == '/user/analytics',
+      );
+      expect(analyticsSwitch(tester).value, isTrue);
+      expect(analyticsSwitch(tester).disabled, isFalse);
+    });
+
+    testWidgets('the switch stays disabled until the read answers', (
+      tester,
+    ) async {
+      final Completer<void> gate = Completer<void>();
+      backend = fakeBackend(analyticsReadGate: gate.future);
+
+      await tester.pumpWidget(wrap(const MagicStarterNewsletterView()));
+      await tester.pump();
+
+      expect(analyticsSwitch(tester).disabled, isTrue);
+
+      gate.complete();
+      await tester.pumpAndSettle();
+
+      expect(analyticsSwitch(tester).disabled, isFalse);
+    });
+
+    testWidgets('turning it off PUTs the opt-out and applies it', (
+      tester,
+    ) async {
+      // Bound again inside the test body: the manager's call queue starts
+      // from a future created where it is constructed, and one created in
+      // setUp, outside the widget tester's fake-async zone, never drains here.
+      Analytics.fake();
+
+      await tester.pumpWidget(wrap(const MagicStarterNewsletterView()));
+      await tester.pumpAndSettle();
+
+      final Finder toggle = find.byWidget(analyticsSwitch(tester));
+      await tester.ensureVisible(toggle);
+      await tester.tap(toggle);
+      await tester.pumpAndSettle();
+
+      backend.assertSent(
+        (MagicRequest request) =>
+            request.method == 'PUT' &&
+            request.url == '/user/analytics' &&
+            (request.data as Map<String, dynamic>)['opted_out'] == true,
+      );
+      expect(Analytics.isOptedOut, isTrue);
+      expect(await Vault.get('magic_starter.analytics_opted_out'), '1');
+      expect(analyticsSwitch(tester).value, isFalse);
+    });
+  });
+}
+
+/// The package's shipped English copy under the dotted keys `trans()` reads,
+/// so the assertions are about what a host installs.
+class _ShippedStarterCopyLoader implements TranslationLoader {
+  const _ShippedStarterCopyLoader();
+
+  @override
+  Future<Map<String, dynamic>> load(Locale _) async {
+    final Map<String, dynamic> stub = jsonDecode(
+      File('assets/stubs/install/en.stub').readAsStringSync(),
+    ) as Map<String, dynamic>;
+
+    return _flatten(stub, '');
+  }
+
+  Map<String, dynamic> _flatten(Map<String, dynamic> map, String prefix) {
+    return {
+      for (final MapEntry<String, dynamic> entry in map.entries)
+        if (entry.value is Map<String, dynamic>)
+          ..._flatten(
+            entry.value as Map<String, dynamic>,
+            '$prefix${entry.key}.',
+          )
+        else
+          '$prefix${entry.key}': entry.value,
+    };
+  }
 }

@@ -3,6 +3,7 @@ import 'package:magic/magic.dart';
 
 import '../configuration/magic_starter_config.dart';
 import '../facades/magic_starter.dart';
+import '../http/controllers/magic_starter_analytics_preference_controller.dart';
 import '../http/controllers/magic_starter_newsletter_controller.dart';
 import '../http/controllers/magic_starter_profile_controller.dart';
 import '../http/controllers/magic_starter_releases_controller.dart';
@@ -20,9 +21,14 @@ Widget _profileSettingsView(String key) {
   return MagicStarter.view.make(key);
 }
 
-/// Resolves the newsletter sub-page, registering its controller first.
+/// Resolves the Email & privacy sub-page (registry key `settings.newsletter`),
+/// registering both of its controllers first.
+///
+/// The newsletter controller is registered even when only `analytics` is on:
+/// the view is a `MagicStatefulView` of it and resolves it with `Magic.find`.
 Widget _newsletterSettingsView() {
   Magic.findOrPut(MagicStarterNewsletterController.new);
+  Magic.findOrPut(MagicStarterAnalyticsPreferenceController.new);
   return MagicStarter.view.make('settings.newsletter');
 }
 
@@ -104,8 +110,9 @@ void registerMagicStarterProfileRoutes() {
         ).title('magic_starter.titles.timezone').stacked();
       }
 
-      // Newsletter sub-page.
-      if (MagicStarterConfig.hasNewsletterFeatures()) {
+      // Email & privacy sub-page: the newsletter and the analytics switch.
+      if (MagicStarterConfig.hasNewsletterFeatures() ||
+          MagicStarterConfig.hasAnalyticsFeatures()) {
         MagicRoute.page(
           MagicStarterConfig.settingsNewsletterRoute(),
           () => _newsletterSettingsView(),

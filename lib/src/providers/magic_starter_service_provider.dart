@@ -2,11 +2,13 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 import 'package:magic/magic.dart';
+import 'package:magic_analytics/magic_analytics.dart';
 import 'package:magic_notifications/magic_notifications.dart';
 import 'package:magic_payments/magic_payments.dart';
 
 import '../configuration/magic_starter_config.dart';
 import '../facades/magic_starter.dart';
+import '../http/controllers/magic_starter_analytics_preference_controller.dart';
 import '../http/controllers/magic_starter_handoff_controller.dart';
 import '../http/magic_starter_guest_claim.dart';
 import '../magic_starter_manager.dart';
@@ -122,6 +124,31 @@ class _ForgetGuestOnLogout extends MagicListener<AuthLogout> {
   Future<void> handle(AuthLogout event) => MagicStarterGuestClaim.forget();
 }
 
+/// Applies the account's "Share usage data" choice on this device once a
+/// session starts ([AuthLogin]) or is confirmed by the API ([AuthRestored]).
+///
+/// The restore leg is what carries a choice made on another device to this
+/// one on its next launch. Unawaited for the reason [_RecordOrClaimGuest]
+/// gives: the read is a round trip and the dispatcher awaits every listener.
+class _ApplyAccountAnalyticsPreference<E extends MagicEvent>
+    extends MagicListener<E> {
+  @override
+  Future<void> handle(E event) async {
+    unawaited(MagicStarterServiceProvider._syncAnalyticsPreference());
+  }
+}
+
+/// Drops this device's copy of the account's analytics choice on every
+/// sign-out, so the next account starts from the device default.
+///
+/// Awaited for the reason [_ForgetGuestOnLogout] gives: a sign-in that follows
+/// at once must not inherit the previous account's opt-out.
+class _ForgetAnalyticsPreferenceOnLogout extends MagicListener<AuthLogout> {
+  @override
+  Future<void> handle(AuthLogout event) =>
+      MagicStarterServiceProvider._forgetAnalyticsPreference();
+}
+
 /// Service provider for Magic Starter.
 ///
 /// Register in your app's kernel:
@@ -152,6 +179,20 @@ class MagicStarterServiceProvider extends ServiceProvider {
         ..register(AuthLogin, [() => _RecordOrClaimGuest()])
         ..register(AuthRestored, [() => _ClaimGuestOnRestore()])
         ..register(AuthLogout, [() => _ForgetGuestOnLogout()]);
+    }
+
+    // The flag alone decides registration; whether `magic_analytics` is bound
+    // is read when an event arrives, because its provider may register after
+    // this one.
+    if (MagicStarterConfig.hasAnalyticsFeatures()) {
+      EventDispatcher.instance
+        ..register(AuthLogin, [
+          () => _ApplyAccountAnalyticsPreference<AuthLogin>(),
+        ])
+        ..register(AuthRestored, [
+          () => _ApplyAccountAnalyticsPreference<AuthRestored>(),
+        ])
+        ..register(AuthLogout, [() => _ForgetAnalyticsPreferenceOnLogout()]);
     }
 
     // Declared at register time rather than in `boot()`, which is what this
@@ -213,6 +254,94 @@ class MagicStarterServiceProvider extends ServiceProvider {
     _applySavedLocaleOnSignIn();
     _releasePushDeviceBeforeLogout();
     _revokeTokenBeforeLogout();
+    await _applyCachedAnalyticsOptOut();
+  }
+
+  /// Whether the starter applies the account's analytics choice at all: the
+  /// feature is on and `magic_analytics`' provider is registered, since its
+  /// facade throws without one.
+  static bool _appliesAnalyticsPreference() {
+    return MagicStarterConfig.hasAnalyticsFeatures() &&
+        Magic.bound('analytics');
+  }
+
+  /// Applies the opt-out cached on this device before the first screen.
+  ///
+  /// `magic_analytics` keeps its opt-out in memory, so without this a cold
+  /// start collects until the account's answer arrives, and offline it never
+  /// does. Logged rather than rethrown: a vault that cannot be read must not
+  /// fail the app's boot.
+  Future<void> _applyCachedAnalyticsOptOut() async {
+    if (!_appliesAnalyticsPreference()) return;
+
+    try {
+      final String? cached = await Vault.get(
+        MagicStarterAnalyticsPreferenceController.deviceCacheKey,
+      );
+      if (cached != '1') return;
+
+      await Analytics.setOptOut(true);
+    } catch (error, stackTrace) {
+      Log.error(
+        '[MagicStarter] cached analytics opt-out could not be applied: '
+        '$error\n$stackTrace',
+      );
+    }
+  }
+
+  /// Reads the signed-in account's analytics choice and applies it on this
+  /// device, without calling the host hook: nothing changed.
+  ///
+  /// A refused or failed read changes nothing, so the cached choice stays in
+  /// force. Logged rather than rethrown because it runs unawaited.
+  static Future<void> _syncAnalyticsPreference() async {
+    if (!_appliesAnalyticsPreference()) return;
+
+    final Object? accountId = Auth.id();
+    if (accountId == null) return;
+
+    try {
+      final MagicResponse response = await Http.get('/user/analytics');
+      if (!response.successful) return;
+
+      // The answer belongs to the account that asked: a sign-out or another
+      // sign-in while it was in flight must not inherit it.
+      if (Auth.id() != accountId) return;
+
+      final Map<String, dynamic> data = response.data as Map<String, dynamic>;
+      await MagicStarterAnalyticsPreferenceController.applyOnDevice(
+        data['opted_out'] as bool,
+      );
+    } catch (error, stackTrace) {
+      Log.error(
+        '[MagicStarter] account analytics preference could not be applied: '
+        '$error\n$stackTrace',
+      );
+    }
+  }
+
+  /// Deletes this device's copy of the account's choice and, when it held an
+  /// opt-out, lifts it, so the next account starts from the device default.
+  ///
+  /// Logged rather than rethrown: a sign-out must not fail on it.
+  static Future<void> _forgetAnalyticsPreference() async {
+    if (!_appliesAnalyticsPreference()) return;
+
+    try {
+      const String key =
+          MagicStarterAnalyticsPreferenceController.deviceCacheKey;
+      final bool wasOptedOut = await Vault.get(key) == '1';
+
+      await Vault.delete(key);
+      if (wasOptedOut) {
+        await Analytics.setOptOut(false);
+      }
+    } catch (error, stackTrace) {
+      Log.error(
+        '[MagicStarter] account analytics preference could not be cleared: '
+        '$error\n$stackTrace',
+      );
+    }
   }
 
   /// Tells magic's [SessionScope] that a session is the user AND the active

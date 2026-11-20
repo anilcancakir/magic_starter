@@ -27,6 +27,7 @@ abstract class MagicStarterConfigHelper {
     'sessions',
     'phone_otp',
     'newsletter',
+    'analytics',
     'notifications',
     'email_verification',
     'guest_auth',

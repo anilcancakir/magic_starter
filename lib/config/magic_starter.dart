@@ -16,6 +16,7 @@ Map<String, dynamic> get magicStarterConfig => {
       'guest_auth': false,
       'phone_otp': false,
       'newsletter': false,
+      'analytics': false,
       'email_verification': false,
       'extended_profile': false,
       'social_login': false,

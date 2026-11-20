@@ -46,6 +46,7 @@ class MagicStarterAuthController extends MagicController
 | `MagicStarterHandoffController` | none | `NavigatesRoutes`, `CompletesSignIn`, `SessionScoped` |
 | `MagicStarterProfileController` | `MagicStateMixin<bool>` | `ValidatesRequests`, `NavigatesRoutes` |
 | `MagicStarterNewsletterController` | `MagicStateMixin` | `ValidatesRequests` |
+| `MagicStarterAnalyticsPreferenceController` | `MagicStateMixin` | `ValidatesRequests` |
 | `MagicStarterReleasesController` | `MagicStateMixin<MagicStarterReleaseFeed>` | none |
 | `MagicStarterTeamController` | `MagicStateMixin<bool>` | `ValidatesRequests`, `SessionScoped` |
 | `MagicStarterSupportController` | none | `ValidatesRequests`, `SessionScoped` |

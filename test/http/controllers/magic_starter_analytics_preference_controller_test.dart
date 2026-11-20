@@ -1,0 +1,192 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:magic/magic.dart';
+import 'package:magic_analytics/magic_analytics.dart';
+import 'package:magic_starter/magic_starter.dart';
+
+const String _cacheKey = 'magic_starter.analytics_opted_out';
+
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  late MagicStarterAnalyticsPreferenceController controller;
+  late List<bool> hookCalls;
+
+  /// Answers every `/user/analytics` request with [statusCode] and echoes the
+  /// value a PUT sent, the shape magic-starter-laravel answers with.
+  FakeNetworkDriver fakeBackend({int statusCode = 200, bool optedOut = false}) {
+    return Http.fake((MagicRequest request) {
+      if (statusCode != 200) {
+        return Http.response({'message': 'Server Error'}, statusCode);
+      }
+
+      final bool answer = request.method == 'PUT'
+          ? (request.data as Map<String, dynamic>)['opted_out'] as bool
+          : optedOut;
+
+      return Http.response({'opted_out': answer});
+    });
+  }
+
+  setUp(() {
+    MagicApp.reset();
+    Magic.flush();
+    Log.fake();
+    Vault.fake();
+    Analytics.fake();
+    setUpMagicStarterForTests();
+
+    hookCalls = <bool>[];
+    MagicStarter.manager.onAnalyticsPreferenceChanged = (bool optedOut) async {
+      hookCalls.add(optedOut);
+    };
+
+    controller = MagicStarterAnalyticsPreferenceController.instance;
+  });
+
+  tearDown(() {
+    Http.unfake();
+    Vault.unfake();
+    Analytics.unfake();
+    Log.unfake();
+  });
+
+  group('getAnalyticsPreference', () {
+    test('reads GET /user/analytics and holds the answer', () async {
+      final fake = fakeBackend(optedOut: true);
+
+      await controller.getAnalyticsPreference();
+
+      fake.assertSent(
+        (MagicRequest request) =>
+            request.method == 'GET' && request.url == '/user/analytics',
+      );
+      expect(controller.isSuccess, isTrue);
+      expect(controller.optedOut, isTrue);
+    });
+
+    test('a read applies nothing on the device', () async {
+      fakeBackend(optedOut: true);
+
+      await controller.getAnalyticsPreference();
+
+      expect(Analytics.isOptedOut, isFalse);
+      expect(await Vault.get(_cacheKey), isNull);
+      expect(hookCalls, isEmpty);
+    });
+
+    test('a failed read sets the fetch error', () async {
+      fakeBackend(statusCode: 500);
+
+      await controller.getAnalyticsPreference();
+
+      expect(controller.isError, isTrue);
+      expect(controller.optedOut, isNull);
+    });
+  });
+
+  group('updateAnalyticsPreference', () {
+    test('PUTs the choice to /user/analytics', () async {
+      final fake = fakeBackend();
+
+      await controller.updateAnalyticsPreference(optedOut: true);
+
+      fake.assertSent(
+        (MagicRequest request) =>
+            request.method == 'PUT' &&
+            request.url == '/user/analytics' &&
+            (request.data as Map<String, dynamic>)['opted_out'] == true,
+      );
+      expect(controller.isSuccess, isTrue);
+      expect(controller.optedOut, isTrue);
+    });
+
+    test('an opt-out stops analytics and caches it on the device', () async {
+      fakeBackend();
+
+      await controller.updateAnalyticsPreference(optedOut: true);
+
+      expect(Analytics.isOptedOut, isTrue);
+      expect(await Vault.get(_cacheKey), '1');
+    });
+
+    test('opting back in resumes analytics and drops the cache', () async {
+      fakeBackend();
+      await controller.updateAnalyticsPreference(optedOut: true);
+
+      await controller.updateAnalyticsPreference(optedOut: false);
+
+      expect(Analytics.isOptedOut, isFalse);
+      expect(await Vault.get(_cacheKey), isNull);
+    });
+
+    test('calls onAnalyticsPreferenceChanged with the new value', () async {
+      fakeBackend();
+
+      await controller.updateAnalyticsPreference(optedOut: true);
+      await controller.updateAnalyticsPreference(optedOut: false);
+
+      expect(hookCalls, [true, false]);
+    });
+
+    test('a failed save applies nothing and sets the update error', () async {
+      fakeBackend(statusCode: 500);
+
+      await controller.updateAnalyticsPreference(optedOut: true);
+
+      expect(controller.isError, isTrue);
+      expect(Analytics.isOptedOut, isFalse);
+      expect(await Vault.get(_cacheKey), isNull);
+      expect(hookCalls, isEmpty);
+    });
+
+    test('a refused value applies nothing', () async {
+      Http.fake({
+        'user/analytics': Http.response({
+          'message': 'The opted out field must be true or false.',
+          'errors': {
+            'opted_out': ['The opted out field must be true or false.'],
+          },
+        }, 422),
+      });
+
+      await controller.updateAnalyticsPreference(optedOut: true);
+
+      expect(Analytics.isOptedOut, isFalse);
+      expect(await Vault.get(_cacheKey), isNull);
+      expect(hookCalls, isEmpty);
+    });
+
+    test('a throwing hook is logged and the save still lands', () async {
+      fakeBackend();
+      MagicStarter.manager.onAnalyticsPreferenceChanged = (bool _) async {
+        throw StateError('boom');
+      };
+
+      await controller.updateAnalyticsPreference(optedOut: true);
+
+      expect(controller.isSuccess, isTrue);
+      expect(Analytics.isOptedOut, isTrue);
+    });
+
+    test(
+      'without the analytics provider the save lands and nothing throws',
+      () async {
+        Analytics.unfake();
+        fakeBackend();
+
+        await controller.updateAnalyticsPreference(optedOut: true);
+
+        expect(Magic.bound('analytics'), isFalse);
+        expect(controller.isSuccess, isTrue);
+        expect(await Vault.get(_cacheKey), '1');
+        expect(hookCalls, [true]);
+      },
+    );
+  });
+
+  test('reset() clears onAnalyticsPreferenceChanged', () {
+    MagicStarter.manager.reset();
+
+    expect(MagicStarter.manager.onAnalyticsPreferenceChanged, isNull);
+  });
+}

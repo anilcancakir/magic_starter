@@ -34,6 +34,7 @@ class MagicStarterConfig {
   static const bool _defaultGuestAuth = false;
   static const bool _defaultPhoneOtp = false;
   static const bool _defaultNewsletter = false;
+  static const bool _defaultAnalytics = false;
   static const bool _defaultEmailVerification = false;
   static const bool _defaultTimezones = false;
   static const bool _defaultBilling = false;
@@ -212,6 +213,17 @@ class MagicStarterConfig {
           _defaultNewsletter,
         ) ??
         _defaultNewsletter;
+  }
+
+  /// Returns whether the account-level analytics opt-out is enabled: the
+  /// "Share usage data" switch on the Email & privacy page, and applying the
+  /// account's choice to `magic_analytics` on this device.
+  static bool hasAnalyticsFeatures() {
+    return Config.get<bool>(
+          'magic_starter.features.analytics',
+          _defaultAnalytics,
+        ) ??
+        _defaultAnalytics;
   }
 
   /// Returns whether email verification starter features are enabled.

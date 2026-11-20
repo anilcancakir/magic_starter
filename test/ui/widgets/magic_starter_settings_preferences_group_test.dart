@@ -125,6 +125,55 @@ void main() {
       );
     });
 
+    testWidgets('the Email & privacy row shows when only analytics is on', (
+      tester,
+    ) async {
+      Config.set('magic_starter.features.analytics', true);
+
+      await tester.pumpWidget(
+        wrap(const MagicStarterSettingsPreferencesGroup()),
+      );
+
+      expect(routes(tester), [
+        MagicStarterConfig.settingsAppearanceRoute(),
+        MagicStarterConfig.settingsNewsletterRoute(),
+      ]);
+    });
+
+    testWidgets('analytics keeps the row without the manage-newsletter '
+        'ability', (tester) async {
+      enableEverything();
+      Config.set('magic_starter.features.analytics', true);
+      Gate.define('starter.manage-newsletter', (user, [_]) => false);
+
+      await tester.pumpWidget(
+        wrap(const MagicStarterSettingsPreferencesGroup()),
+      );
+
+      expect(
+        routes(tester),
+        contains(MagicStarterConfig.settingsNewsletterRoute()),
+      );
+    });
+
+    testWidgets('the row is titled with the Email & privacy key', (
+      tester,
+    ) async {
+      enableEverything();
+
+      await tester.pumpWidget(
+        wrap(const MagicStarterSettingsPreferencesGroup()),
+      );
+
+      final MSSettingsNavRow row = tester
+          .widgetList<MSSettingsNavRow>(find.byType(MSSettingsNavRow))
+          .singleWhere(
+            (MSSettingsNavRow row) =>
+                row.to == MagicStarterConfig.settingsNewsletterRoute(),
+          );
+      expect(row.title, trans('magic_starter.privacy.title'));
+    });
+
     testWidgets('carries no version caption of its own', (tester) async {
       enableEverything();
 

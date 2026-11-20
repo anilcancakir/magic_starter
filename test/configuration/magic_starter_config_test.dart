@@ -53,6 +53,10 @@ void main() {
         expect(MagicStarterConfig.hasNewsletterFeatures(), isFalse);
       });
 
+      test('hasAnalyticsFeatures() returns false by default', () {
+        expect(MagicStarterConfig.hasAnalyticsFeatures(), isFalse);
+      });
+
       test('hasReleasesFeatures() returns false by default', () {
         expect(MagicStarterConfig.hasReleasesFeatures(), isFalse);
       });
@@ -250,6 +254,12 @@ void main() {
         Config.set('magic_starter.features.newsletter', true);
 
         expect(MagicStarterConfig.hasNewsletterFeatures(), isTrue);
+      });
+
+      test('hasAnalyticsFeatures() returns true when config is set', () {
+        Config.set('magic_starter.features.analytics', true);
+
+        expect(MagicStarterConfig.hasAnalyticsFeatures(), isTrue);
       });
 
       test('hasReleasesFeatures() returns true when config is set', () {
