@@ -1,7 +1,6 @@
 import 'package:magic/magic.dart';
 import 'package:magic_analytics/magic_analytics.dart';
 
-import '../../configuration/magic_starter_config.dart';
 import '../../facades/magic_starter.dart';
 
 /// Controller for the account-level "Share usage data" choice on the Email &
@@ -36,16 +35,12 @@ class MagicStarterAnalyticsPreferenceController extends MagicController
   bool? get optedOut => _optedOut;
 
   /// Drops the previous account's answer, so the switch never shows it for
-  /// the next one, then reads the new account's choice when the switch can
-  /// render.
+  /// the next one. No read here: `SessionScope` runs this on every sign-in
+  /// and team switch, and the Email & privacy page reads on mount.
   @override
   Future<void> resetForSession() async {
     _optedOut = null;
     setEmpty();
-
-    if (MagicStarterConfig.hasAnalyticsFeatures() && Magic.bound('analytics')) {
-      await getAnalyticsPreference();
-    }
   }
 
   /// Reads the account's choice.

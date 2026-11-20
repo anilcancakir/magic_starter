@@ -42,7 +42,8 @@ dependencies:
   magic_notifications: ^1.0.0
   # The "Share usage data" switch on the Email & privacy page applies the
   # account's choice through `Analytics.setOptOut` and reads it back through
-  # `Analytics.isOptedOut`. 1.0.1 is the first release on pub.dev; every call
+  # `Analytics.isOptedOut`. 1.0.1 is the floor because it stops event
+  # parameters leaking into later events on web (1.0.0 does not); every call
   # is guarded by `Magic.bound('analytics')`, so an app that never registers
   # `AnalyticsServiceProvider` pays nothing at runtime.
   magic_analytics: ^1.0.1

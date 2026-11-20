@@ -219,7 +219,7 @@ void main() {
   });
 
   test('a new session forgets the previous account answer', () async {
-    fakeBackend(optedOut: true);
+    final fake = fakeBackend(optedOut: true);
     await controller.getAnalyticsPreference();
     expect(controller.optedOut, isTrue);
 
@@ -227,6 +227,8 @@ void main() {
 
     expect(controller, isA<SessionScoped>());
     expect(controller.optedOut, isNull);
+    // The page reads on mount; a sign-in or team switch sends nothing here.
+    expect(fake.recorded, hasLength(1));
   });
 
   test('reset() clears both analytics hooks', () {

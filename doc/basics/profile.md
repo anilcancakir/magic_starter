@@ -53,7 +53,7 @@ Every `do*` method answers `bool` (a few two-factor reads answer a map or a list
 | Password | `settingsPasswordRoute()` | `settings.security.password` | Gate `starter.update-password` |
 | Language | `settingsLanguageRoute()` | `settings.language` | `extended_profile` |
 | Timezone | `settingsTimezoneRoute()` | `settings.timezone` | `timezones` |
-| Email & privacy | `settingsNewsletterRoute()` | `settings.newsletter` | `newsletter` and Gate `starter.manage-newsletter`, or `analytics` |
+| Email & privacy | `settingsNewsletterRoute()` | `settings.newsletter` | `newsletter` and Gate `starter.manage-newsletter`, or `analytics` with `AnalyticsServiceProvider` registered |
 | What's new | `settingsChangelogRoute()` | `settings.changelog` | `releases` (see [Releases](./releases.md)) |
 | Two-factor | `settingsTwoFactorRoute()` | `settings.security.two_factor` | `two_factor` and Gate `starter.manage-two-factor` |
 | Sessions | `settingsSessionsRoute()` | `settings.security.sessions` | `sessions` |
@@ -209,7 +209,7 @@ Enabling, confirming, disabling and recovery codes run through the same controll
 | `starter.update-password` | The Password row and page |
 | `starter.verify-email` | The verification banner |
 | `starter.manage-two-factor` | The Two-factor row |
-| `starter.manage-newsletter` | The Email & privacy row while `analytics` is off |
+| `starter.manage-newsletter` | The newsletter section of Email & privacy, and the row unless the analytics switch renders (`analytics` on and `AnalyticsServiceProvider` registered) |
 | `starter.logout-sessions` | The revoke buttons on Sessions |
 | `starter.delete-account` | The delete section; a guest is denied and sees an upgrade prompt instead |
 
