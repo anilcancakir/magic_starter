@@ -30,16 +30,27 @@ class MagicStarterAnalyticsPreferenceController extends MagicController
 
   bool? _optedOut;
 
+  /// The account [_optedOut] was answered for.
+  Object? _answeredFor;
+
   /// The account's choice as the backend last answered it, `true` when the
   /// account has opted out; null until a read or a save has answered.
   bool? get optedOut => _optedOut;
 
   /// Drops the previous account's answer, so the switch never shows it for
-  /// the next one. No read here: `SessionScope` runs this on every sign-in
-  /// and team switch, and the Email & privacy page reads on mount.
+  /// the next one. A team switch by the same user keeps it: the choice
+  /// belongs to the user, and an open page keeps a usable switch. No read
+  /// here: `SessionScope` runs this on every sign-in and team switch, and the
+  /// Email & privacy page reads on mount.
   @override
   Future<void> resetForSession() async {
+    if (_optedOut != null && Auth.id() == _answeredFor) {
+      refreshUI();
+      return;
+    }
+
     _optedOut = null;
+    _answeredFor = null;
     setEmpty();
   }
 
@@ -62,6 +73,7 @@ class MagicStarterAnalyticsPreferenceController extends MagicController
 
       final Map<String, dynamic> data = response.data as Map<String, dynamic>;
       _optedOut = data['opted_out'] as bool;
+      _answeredFor = Auth.id();
       setSuccess(data);
     } catch (e, stackTrace) {
       Log.error(
@@ -104,6 +116,7 @@ class MagicStarterAnalyticsPreferenceController extends MagicController
       //    collecting exactly as the account still says.
       await applyOnDevice(optedOut);
       _optedOut = optedOut;
+      _answeredFor = account;
       setSuccess(response.data as Map<String, dynamic>);
 
       // 2. Last, so the host re-applies identity on a device already opted in.

@@ -218,16 +218,32 @@ void main() {
     );
   });
 
-  test('a new session forgets the previous account answer', () async {
+  test('another account forgets the previous account answer', () async {
+    Auth.fake(user: MagicStarterAuthUser.fromMap({'id': 1, 'name': 'A'}));
     final fake = fakeBackend(optedOut: true);
     await controller.getAnalyticsPreference();
     expect(controller.optedOut, isTrue);
 
+    Auth.fake(user: MagicStarterAuthUser.fromMap({'id': 2, 'name': 'B'}));
     await controller.resetForSession();
 
     expect(controller, isA<SessionScoped>());
     expect(controller.optedOut, isNull);
-    // The page reads on mount; a sign-in or team switch sends nothing here.
+    // The page reads on mount; a sign-in sends nothing here.
+    expect(fake.recorded, hasLength(1));
+  });
+
+  test('a team switch keeps the same account answer', () async {
+    // The choice belongs to the user, not the team, so an open page keeps a
+    // usable switch across a team switch.
+    Auth.fake(user: MagicStarterAuthUser.fromMap({'id': 1, 'name': 'A'}));
+    final fake = fakeBackend(optedOut: true);
+    await controller.getAnalyticsPreference();
+
+    await controller.resetForSession();
+
+    expect(controller.optedOut, isTrue);
+    expect(controller.isSuccess, isTrue);
     expect(fake.recorded, hasLength(1));
   });
 
