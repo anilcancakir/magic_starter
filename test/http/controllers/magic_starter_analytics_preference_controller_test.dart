@@ -33,6 +33,7 @@ void main() {
     Log.fake();
     Vault.fake();
     Analytics.fake();
+    Auth.fake();
     setUpMagicStarterForTests();
 
     hookCalls = <bool>[];
@@ -44,6 +45,7 @@ void main() {
   });
 
   tearDown(() {
+    Auth.unfake();
     Http.unfake();
     Vault.unfake();
     Analytics.unfake();
@@ -168,6 +170,22 @@ void main() {
       expect(Analytics.isOptedOut, isTrue);
     });
 
+    test('a save answered after the account changed applies nothing', () async {
+      Auth.fake(user: MagicStarterAuthUser.fromMap({'id': 1, 'name': 'A'}));
+      Http.fake((MagicRequest request) {
+        // Another account signs in while the PUT is in flight.
+        Auth.fake(user: MagicStarterAuthUser.fromMap({'id': 2, 'name': 'B'}));
+
+        return Http.response({'opted_out': true});
+      });
+
+      await controller.updateAnalyticsPreference(optedOut: true);
+
+      expect(Analytics.isOptedOut, isFalse);
+      expect(await Vault.get(_cacheKey), isNull);
+      expect(hookCalls, isEmpty);
+    });
+
     test('a host applyAnalyticsOptOut hook replaces the facade call', () async {
       final List<bool> applied = <bool>[];
       MagicStarter.manager.applyAnalyticsOptOut = (bool optedOut) async {
@@ -198,6 +216,17 @@ void main() {
         expect(hookCalls, [true]);
       },
     );
+  });
+
+  test('a new session forgets the previous account answer', () async {
+    fakeBackend(optedOut: true);
+    await controller.getAnalyticsPreference();
+    expect(controller.optedOut, isTrue);
+
+    await controller.resetForSession();
+
+    expect(controller, isA<SessionScoped>());
+    expect(controller.optedOut, isNull);
   });
 
   test('reset() clears both analytics hooks', () {

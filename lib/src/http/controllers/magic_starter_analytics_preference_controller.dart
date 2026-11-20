@@ -1,6 +1,7 @@
 import 'package:magic/magic.dart';
 import 'package:magic_analytics/magic_analytics.dart';
 
+import '../../configuration/magic_starter_config.dart';
 import '../../facades/magic_starter.dart';
 
 /// Controller for the account-level "Share usage data" choice on the Email &
@@ -13,7 +14,8 @@ import '../../facades/magic_starter.dart';
 /// cold start reads ([deviceCacheKey]), then the host's
 /// `MagicStarterManager.onAnalyticsPreferenceChanged` hook.
 class MagicStarterAnalyticsPreferenceController extends MagicController
-    with MagicStateMixin, ValidatesRequests {
+    with MagicStateMixin, ValidatesRequests
+    implements SessionScoped {
   /// Singleton accessor; use this instead of constructing directly.
   static MagicStarterAnalyticsPreferenceController get instance =>
       Magic.findOrPut(MagicStarterAnalyticsPreferenceController.new);
@@ -32,6 +34,19 @@ class MagicStarterAnalyticsPreferenceController extends MagicController
   /// The account's choice as the backend last answered it, `true` when the
   /// account has opted out; null until a read or a save has answered.
   bool? get optedOut => _optedOut;
+
+  /// Drops the previous account's answer, so the switch never shows it for
+  /// the next one, then reads the new account's choice when the switch can
+  /// render.
+  @override
+  Future<void> resetForSession() async {
+    _optedOut = null;
+    setEmpty();
+
+    if (MagicStarterConfig.hasAnalyticsFeatures() && Magic.bound('analytics')) {
+      await getAnalyticsPreference();
+    }
+  }
 
   /// Reads the account's choice.
   Future<void> getAnalyticsPreference() async {
@@ -73,6 +88,10 @@ class MagicStarterAnalyticsPreferenceController extends MagicController
     _isSubmitting = true;
     setLoading();
 
+    // The account the choice belongs to: an answer landing after a sign-out
+    // or another sign-in must not be applied to whoever holds the device now.
+    final Object? account = Auth.id();
+
     try {
       final MagicResponse response = await Http.put(
         '/user/analytics',
@@ -83,6 +102,8 @@ class MagicStarterAnalyticsPreferenceController extends MagicController
         setError(trans('magic_starter.analytics.update_error'));
         return;
       }
+
+      if (Auth.id() != account) return;
 
       // 1. Apply on this device only now, so a refused save leaves the device
       //    collecting exactly as the account still says.

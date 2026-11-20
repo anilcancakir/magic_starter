@@ -139,9 +139,17 @@ void main() {
 
     test('an answer for a session that is gone applies nothing', () async {
       await bootProvider();
-      fakeBackend(optedOut: true);
+      await Auth.login({'token': 'account-token'}, _user());
+      Http.fake((MagicRequest request) {
+        // Another account signs in while the read is in flight.
+        Auth.fake(
+          user: MagicStarterAuthUser.fromMap({'id': 43, 'name': 'Bob'}),
+        );
 
-      await Event.dispatch(AuthLogin(_user()));
+        return Http.response({'opted_out': true});
+      });
+
+      await Event.dispatch(AuthRestored(_user()));
       await pumpEventQueue();
 
       expect(Analytics.isOptedOut, isFalse);

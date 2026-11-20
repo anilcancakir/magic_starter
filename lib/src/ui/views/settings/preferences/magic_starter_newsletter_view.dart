@@ -30,6 +30,24 @@ class MagicStarterNewsletterView
     extends MagicStatefulView<MagicStarterNewsletterController> {
   const MagicStarterNewsletterView({super.key});
 
+  /// Whether the newsletter section renders: the feature is on and the user
+  /// may manage the subscription (`starter.manage-newsletter`, which denies a
+  /// guest).
+  static bool showsNewsletter() =>
+      MagicStarterConfig.hasNewsletterFeatures() &&
+      Gate.allows('starter.manage-newsletter');
+
+  /// Whether the "Share usage data" section renders: the feature is on and
+  /// `magic_analytics`' provider is registered. Without the provider there is
+  /// nothing on this device to apply the choice to, so the switch would only
+  /// mislead.
+  static bool showsAnalytics() =>
+      MagicStarterConfig.hasAnalyticsFeatures() && Magic.bound('analytics');
+
+  /// Whether the page has a section to show; the hub row hides otherwise, so
+  /// it never leads to a page with only a title.
+  static bool hasSections() => showsNewsletter() || showsAnalytics();
+
   @override
   State<MagicStarterNewsletterView> createState() =>
       _MagicStarterNewsletterViewState();
@@ -51,12 +69,9 @@ class _MagicStarterNewsletterViewState
 
   /// Read once: a feature toggled after the page opened changes nothing here,
   /// as with every other settings page.
-  final bool _showsNewsletter = MagicStarterConfig.hasNewsletterFeatures();
+  final bool _showsNewsletter = MagicStarterNewsletterView.showsNewsletter();
 
-  /// Without `magic_analytics`' provider there is nothing on this device to
-  /// apply the choice to, so the switch would only mislead.
-  final bool _showsAnalytics =
-      MagicStarterConfig.hasAnalyticsFeatures() && Magic.bound('analytics');
+  final bool _showsAnalytics = MagicStarterNewsletterView.showsAnalytics();
 
   MagicStarterAnalyticsPreferenceController get _analytics =>
       MagicStarterAnalyticsPreferenceController.instance;

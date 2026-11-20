@@ -652,6 +652,18 @@ void main() {
       expect(sentTo('user/newsletter'), isFalse);
     });
 
+    testWidgets('drops the newsletter section for a user who may not '
+        'manage it', (tester) async {
+      Gate.define('starter.manage-newsletter', (user, [_]) => false);
+
+      await tester.pumpWidget(wrap(const MagicStarterNewsletterView()));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Receive Newsletter'), findsNothing);
+      expect(find.byType(MSSwitch), findsOneWidget);
+      expect(sentTo('user/newsletter'), isFalse);
+    });
+
     testWidgets('drops the analytics section when analytics is off', (
       tester,
     ) async {
