@@ -15,6 +15,7 @@
 - [Logout Callback](#logout-callback)
 - [Login Callback](#login-callback)
 - [Guest Claim Callback](#guest-claim-callback)
+- [Analytics Preference Callback](#analytics-preference-callback)
 - [Locale Application](#locale-application)
 - [Unified Theme](#unified-theme)
 - [Form Theme](#form-theme)
@@ -386,6 +387,33 @@ Also accepted as the `onGuestClaimed` argument of `MagicStarter.bootstrap()`. Wi
 
 When `onGuestClaimed` is `null` (the default), nothing runs.
 
+<a name="analytics-preference-callback"></a>
+## Analytics Preference Callback
+
+Run custom logic after the user changes the account's "Share usage data" choice:
+
+```dart
+MagicStarter.manager.onAnalyticsPreferenceChanged = (bool optedOut) async {
+  if (optedOut) return;
+
+  await Analytics.identify(Auth.user()!.get<String>('uuid')!);
+};
+```
+
+With the `analytics` feature on, `MagicStarterAnalyticsPreferenceController.updateAnalyticsPreference` calls it once the backend accepted the change and the device applied it (`Analytics.setOptOut` and the vault copy). `magic_analytics` drops `identify`, `setUserProperties` and `setDefaultParams` while opted out, so this is where a host re-applies them. It is not called when the starter applies the account's choice on boot or after a sign-in or restore, since nothing changed then. It is awaited, and a failure is logged rather than rethrown; the save still counts.
+
+When `onAnalyticsPreferenceChanged` is `null` (the default), nothing runs.
+
+A host with its own reason to stay opted out, such as a device-level consent refusal, sets `applyAnalyticsOptOut` and combines the two there:
+
+```dart
+MagicStarter.manager.applyAnalyticsOptOut = (bool accountOptedOut) async {
+  await Analytics.setOptOut(accountOptedOut || await deviceRefusedConsent());
+};
+```
+
+When it is set, the starter calls it instead of `Analytics.setOptOut` everywhere it applies the account's choice: the cached choice on boot, the answer after a sign-in or restore, a saved switch, and the lift on sign-out (with `false`). Without it the account's choice would overwrite the host's own opt-out. It is awaited, and a failure is logged by the caller.
+
 <a name="locale-application"></a>
 ## Locale Application
 
@@ -699,7 +727,7 @@ The facade provides a shortcut: `MagicStarter.view` delegates to `manager.view`.
 | `settings.hub`, `profile.profile`, `settings.appearance`, `settings.security.password` | `MagicStarterSettingsHubView`, `MagicStarterProfileSubPageView`, `MagicStarterAppearanceView`, `MagicStarterPasswordView` | Always |
 | `settings.language` | `MagicStarterLanguageView` | `hasExtendedProfileFeatures()` |
 | `settings.timezone` | `MagicStarterTimezoneView` | `hasTimezoneFeatures()` |
-| `settings.newsletter` | `MagicStarterNewsletterView` | `hasNewsletterFeatures()` |
+| `settings.newsletter` | `MagicStarterNewsletterView` (Email & privacy) | `hasNewsletterFeatures()` or `hasAnalyticsFeatures()` |
 | `settings.changelog` | `MagicStarterChangelogView` | `hasReleasesFeatures()` |
 | `settings.security.two_factor` | `MagicStarterTwoFactorView` | `hasTwoFactorFeatures()` |
 | `settings.security.sessions` | `MagicStarterSessionsView` | `hasSessionsFeatures()` |

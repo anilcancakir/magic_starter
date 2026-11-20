@@ -46,6 +46,7 @@ class MagicStarterAuthController extends MagicController
 | `MagicStarterHandoffController` | none | `NavigatesRoutes`, `CompletesSignIn`, `SessionScoped` |
 | `MagicStarterProfileController` | `MagicStateMixin<bool>` | `ValidatesRequests`, `NavigatesRoutes` |
 | `MagicStarterNewsletterController` | `MagicStateMixin` | `ValidatesRequests` |
+| `MagicStarterAnalyticsPreferenceController` | `MagicStateMixin` | `ValidatesRequests`, `SessionScoped` |
 | `MagicStarterReleasesController` | `MagicStateMixin<MagicStarterReleaseFeed>` | none |
 | `MagicStarterTeamController` | `MagicStateMixin<bool>` | `ValidatesRequests`, `SessionScoped` |
 | `MagicStarterSupportController` | none | `ValidatesRequests`, `SessionScoped` |
@@ -113,7 +114,7 @@ Because `findOrPut` stores the instance in the container, a controller outlives 
 
 - The controller's own `onInit()` runs once per instance lifetime, the first time it backs a view, not on every mount.
 - The view state's `onInit()` runs on every mount. When a view mounts, magic clears the controller's validation errors and turns an error status back to empty without notifying, so a failed attempt does not greet the next visit. A controller still holds its other state (a success value, `ValueNotifier` contents) between visits: reset what you need in the view's `onInit()`.
-- A controller that caches data of one signed-in user or team implements magic's `SessionScoped`, so a sign-out or a team switch resets it. The team, support, feedback, handoff and billing controllers do; see [Session Scope](../basics/session-scope.md).
+- A controller that caches data of one signed-in user or team implements magic's `SessionScoped`, so a sign-out or a team switch resets it. The team, support, feedback, handoff, billing and analytics preference controllers do; see [Session Scope](../basics/session-scope.md).
 - `ValueNotifier` fields are disposed with the controller. In tests call `controller.dispose()` in `tearDown`.
 - `Magic.flush()` or `MagicApp.reset()` replaces the container; the next `findOrPut` builds a fresh instance. That is the test isolation mechanism.
 

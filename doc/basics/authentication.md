@@ -448,6 +448,7 @@ Authentication features are controlled by these configuration toggles. All defau
 | `magic_starter.features.guest_auth` | `hasGuestAuthFeatures()` | Guest login flow |
 | `magic_starter.features.phone_otp` | `hasPhoneOtpFeatures()` | Phone OTP send/verify |
 | `magic_starter.features.newsletter` | `hasNewsletterFeatures()` | Newsletter checkbox on registration |
+| `magic_starter.features.analytics` | `hasAnalyticsFeatures()` | The account's analytics opt-out applied on boot, sign-in and sign-out |
 | `magic_starter.features.email_verification` | `hasEmailVerificationFeatures()` | Email verification flow |
 | `magic_starter.features.handoff` | `hasHandoffFeatures()` | Sign-in handoff route and view |
 | `magic_starter.auth.email` | `emailIdentity()` | Email field in login/register (default `true`) |

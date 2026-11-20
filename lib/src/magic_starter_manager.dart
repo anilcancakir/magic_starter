@@ -286,6 +286,29 @@ class MagicStarterManager {
   /// throw is logged.
   Future<void> Function(GuestClaimOutcome outcome)? onGuestClaimed;
 
+  /// Called after the user changed the account's "Share usage data" choice and
+  /// the backend accepted it, with the new value; [optedOut] true means the
+  /// account stopped sharing.
+  ///
+  /// Runs once the choice is applied on this device. `magic_analytics` drops
+  /// `identify`, `setUserProperties` and `setDefaultParams` while opted out, so
+  /// a host that sets them re-applies them here when [optedOut] turns false.
+  /// Deliberately NOT called when the starter applies the account's choice on
+  /// boot or after a sign-in: nothing changed then. Awaited by the controller;
+  /// a throw is logged and the save still counts.
+  Future<void> Function(bool optedOut)? onAnalyticsPreferenceChanged;
+
+  /// Replaces the starter's own `Analytics.setOptOut(accountOptedOut)` wherever
+  /// it applies the account's "Share usage data" choice on this device: the
+  /// cached choice on boot, the account's answer after a sign-in or restore,
+  /// a saved switch, and the lift on sign-out (`false`).
+  ///
+  /// Set it when the host has its own reason to stay opted out, such as a
+  /// device-level consent refusal, and combine the two there; otherwise the
+  /// account's choice would overwrite the host's. Awaited; a throw propagates
+  /// to the caller, which logs it.
+  Future<void> Function(bool accountOptedOut)? applyAnalyticsOptOut;
+
   /// Custom header builder. When set, replaces the default header.
   Widget Function(BuildContext context, bool isDesktop)? headerBuilder;
 
@@ -772,8 +795,10 @@ class MagicStarterManager {
       );
     }
 
-    // Newsletter.
-    if (MagicStarterConfig.hasNewsletterFeatures()) {
+    // Email & privacy: the newsletter page, which also holds the analytics
+    // switch.
+    if (MagicStarterConfig.hasNewsletterFeatures() ||
+        MagicStarterConfig.hasAnalyticsFeatures()) {
       _registerDefault(
         'settings.newsletter',
         () => const MagicStarterNewsletterView(),
@@ -956,6 +981,8 @@ class MagicStarterManager {
     _landedTeamId = null;
     onLogin = null;
     onGuestClaimed = null;
+    onAnalyticsPreferenceChanged = null;
+    applyAnalyticsOptOut = null;
     headerBuilder = null;
     sidebarFooterBuilder = null;
     socialAuth = null;

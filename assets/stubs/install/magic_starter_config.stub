@@ -15,6 +15,7 @@ Map<String, dynamic> get magicStarterConfig => {
       'sessions': {{ feature_sessions }},
       'phone_otp': {{ feature_phone_otp }},
       'newsletter': {{ feature_newsletter }},
+      'analytics': {{ feature_analytics }},
       'notifications': {{ feature_notifications }},
       'email_verification': {{ feature_email_verification }},
       'guest_auth': {{ feature_guest_auth }},

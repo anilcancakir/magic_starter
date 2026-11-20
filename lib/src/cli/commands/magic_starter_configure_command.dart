@@ -25,6 +25,7 @@ class MagicStarterConfigureCommand extends DowelCommand {
     'sessions': 'sessions',
     'phone-otp': 'phone_otp',
     'newsletter': 'newsletter',
+    'analytics': 'analytics',
     'notifications': 'notifications',
     'email-verification': 'email_verification',
   };
@@ -39,6 +40,7 @@ class MagicStarterConfigureCommand extends DowelCommand {
       '{--sessions : Enable or disable the sessions feature} '
       '{--phone-otp : Enable or disable the phone_otp feature} '
       '{--newsletter : Enable or disable the newsletter feature} '
+      '{--analytics : Enable or disable the analytics feature} '
       '{--notifications : Enable or disable the notifications feature} '
       '{--email-verification : Enable or disable the email_verification feature}';
 
@@ -114,12 +116,17 @@ class MagicStarterConfigureCommand extends DowelCommand {
 
     // 4. Apply each update sequentially to the content string.
     String updated = content;
-    for (final entry in updates.entries) {
-      updated = MagicStarterConfigHelper.updateFeature(
-        updated,
-        entry.key,
-        entry.value,
-      );
+    try {
+      for (final entry in updates.entries) {
+        updated = MagicStarterConfigHelper.updateFeature(
+          updated,
+          entry.key,
+          entry.value,
+        );
+      }
+    } on ArgumentError {
+      ctx.output.error('No features map found in $_configPath');
+      return 1;
     }
 
     // 5. Write the updated content back to the config file.

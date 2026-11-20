@@ -245,6 +245,30 @@ void main() {
       expect(routeFor(MagicStarterConfig.settingsNewsletterRoute()), isNotNull);
     });
 
+    test('the Email & privacy page is routed when only analytics is on', () {
+      Config.set('magic_starter.features.newsletter', false);
+      Config.set('magic_starter.features.analytics', true);
+      Magic.singleton('magic_starter', () => MagicStarterManager());
+
+      registerMagicStarterProfileRoutes();
+
+      final route = routeFor(MagicStarterConfig.settingsNewsletterRoute());
+      expect(route, isNotNull);
+      expect(route!.routeTitle, 'magic_starter.titles.newsletter');
+      expect(MagicStarter.view.has('settings.newsletter'), isTrue);
+    });
+
+    test('the Email & privacy page is absent with both features off', () {
+      Config.set('magic_starter.features.newsletter', false);
+      Config.set('magic_starter.features.analytics', false);
+      Magic.singleton('magic_starter', () => MagicStarterManager());
+
+      registerMagicStarterProfileRoutes();
+
+      expect(routeFor(MagicStarterConfig.settingsNewsletterRoute()), isNull);
+      expect(MagicStarter.view.has('settings.newsletter'), isFalse);
+    });
+
     test('changelog sub-route appears when releases is on', () {
       Config.set('magic_starter.features.releases', true);
 

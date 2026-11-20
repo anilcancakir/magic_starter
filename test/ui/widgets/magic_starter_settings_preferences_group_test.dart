@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:magic/magic.dart';
+import 'package:magic_analytics/magic_analytics.dart';
 import 'package:magic_starter/magic_starter.dart';
 
 void main() {
@@ -123,6 +124,76 @@ void main() {
         routes(tester),
         isNot(contains(MagicStarterConfig.settingsNewsletterRoute())),
       );
+    });
+
+    testWidgets('the Email & privacy row shows when only analytics is on', (
+      tester,
+    ) async {
+      Config.set('magic_starter.features.analytics', true);
+      Analytics.fake();
+      addTearDown(Analytics.unfake);
+
+      await tester.pumpWidget(
+        wrap(const MagicStarterSettingsPreferencesGroup()),
+      );
+
+      expect(routes(tester), [
+        MagicStarterConfig.settingsAppearanceRoute(),
+        MagicStarterConfig.settingsNewsletterRoute(),
+      ]);
+    });
+
+    testWidgets('analytics keeps the row without the manage-newsletter '
+        'ability', (tester) async {
+      enableEverything();
+      Config.set('magic_starter.features.analytics', true);
+      Analytics.fake();
+      addTearDown(Analytics.unfake);
+      Gate.define('starter.manage-newsletter', (user, [_]) => false);
+
+      await tester.pumpWidget(
+        wrap(const MagicStarterSettingsPreferencesGroup()),
+      );
+
+      expect(
+        routes(tester),
+        contains(MagicStarterConfig.settingsNewsletterRoute()),
+      );
+    });
+
+    testWidgets('hides the row when the page would have no section', (
+      tester,
+    ) async {
+      // analytics on without magic_analytics registered, and a user who may
+      // not manage the newsletter (a guest): nothing would render.
+      enableEverything();
+      Config.set('magic_starter.features.analytics', true);
+      Gate.define('starter.manage-newsletter', (user, [_]) => false);
+
+      await tester.pumpWidget(
+        wrap(const MagicStarterSettingsPreferencesGroup()),
+      );
+
+      expect(
+        routes(tester),
+        isNot(contains(MagicStarterConfig.settingsNewsletterRoute())),
+      );
+    });
+
+    testWidgets('a host catalogue without the new key still reads English', (
+      tester,
+    ) async {
+      // A host that copied the install stub before Email & privacy shipped has
+      // no `magic_starter.privacy.title`; the row must not show the raw key.
+      enableEverything();
+      expect(Lang.has('magic_starter.privacy.title'), isFalse);
+
+      await tester.pumpWidget(
+        wrap(const MagicStarterSettingsPreferencesGroup()),
+      );
+
+      expect(find.text('Email & privacy'), findsOneWidget);
+      expect(find.text('magic_starter.privacy.title'), findsNothing);
     });
 
     testWidgets('carries no version caption of its own', (tester) async {

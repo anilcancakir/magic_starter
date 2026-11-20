@@ -56,7 +56,7 @@ MagicStarter.view.registerLayout('layout.app', (child) => MyAppShell(child: chil
 | `settings.hub`, `profile.profile`, `settings.appearance`, `settings.security.password` | Always |
 | `settings.language` | `extended_profile` |
 | `settings.timezone` | `timezones` |
-| `settings.newsletter` | `newsletter` |
+| `settings.newsletter` (Email & privacy) | `newsletter` or `analytics` |
 | `settings.changelog` | `releases` |
 | `settings.security.two_factor` | `two_factor` |
 | `settings.security.sessions` | `sessions` |

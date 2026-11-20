@@ -5,6 +5,8 @@ import 'package:magic/magic.dart';
 import '../../configuration/magic_starter_config.dart';
 import '../components/settings_nav_row/index.dart';
 import '../components/settings_section/index.dart';
+import '../../support/control_name.dart';
+import '../views/settings/preferences/magic_starter_newsletter_view.dart';
 
 /// The Preferences group of the settings hub, gating included.
 ///
@@ -12,8 +14,8 @@ import '../components/settings_section/index.dart';
 /// `magic_starter.settings.preferences_section` with Appearance, which has no
 /// gate, followed in this order by the rows whose feature is on: Notifications
 /// (`notifications`), Language (`extended_profile`), Timezone (`timezones`),
-/// Newsletter (`newsletter` and the `starter.manage-newsletter` ability) and
-/// What's new (`releases`).
+/// Email & privacy (when the page has a section to show, see
+/// `MagicStarterNewsletterView.hasSections`) and What's new (`releases`).
 ///
 /// The version caption is not part of the group: the hub closes its page with
 /// a `MagicStarterAppVersion` when `MagicStarterConfig.hasReleasesFeatures()`,
@@ -60,11 +62,13 @@ class MagicStarterSettingsPreferencesGroup extends StatelessWidget {
             title: trans('profile.timezone_label'),
             to: MagicStarterConfig.settingsTimezoneRoute(),
           ),
-        if (MagicStarterConfig.hasNewsletterFeatures() &&
-            Gate.allows('starter.manage-newsletter'))
+        if (MagicStarterNewsletterView.hasSections())
           MSSettingsNavRow(
             icon: _iconNewsletter,
-            title: trans('magic_starter.newsletter.section_title'),
+            title: magicStarterControlName(
+              'magic_starter.privacy.title',
+              'Email & privacy',
+            ),
             to: MagicStarterConfig.settingsNewsletterRoute(),
           ),
         if (MagicStarterConfig.hasReleasesFeatures())

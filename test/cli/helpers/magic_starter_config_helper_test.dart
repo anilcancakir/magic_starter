@@ -108,6 +108,65 @@ Map<String, dynamic> get magicStarterConfig => {
         expect(features['registration'], true);
       });
 
+      test('adds a feature the config does not list yet', () {
+        // A config written before the feature existed has no key for it; the
+        // flag would otherwise report success and change nothing.
+        const content = """
+Map<String, dynamic> get magicStarterConfig => {
+      'magic_starter': {
+        'features': {
+          'teams': true,
+          'registration': false,
+        },
+      },
+    };
+""";
+        final updated = MagicStarterConfigHelper.updateFeature(
+          content,
+          'analytics',
+          true,
+        );
+        final features = MagicStarterConfigHelper.parseFeatures(updated);
+        expect(features['analytics'], true);
+        expect(features['teams'], true);
+        expect(features['registration'], false);
+        expect(updated, contains("          'analytics': true,\n"));
+      });
+
+      test('adds a missing feature to a CRLF config', () {
+        const String content =
+            "Map<String, dynamic> get magicStarterConfig => {\r\n"
+            "      'magic_starter': {\r\n"
+            "        'features': {\r\n"
+            "          'teams': true,\r\n"
+            "        },\r\n"
+            "      },\r\n"
+            "    };\r\n";
+
+        final updated = MagicStarterConfigHelper.updateFeature(
+          content,
+          'analytics',
+          true,
+        );
+
+        expect(
+          MagicStarterConfigHelper.parseFeatures(updated)['analytics'],
+          true,
+        );
+        expect(updated, contains("          'analytics': true,\r\n"));
+      });
+
+      test('throws when the content has no features map', () {
+        expect(
+          () => MagicStarterConfigHelper.updateFeature(
+            '// No features here',
+            'analytics',
+            true,
+          ),
+          throwsArgumentError,
+        );
+      });
+
       test('is idempotent when setting same value', () {
         const content = """
 Map<String, dynamic> get magicStarterConfig => {

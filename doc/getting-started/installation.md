@@ -22,6 +22,7 @@ The Dart and Flutter floors are inherited from `magic`: a package cannot resolve
 | `magic` | `^1.0.0` |
 | `dowel` | `^1.0.0` |
 | `magic_notifications` | `^1.0.0` |
+| `magic_analytics` | `^1.0.1` |
 | `magic_payments` | `^1.0.0` |
 | `magic_picker` | `^1.0.0` |
 | `magic_socket` | `^1.0.0` |

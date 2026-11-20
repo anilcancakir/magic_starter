@@ -42,6 +42,7 @@ Map<String, dynamic> get magicStarterConfig => {
       'sessions': false,
       'phone_otp': false,
       'newsletter': false,
+      'analytics': false,
       'notifications': false,
       'email_verification': false,
       'guest_auth': false,
@@ -132,7 +133,8 @@ Each toggle controls whether routes are registered, views are put in the registr
 | `two_factor` | `false` | Two-factor setup, the challenge screen and recovery codes. |
 | `sessions` | `false` | The browser sessions list with revoke. |
 | `phone_otp` | `false` | The phone-based one-time code flow (send, verify). |
-| `newsletter` | `false` | The newsletter subscribe toggle in the settings. |
+| `newsletter` | `false` | The newsletter subscribe toggle on the Email & privacy settings page. |
+| `analytics` | `false` | The account-level "Share usage data" switch on the Email & privacy page, and applying the account's choice to `magic_analytics` on boot, sign-in and sign-out. Needs `AnalyticsServiceProvider` registered; without it the switch is hidden. |
 | `notifications` | `false` | The in-app notification list, unread badge and preferences screen, and the push identity this package declares. |
 | `email_verification` | `false` | The email verification page and resend flow. |
 | `guest_auth` | `false` | The login screen's "Continue as guest" button, plus the listeners that record a guest sign-in and claim that guest's data when an account signs in. It adds no routes or screens. |
@@ -163,7 +165,7 @@ To enable features, set their values to `true`:
 ```
 
 > [!TIP]
-> A disabled feature registers no route and no view, so asking the view registry for its key (`MagicStarter.view.make('teams.create')`) throws a `StateError`. Check `MagicStarterConfig.hasTeamFeatures()` and its siblings before building a link to a gated page.
+> A disabled feature registers no route and no view, so asking the view registry for its key (`MagicStarter.view.make('teams.create')`) throws a `StateError`. Check `MagicStarterConfig.hasTeamFeatures()` and its siblings before building a link to a gated page. The one shared page is Email & privacy: its route and `settings.newsletter` key register while either `newsletter` or `analytics` is on, so turning `newsletter` off alone does not remove it.
 
 <a name="route-customization"></a>
 ## Route Customisation
