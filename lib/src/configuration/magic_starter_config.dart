@@ -217,7 +217,8 @@ class MagicStarterConfig {
 
   /// Returns whether the account-level analytics opt-out is enabled: the
   /// "Share usage data" switch on the Email & privacy page, and applying the
-  /// account's choice to `magic_analytics` on this device.
+  /// account's choice through the host's `applyAnalyticsOptOut` hook, which
+  /// `MagicStarterServiceProvider.boot()` requires while this is on.
   static bool hasAnalyticsFeatures() {
     return Config.get<bool>(
           'magic_starter.features.analytics',

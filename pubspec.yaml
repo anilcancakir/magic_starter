@@ -40,12 +40,6 @@ dependencies:
   # `MagicNotificationsDowelProvider` and moved Wind to `wind_kit`. A floor must
   # name a version pub.dev already has, or the package is unresolvable.
   magic_notifications: ^1.0.0
-  # The "Share usage data" switch on the Email & privacy page applies the
-  # account's choice through `Analytics.setOptOut`. 1.0.1 is the floor because it stops event
-  # parameters leaking into later events on web (1.0.0 does not); every call
-  # is guarded by `Magic.bound('analytics')`, so an app that never registers
-  # `AnalyticsServiceProvider` pays nothing at runtime.
-  magic_analytics: ^1.0.1
   # Direct rather than transitive: `wind_kit` reaches this package through
   # `magic`, so without an entry here there is no floor to raise when this
   # package starts calling a new Wind API. `magic_starter_timezone_select.dart`
@@ -83,6 +77,11 @@ dev_dependencies:
     sdk: flutter
   test: ^1.32.0
   flutter_lints: ^6.0.0
+  # Tests only: they connect it the way a host does, through
+  # `applyAnalyticsOptOut: Analytics.setOptOut`, to prove the documented line
+  # works. `lib/` imports no analytics package, so a host that never adds this
+  # one resolves no Firebase through the starter.
+  magic_analytics: ^1.0.1
 
 flutter:
   assets:

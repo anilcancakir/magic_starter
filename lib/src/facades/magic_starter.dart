@@ -86,6 +86,15 @@ class MagicStarter {
   /// [useLogin] would. [onGuestClaimed] is optional for the same reason, and
   /// is passed the way [useGuestClaimed] would.
   ///
+  /// [applyAnalyticsOptOut] is optional because the analytics feature is
+  /// opt-in (`magic_starter.features.analytics` defaults to `false`), and required in
+  /// practice once it is on: the starter imports no analytics package, so this
+  /// is how the account's "Share usage data" choice reaches the host's own.
+  /// `MagicStarterServiceProvider.boot()` throws a [StateError] when the
+  /// feature is on and no hook was set. It has no `use*()` setter: it is the
+  /// plain `MagicStarterManager.applyAnalyticsOptOut` field, which [bootstrap]
+  /// assigns.
+  ///
   /// [currentTeam], [allTeams] and [onSwitch] are optional because teams are
   /// an opt-in feature (`magic_starter.features.teams` defaults to `false`); a
   /// teamless app must not be forced to pass stub callbacks. They are still
@@ -131,6 +140,7 @@ class MagicStarter {
     required Map<String, String> locales,
     Future<void> Function()? onLogin,
     Future<void> Function(GuestClaimOutcome outcome)? onGuestClaimed,
+    Future<void> Function(bool accountOptedOut)? applyAnalyticsOptOut,
     MagicStarterTeam? Function()? currentTeam,
     List<MagicStarterTeam> Function()? allTeams,
     Future<void> Function(dynamic teamId)? onSwitch,
@@ -160,6 +170,9 @@ class MagicStarter {
     useLocaleOptions(locales);
     if (onLogin != null) useLogin(onLogin);
     if (onGuestClaimed != null) useGuestClaimed(onGuestClaimed);
+    if (applyAnalyticsOptOut != null) {
+      manager.applyAnalyticsOptOut = applyAnalyticsOptOut;
+    }
 
     if (teamCallbacks == 3) {
       useTeamResolver(

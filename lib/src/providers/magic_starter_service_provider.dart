@@ -180,9 +180,8 @@ class MagicStarterServiceProvider extends ServiceProvider {
         ..register(AuthLogout, [() => _ForgetGuestOnLogout()]);
     }
 
-    // The flag alone decides registration; whether `magic_analytics` is bound
-    // is read when an event arrives, because its provider may register after
-    // this one.
+    // The flag alone decides registration. The host's `applyAnalyticsOptOut`
+    // hook is read when an event arrives, and `boot()` refuses a missing one.
     if (MagicStarterConfig.hasAnalyticsFeatures()) {
       EventDispatcher.instance
         ..register(AuthLogin, [
@@ -212,6 +211,15 @@ class MagicStarterServiceProvider extends ServiceProvider {
 
   @override
   Future<void> boot() async {
+    // The account's "Share usage data" choice applies through the host's hook
+    // and nothing else, so a missing hook would let an opted-out account keep
+    // being collected. Refused first, before this provider changes anything.
+    // The hook is set in the host's own provider boot, which runs before this
+    // one (see `_declarePushIdentityOnSignIn` for the ordering).
+    if (MagicStarterConfig.hasAnalyticsFeatures()) {
+      MagicStarterAnalyticsPreferenceController.requireApplyHook();
+    }
+
     final teamsEnabled =
         Config.get<bool>('magic_starter.features.teams', false) ?? false;
     if (teamsEnabled && MagicStarter.manager.teamResolver == null) {
@@ -256,22 +264,14 @@ class MagicStarterServiceProvider extends ServiceProvider {
     await _applyCachedAnalyticsOptOut();
   }
 
-  /// Whether the starter applies the account's analytics choice at all: the
-  /// feature is on and `magic_analytics`' provider is registered, since its
-  /// facade throws without one.
-  static bool _appliesAnalyticsPreference() {
-    return MagicStarterConfig.hasAnalyticsFeatures() &&
-        Magic.bound('analytics');
-  }
-
   /// Applies the opt-out cached on this device before the first screen.
   ///
-  /// `magic_analytics` keeps its opt-out in memory, so without this a cold
-  /// start collects until the account's answer arrives, and offline it never
-  /// does. Logged rather than rethrown: a vault that cannot be read must not
-  /// fail the app's boot.
+  /// An analytics package usually keeps its opt-out in memory, so without this
+  /// a cold start collects until the account's answer arrives, and offline it
+  /// never does. Logged rather than rethrown: a vault that cannot be read must
+  /// not fail the app's boot.
   Future<void> _applyCachedAnalyticsOptOut() async {
-    if (!_appliesAnalyticsPreference()) return;
+    if (!MagicStarterConfig.hasAnalyticsFeatures()) return;
 
     try {
       final String? cached = await Vault.get(
@@ -294,7 +294,7 @@ class MagicStarterServiceProvider extends ServiceProvider {
   /// A refused or failed read changes nothing, so the cached choice stays in
   /// force. Logged rather than rethrown because it runs unawaited.
   static Future<void> _syncAnalyticsPreference() async {
-    if (!_appliesAnalyticsPreference()) return;
+    if (!MagicStarterConfig.hasAnalyticsFeatures()) return;
 
     final Object? accountId = Auth.id();
     if (accountId == null) return;
@@ -330,7 +330,7 @@ class MagicStarterServiceProvider extends ServiceProvider {
   ///
   /// Logged rather than rethrown: a sign-out must not fail on it.
   static Future<void> _forgetAnalyticsPreference() async {
-    if (!_appliesAnalyticsPreference()) return;
+    if (!MagicStarterConfig.hasAnalyticsFeatures()) return;
 
     try {
       const String key =

@@ -18,10 +18,14 @@ void main() {
 
   late List<bool> hookCalls;
 
-  /// Boots the starter provider, which is what applies the account choice.
+  /// Boots the starter provider, which is what applies the account choice,
+  /// with the one line a host writes to connect magic_analytics. The hook is
+  /// set between register and boot, where a host's own provider sets it:
+  /// `register()` binds a fresh manager.
   Future<void> bootProvider() async {
     final provider = MagicStarterServiceProvider(MagicApp.instance);
     provider.register();
+    MagicStarter.manager.applyAnalyticsOptOut = Analytics.setOptOut;
     await provider.boot();
   }
 
@@ -309,24 +313,71 @@ void main() {
     });
   });
 
-  group('without the analytics provider', () {
-    setUp(Analytics.unfake);
+  group('without an applyAnalyticsOptOut hook', () {
+    Future<void> bootWithoutHook() async {
+      final provider = MagicStarterServiceProvider(MagicApp.instance);
+      provider.register();
+      await provider.boot();
+    }
 
-    test('boot, sign-in and sign-out neither throw nor read', () async {
-      Vault.fake({_cacheKey: '1'});
-      await expectLater(bootProvider(), completes);
-      await Auth.login({'token': 'account-token'}, _user());
-      final fake = Http.fake();
-
-      await Event.dispatch(AuthLogin(_user()));
-      await pumpEventQueue();
-      await Auth.logout();
-      await pumpEventQueue();
-
-      expect(Magic.bound('analytics'), isFalse);
-      fake.assertNotSent(
-        (MagicRequest request) => request.url.contains('user/analytics'),
+    test('boot refuses while the analytics feature is on', () async {
+      await expectLater(
+        bootWithoutHook(),
+        throwsA(
+          isA<StateError>().having(
+            (StateError error) => error.message,
+            'message',
+            allOf(
+              contains('applyAnalyticsOptOut'),
+              contains('magic_starter.features.analytics'),
+            ),
+          ),
+        ),
       );
     });
+
+    test('boot completes while the analytics feature is off', () async {
+      Config.set('magic_starter.features.analytics', false);
+
+      await expectLater(bootWithoutHook(), completes);
+    });
+
+    test('boot applies a cached opt-out through the hook alone', () async {
+      // Only the hook matters to the starter; the plugin is the host's. With
+      // nothing bound under `analytics`, the cached choice still reaches it.
+      Analytics.unfake();
+      expect(Magic.bound('analytics'), isFalse);
+      Vault.fake({_cacheKey: '1'});
+      final List<bool> applied = <bool>[];
+      final provider = MagicStarterServiceProvider(MagicApp.instance);
+      provider.register();
+      MagicStarter.manager.applyAnalyticsOptOut = (bool optedOut) async {
+        applied.add(optedOut);
+      };
+
+      await provider.boot();
+
+      expect(applied, <bool>[true]);
+    });
+
+    test(
+      'a hook passed to bootstrap() after register lets boot complete',
+      () async {
+        // The order a host follows: every register() runs first, then the
+        // host's own provider calls bootstrap(), then the starter boots.
+        final provider = MagicStarterServiceProvider(MagicApp.instance);
+        provider.register();
+
+        MagicStarter.bootstrap(
+          userFactory: (data) => MagicStarterAuthUser.fromMap(data),
+          onLogout: () async {},
+          locales: const {'en': 'English'},
+          applyAnalyticsOptOut: (bool optedOut) async {},
+        );
+
+        await expectLater(provider.boot(), completes);
+        expect(MagicStarter.manager.applyAnalyticsOptOut, isNotNull);
+      },
+    );
   });
 }
