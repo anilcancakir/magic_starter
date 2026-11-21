@@ -23,9 +23,10 @@ class _TestMagicStarterConfigureCommand extends MagicStarterConfigureCommand {
 /// string options supply the string value directly.
 Future<int> _runConfigure(
   MagicStarterConfigureCommand command,
-  Map<String, dynamic> flags,
-) {
-  final ctx = DowelContext.bare(MapInput(flags), BufferedOutput());
+  Map<String, dynamic> flags, {
+  BufferedOutput? output,
+}) {
+  final ctx = DowelContext.bare(MapInput(flags), output ?? BufferedOutput());
   return command.handle(ctx);
 }
 
@@ -336,6 +337,35 @@ void main() {
       final content = File('${tempDir.path}/lib/config/magic_starter.dart')
           .readAsStringSync();
       expect(content, contains("'notifications': false"));
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // The analytics hook notice
+  // -------------------------------------------------------------------------
+  group('analytics', () {
+    // The app refuses to boot while `analytics` is on and no
+    // `applyAnalyticsOptOut` hook is set, so turning it on says so.
+    test('--analytics names the hook the app needs', () async {
+      final BufferedOutput output = BufferedOutput();
+
+      await _runConfigure(command, {'analytics': true}, output: output);
+
+      final content = File('${tempDir.path}/lib/config/magic_starter.dart')
+          .readAsStringSync();
+      expect(content, contains("'analytics': true"));
+      expect(output.content, contains('applyAnalyticsOptOut'));
+    });
+
+    test('--no-analytics and other flags stay quiet about it', () async {
+      final BufferedOutput output = BufferedOutput();
+
+      await _runConfigure(command, {
+        'analytics': false,
+        'teams': true,
+      }, output: output);
+
+      expect(output.content, isNot(contains('applyAnalyticsOptOut')));
     });
   });
 }

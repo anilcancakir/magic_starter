@@ -38,6 +38,43 @@ void main() {
     // The three universal pieces land exactly where their setters put them.
     // -------------------------------------------------------------------------
 
+    // -------------------------------------------------------------------------
+    // The analytics hook is optional here and required by the provider's boot.
+    // -------------------------------------------------------------------------
+
+    group('applyAnalyticsOptOut', () {
+      test('lands on the manager', () async {
+        final List<bool> applied = <bool>[];
+
+        Future<void> apply(bool optedOut) async {
+          applied.add(optedOut);
+        }
+
+        MagicStarter.bootstrap(
+          userFactory: (data) => _HostUser.fromMap(data),
+          onLogout: () async {},
+          locales: const {'en': 'English'},
+          applyAnalyticsOptOut: apply,
+        );
+
+        expect(MagicStarter.manager.applyAnalyticsOptOut, equals(apply));
+
+        await MagicStarter.manager.applyAnalyticsOptOut!(true);
+
+        expect(applied, <bool>[true]);
+      });
+
+      test('stays unset when omitted', () {
+        MagicStarter.bootstrap(
+          userFactory: (data) => _HostUser.fromMap(data),
+          onLogout: () async {},
+          locales: const {'en': 'English'},
+        );
+
+        expect(MagicStarter.manager.applyAnalyticsOptOut, isNull);
+      });
+    });
+
     group('universal identity', () {
       test('userFactory lands where useUserModel() puts it', () {
         Authenticatable factory(Map<String, dynamic> data) {

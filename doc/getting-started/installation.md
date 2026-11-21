@@ -22,7 +22,6 @@ The Dart and Flutter floors are inherited from `magic`: a package cannot resolve
 | `magic` | `^1.0.0` |
 | `dowel` | `^1.0.0` |
 | `magic_notifications` | `^1.0.0` |
-| `magic_analytics` | `^1.0.1` |
 | `magic_payments` | `^1.0.0` |
 | `magic_picker` | `^1.0.0` |
 | `magic_socket` | `^1.0.0` |
@@ -31,6 +30,8 @@ The Dart and Flutter floors are inherited from `magic`: a package cannot resolve
 | `in_app_review` | `^2.0.12` |
 | `package_info_plus` | `^10.2.2` |
 | `web` | `^1.1.2` |
+
+The starter imports no analytics package, so nothing here resolves Firebase for you. To use the `analytics` feature, install `magic_analytics` yourself (`flutter pub add magic_analytics`, then `dart run magic:dowel plugin:install magic_analytics`) or any analytics package, and connect it as described in [Analytics Preference Callback](../architecture/manager.md#analytics-preference-callback).
 
 The UI is built on `wind_kit` and `material_ui`, which come with `magic`. The app must already be scaffolded by Magic (`lib/config/app.dart` present): run `dart run magic:dowel magic:install` first, see the [Magic installation guide](https://anilcancakir.com/magic/docs/getting-started/installation).
 
@@ -183,7 +184,7 @@ The team callbacks are a group: pass all three or none.
 | Teams on, team callbacks omitted | Throws a `StateError` naming the missing call and the config flag. |
 | Only some of the three callbacks passed | Throws an `ArgumentError`; the manager is left untouched. |
 
-`bootstrap()` also takes the optional `onLogin` and `onGuestClaimed` callbacks, described in [Manager](../architecture/manager.md#login-callback).
+`bootstrap()` also takes the optional `onLogin` and `onGuestClaimed` callbacks, described in [Manager](../architecture/manager.md#login-callback), and `applyAnalyticsOptOut`, which the `analytics` feature needs (see [Analytics Preference Callback](../architecture/manager.md#analytics-preference-callback)).
 
 The individual setters (`useUserModel()`, `useLogout()`, `useLocaleOptions()`, `useTeamResolver()`) stay public. Call one after `bootstrap()` to replace what it registered, for example to register the team resolver once your own team store is warm:
 

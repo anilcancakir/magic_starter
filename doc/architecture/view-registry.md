@@ -186,7 +186,7 @@ MagicStarter.view.register('settings.hub', () => const AppSettingsView());
 |:-------|:---------------------|
 | `MagicStarterSettingsAccountGroup` | Profile (always); for a guest (denied `starter.delete-account`) also the upgrade and sign-in rows |
 | `MagicStarterSettingsSecurityGroup` | Two-factor (`two_factor` and `starter.manage-two-factor`), Password (`starter.update-password`), Browser sessions (`sessions`), Connected accounts (`social_login` and a `MagicStarter.useSocialAuth` bridge) |
-| `MagicStarterSettingsPreferencesGroup` | Appearance (always), Notifications (`notifications`), Language (`extended_profile`), Timezone (`timezones`), Email & privacy (`newsletter` and `starter.manage-newsletter`, or `analytics` with `AnalyticsServiceProvider` registered), What's new (`releases`) |
+| `MagicStarterSettingsPreferencesGroup` | Appearance (always), Notifications (`notifications`), Language (`extended_profile`), Timezone (`timezones`), Email & privacy (`newsletter` and `starter.manage-newsletter`, or `analytics`), What's new (`releases`) |
 
 - The Security group renders a zero-size box when none of its rows is reachable. `MSPageScaffold` still puts a gap around a zero-size child, so guard the group with `hasRows`; the other two always have a row.
 - The groups read the user, the abilities and the flags when they build and listen to none of them. Leave them non-const when the page is rebuilt on an auth change, or the Profile subtitle and the two-factor value keep what they read first.

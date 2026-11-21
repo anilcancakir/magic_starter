@@ -47,7 +47,7 @@ void register() {
 2. **Auth restored listener**: `_ReloadOnAuthRestored` calls `Magic.reload()` when `AuthRestored` fires with `changed` true, so screens refresh after a write that calls `Auth.restore()` (team rename, invitation accept, profile update). A sync that only confirms the cached user (`changed` false, the usual cold boot) reloads nothing. It also stays out of the way while `MagicStarterHandoffController` holds a sign-in handoff. A team switch does not come through here; it resets team-scoped screens through `SessionScope`.
 3. **Auth login listener**: `_CallOnLoginHook` calls the host's `MagicStarter.useLogin()` callback (unawaited, logged on failure) whenever `AuthLogin` fires: every fresh sign-in, never a cold-boot restore. See [Login Callback](manager.md#login-callback).
 4. **Guest listeners**, only when `features.guest_auth` is on: on `AuthLogin` a guest sign-in is recorded and any other sign-in claims the recorded guest's data in the background; on `AuthRestored` a pending claim runs; on `AuthLogout` the record is forgotten. See [Guest Claim Callback](manager.md#guest-claim-callback).
-5. **Analytics preference listeners**, registered when `features.analytics` is on; each does nothing while `magic_analytics`' provider is not registered: on `AuthLogin` and `AuthRestored` the account's choice is read from `GET /user/analytics` and applied in the background (an answer whose session changed is dropped); on `AuthLogout` the device copy is deleted and a cached opt-out lifted. Each apply goes through `MagicStarter.manager.applyAnalyticsOptOut` when the host set it. See [Analytics Preference Callback](manager.md#analytics-preference-callback).
+5. **Analytics preference listeners**, registered when `features.analytics` is on: on `AuthLogin` and `AuthRestored` the account's choice is read from `GET /user/analytics` and applied in the background (an answer whose session changed is dropped); on `AuthLogout` the device copy is deleted and a cached opt-out lifted. Each apply goes through the host's `MagicStarter.manager.applyAnalyticsOptOut`, which `boot()` requires. See [Analytics Preference Callback](manager.md#analytics-preference-callback).
 6. **Session identity**: sets `SessionScope.identity` to `<userId>:<teamId>` while signed in and `null` otherwise, so a team switch by the same user counts as a change. See [Session Scope](../basics/session-scope.md).
 7. **Store billable**: points `StoreIdentitySync.billableId` at the manager, so the store rail is identified as the user or the team according to `magic_starter.billing.billable`.
 
@@ -59,13 +59,14 @@ void register() {
 
 `boot()` is `async`. In order, it:
 
-1. warns about a missing team resolver,
-2. defines the Gate abilities,
-3. schedules the primary colour fallback,
-4. installs the modal presentation resolver on magic's router (`MagicRoute.useOverlayPresentation`), so an overlay route follows the modal theme's `presentation`,
-5. on the web, primes the app build when `app_update` or `releases` is on,
-6. attaches the auth state listeners and the before-logout hooks described below,
-7. with `analytics` on and the provider registered, applies the opt-out cached on this device, so a cold start stays off before the account answers.
+1. with `analytics` on, throws a `StateError` when the host has not set `MagicStarter.manager.applyAnalyticsOptOut`,
+2. warns about a missing team resolver,
+3. defines the Gate abilities,
+4. schedules the primary colour fallback,
+5. installs the modal presentation resolver on magic's router (`MagicRoute.useOverlayPresentation`), so an overlay route follows the modal theme's `presentation`,
+6. on the web, primes the app build when `app_update` or `releases` is on,
+7. attaches the auth state listeners and the before-logout hooks described below,
+8. with `analytics` on, applies the opt-out cached on this device, so a cold start stays off before the account answers.
 
 <a name="teams-feature-warning"></a>
 ### Teams Feature Warning

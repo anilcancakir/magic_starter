@@ -18,8 +18,7 @@ import '../../../../support/control_name.dart';
 /// with a trailing [MSSwitch] wired to
 /// [MagicStarterNewsletterController.updateNewsletterSubscription], its status
 /// fetched on init via `getNewsletterStatus`. The analytics section renders
-/// when `analytics` is on and `magic_analytics`' provider is registered: one
-/// switch wired to
+/// when `analytics` is on: one switch wired to
 /// [MagicStarterAnalyticsPreferenceController.updateAnalyticsPreference], on
 /// while the account shares usage data, disabled until the account's choice is
 /// read and while a save is in flight.
@@ -38,12 +37,11 @@ class MagicStarterNewsletterView
       MagicStarterConfig.hasNewsletterFeatures() &&
       Gate.allows('starter.manage-newsletter');
 
-  /// Whether the "Share usage data" section renders: the feature is on and
-  /// `magic_analytics`' provider is registered. Without the provider there is
-  /// nothing on this device to apply the choice to, so the switch would only
-  /// mislead.
-  static bool showsAnalytics() =>
-      MagicStarterConfig.hasAnalyticsFeatures() && Magic.bound('analytics');
+  /// Whether the "Share usage data" section renders: the feature is on. The
+  /// host's `applyAnalyticsOptOut` hook is what applies the choice, and the
+  /// service provider refuses to boot without it, so the switch never renders
+  /// over nothing.
+  static bool showsAnalytics() => MagicStarterConfig.hasAnalyticsFeatures();
 
   /// Whether the page has a section to show; the hub row hides otherwise, so
   /// it never leads to a page with only a title.

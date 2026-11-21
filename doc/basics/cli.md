@@ -164,7 +164,7 @@ dart run magic:dowel starter:configure --teams --notifications
 > Only flags you pass are touched; the rest stay as they are. The command rewrites the Dart source with a regular expression through `MagicStarterConfigHelper.updateFeature()`. Features without a flag here (registration, billing, support and the rest) are edited in the config file by hand.
 
 Each flag is negatable: `--teams` turns the feature on and `--no-teams` turns it off, for example `dart run magic:dowel starter:configure --no-teams`.
-Flipping a toggle edits the config file and nothing else. A feature that needs scaffolding (teams needs the `Team` model, the `User` team accessors, the `bootstrap()` team callbacks and `registerMagicStarterTeamRoutes()`) gets it only from `starter:install`.
+Flipping a toggle edits the config file and nothing else, apart from a notice: `--analytics` prints the `applyAnalyticsOptOut` step, because the app refuses to boot with `analytics` on until that hook is set (see [Analytics Preference Callback](../architecture/manager.md#analytics-preference-callback)). A feature that needs scaffolding (teams needs the `Team` model, the `User` team accessors, the `bootstrap()` team callbacks and `registerMagicStarterTeamRoutes()`) gets it only from `starter:install`.
 
 <a name="non-interactive-mode"></a>
 ### Non-Interactive Mode

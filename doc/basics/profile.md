@@ -53,7 +53,7 @@ Every `do*` method answers `bool` (a few two-factor reads answer a map or a list
 | Password | `settingsPasswordRoute()` | `settings.security.password` | Gate `starter.update-password` |
 | Language | `settingsLanguageRoute()` | `settings.language` | `extended_profile` |
 | Timezone | `settingsTimezoneRoute()` | `settings.timezone` | `timezones` |
-| Email & privacy | `settingsNewsletterRoute()` | `settings.newsletter` | `newsletter` and Gate `starter.manage-newsletter`, or `analytics` with `AnalyticsServiceProvider` registered |
+| Email & privacy | `settingsNewsletterRoute()` | `settings.newsletter` | `newsletter` and Gate `starter.manage-newsletter`, or `analytics` |
 | What's new | `settingsChangelogRoute()` | `settings.changelog` | `releases` (see [Releases](./releases.md)) |
 | Two-factor | `settingsTwoFactorRoute()` | `settings.security.two_factor` | `two_factor` and Gate `starter.manage-two-factor` |
 | Sessions | `settingsSessionsRoute()` | `settings.security.sessions` | `sessions` |
@@ -163,14 +163,14 @@ await MagicStarterNewsletterController.instance.updateNewsletterSubscription(sub
 
 These call `GET /user/newsletter` and `PUT /user/newsletter`. `MagicStarter.useNewsletterLabel('Subscribe to our updates')` sets the label of the newsletter checkbox on the register view (with `newsletter` on); the profile newsletter section does not read it.
 
-The page is titled "Email & privacy" (`magic_starter.privacy.title`). With `magic_starter.features.analytics` on and `magic_analytics`' `AnalyticsServiceProvider` registered, it also shows a "Share usage data" switch for the whole account; the newsletter section shows only with `newsletter` on. The registry key `settings.newsletter`, the route and `MagicStarterNewsletterView` keep the newsletter name for compatibility. `MagicStarterAnalyticsPreferenceController` reads and saves the choice:
+The page is titled "Email & privacy" (`magic_starter.privacy.title`). With `magic_starter.features.analytics` on, it also shows a "Share usage data" switch for the whole account (the starter imports no analytics package, so the host connects its own through [`applyAnalyticsOptOut`](../architecture/manager.md#analytics-preference-callback)); the newsletter section shows only with `newsletter` on. The registry key `settings.newsletter`, the route and `MagicStarterNewsletterView` keep the newsletter name for compatibility. `MagicStarterAnalyticsPreferenceController` reads and saves the choice:
 
 ```dart
 await MagicStarterAnalyticsPreferenceController.instance.getAnalyticsPreference();
 await MagicStarterAnalyticsPreferenceController.instance.updateAnalyticsPreference(optedOut: true);
 ```
 
-These call `GET /user/analytics` and `PUT /user/analytics` with `{"opted_out": bool}` (the backend's `analytics-preference` feature). Only an accepted save is applied on the device: `Analytics.setOptOut`, a vault copy under `magic_starter.analytics_opted_out`, then the host's [`onAnalyticsPreferenceChanged`](../architecture/manager.md#analytics-preference-callback). `MagicStarterServiceProvider` applies the vault copy on boot, applies the account's answer after every sign-in and confirmed restore, and drops the copy (lifting an opt-out it held) on sign-out. With the feature off, nothing reads `/user/analytics`.
+These call `GET /user/analytics` and `PUT /user/analytics` with `{"opted_out": bool}` (the backend's `analytics-preference` feature). Only an accepted save is applied on the device: the host's `applyAnalyticsOptOut` hook, a vault copy under `magic_starter.analytics_opted_out`, then the host's [`onAnalyticsPreferenceChanged`](../architecture/manager.md#analytics-preference-callback). `MagicStarterServiceProvider` applies the vault copy on boot, applies the account's answer after every sign-in and confirmed restore, and drops the copy (lifting an opt-out it held) on sign-out. With the feature off, nothing reads `/user/analytics`.
 
 <a name="delete-account"></a>
 ## Delete Account
@@ -209,7 +209,7 @@ Enabling, confirming, disabling and recovery codes run through the same controll
 | `starter.update-password` | The Password row and page |
 | `starter.verify-email` | The verification banner |
 | `starter.manage-two-factor` | The Two-factor row |
-| `starter.manage-newsletter` | The newsletter section of Email & privacy, and the row unless the analytics switch renders (`analytics` on and `AnalyticsServiceProvider` registered) |
+| `starter.manage-newsletter` | The newsletter section of Email & privacy, and the row unless the analytics switch renders (`analytics` on) |
 | `starter.logout-sessions` | The revoke buttons on Sessions |
 | `starter.delete-account` | The delete section; a guest is denied and sees an upgrade prompt instead |
 

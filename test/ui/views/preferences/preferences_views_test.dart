@@ -600,7 +600,6 @@ void main() {
     setUp(() async {
       Config.set('magic_starter.features.analytics', true);
       Vault.fake();
-      Analytics.fake();
       backend = fakeBackend();
 
       Translator.instance.setLoader(const _ShippedStarterCopyLoader());
@@ -611,7 +610,6 @@ void main() {
       Translator.reset();
       Http.unfake();
       Vault.unfake();
-      Analytics.unfake();
     });
 
     testWidgets('is titled Email & privacy', (tester) async {
@@ -677,18 +675,20 @@ void main() {
       expect(sentTo('user/analytics'), isFalse);
     });
 
-    testWidgets('shows no switch without the analytics provider', (
+    testWidgets('shows the switch without magic_analytics registered', (
       tester,
     ) async {
-      Analytics.unfake();
+      // The flag alone decides: the host's applyAnalyticsOptOut hook is what
+      // applies the choice, and the starter never looks for the plugin.
+      expect(Magic.bound('analytics'), isFalse);
       Config.set('magic_starter.features.newsletter', false);
 
       await tester.pumpWidget(wrap(const MagicStarterNewsletterView()));
       await tester.pumpAndSettle();
 
       expect(tester.takeException(), isNull);
-      expect(find.byType(MSSwitch), findsNothing);
-      expect(sentTo('user/analytics'), isFalse);
+      expect(find.byType(MSSwitch), findsOneWidget);
+      expect(sentTo('user/analytics'), isTrue);
     });
 
     testWidgets('the switch reads GET /user/analytics and shows sharing on', (
@@ -728,7 +728,11 @@ void main() {
       // Bound again inside the test body: the manager's call queue starts
       // from a future created where it is constructed, and one created in
       // setUp, outside the widget tester's fake-async zone, never drains here.
+      // The hook is the one line a host writes to connect magic_analytics.
       Analytics.fake();
+      addTearDown(Analytics.unfake);
+      MagicStarter.manager.applyAnalyticsOptOut = Analytics.setOptOut;
+      addTearDown(() => MagicStarter.manager.applyAnalyticsOptOut = null);
 
       await tester.pumpWidget(wrap(const MagicStarterNewsletterView()));
       await tester.pumpAndSettle();

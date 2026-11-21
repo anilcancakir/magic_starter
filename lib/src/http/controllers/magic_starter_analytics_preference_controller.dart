@@ -1,5 +1,4 @@
 import 'package:magic/magic.dart';
-import 'package:magic_analytics/magic_analytics.dart';
 
 import '../../facades/magic_starter.dart';
 import '../../support/control_name.dart';
@@ -10,9 +9,11 @@ import '../../support/control_name.dart';
 /// The choice lives on the account (`GET` and `PUT /user/analytics`, answered
 /// as `{"opted_out": bool}`), so turning it off on one device turns it off on
 /// every device the account signs in on. A save is applied on this device only
-/// after the backend accepted it: `magic_analytics`' opt-out, the vault copy a
-/// cold start reads ([deviceCacheKey]), then the host's
-/// `MagicStarterManager.onAnalyticsPreferenceChanged` hook.
+/// after the backend accepted it: the host's
+/// `MagicStarterManager.applyAnalyticsOptOut` hook, the vault copy a cold start
+/// reads ([deviceCacheKey]), then the host's
+/// `MagicStarterManager.onAnalyticsPreferenceChanged` hook. The starter never
+/// imports an analytics package: the host connects its own through the first.
 class MagicStarterAnalyticsPreferenceController extends MagicController
     with MagicStateMixin, ValidatesRequests
     implements SessionScoped {
@@ -23,8 +24,9 @@ class MagicStarterAnalyticsPreferenceController extends MagicController
   /// The vault key holding this device's copy of the account's choice: `'1'`
   /// while the account has opted out, absent otherwise.
   ///
-  /// `magic_analytics` keeps its opt-out in memory, so without this copy every
-  /// cold start would collect until the account's answer arrived.
+  /// An analytics package usually keeps its opt-out in memory (`magic_analytics`
+  /// does), so without this copy every cold start would collect until the
+  /// account's answer arrived.
   static const String deviceCacheKey = 'magic_starter.analytics_opted_out';
 
   bool _isSubmitting = false;
@@ -171,24 +173,42 @@ class MagicStarterAnalyticsPreferenceController extends MagicController
     }
   }
 
-  /// Hands the account's choice to the host's
-  /// `MagicStarterManager.applyAnalyticsOptOut` hook when one is set, and to
-  /// `magic_analytics` otherwise (only when its provider is registered).
+  /// The host's `MagicStarterManager.applyAnalyticsOptOut` hook.
   ///
-  /// The one place the starter changes the opt-out, so a host that combines
-  /// the account's choice with its own consent sees every change.
-  static Future<void> applyOptOut(bool accountOptedOut) async {
+  /// Throws a [StateError] naming the one line that wires it when the host set
+  /// none. `MagicStarterServiceProvider.boot()` calls this while the feature is
+  /// on, so a host finds out on its first run rather than by collecting data
+  /// for an account that opted out.
+  static Future<void> Function(bool accountOptedOut) requireApplyHook() {
     final Future<void> Function(bool)? hook =
         MagicStarter.manager.applyAnalyticsOptOut;
 
-    if (hook != null) {
-      await hook(accountOptedOut);
-      return;
+    if (hook == null) {
+      throw StateError(
+        '"magic_starter.features.analytics" is enabled but '
+        'MagicStarterManager.applyAnalyticsOptOut is not set, so the account\'s '
+        '"Share usage data" choice would apply to nothing. Install '
+        'magic_analytics (`flutter pub add magic_analytics`, then `dart run '
+        'magic:dowel plugin:install magic_analytics`) or any analytics '
+        'package, and pass '
+        '`applyAnalyticsOptOut: (optedOut) => Analytics.setOptOut(optedOut)` '
+        'to MagicStarter.bootstrap(), from a provider that boots before '
+        'MagicStarterServiceProvider (your AppServiceProvider), or disable '
+        'the feature in lib/config/magic_starter.dart.',
+      );
     }
 
-    if (Magic.bound('analytics')) {
-      await Analytics.setOptOut(accountOptedOut);
-    }
+    return hook;
+  }
+
+  /// Hands the account's choice to the host's
+  /// `MagicStarterManager.applyAnalyticsOptOut` hook.
+  ///
+  /// The one place the starter changes the opt-out, so a host that combines
+  /// the account's choice with its own consent sees every change. Throws a
+  /// [StateError] through [requireApplyHook] when no hook is set.
+  static Future<void> applyOptOut(bool accountOptedOut) async {
+    await requireApplyHook()(accountOptedOut);
   }
 
   /// Applies the account's choice on this device through [applyOptOut], and
@@ -215,7 +235,7 @@ class MagicStarterAnalyticsPreferenceController extends MagicController
       );
     }
 
-    // 2. The opt-out itself, through the host's hook when it set one.
+    // 2. The opt-out itself, through the host's hook.
     await applyOptOut(optedOut);
   }
 

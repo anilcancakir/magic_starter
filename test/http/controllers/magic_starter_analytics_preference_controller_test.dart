@@ -40,6 +40,8 @@ void main() {
     MagicStarter.manager.onAnalyticsPreferenceChanged = (bool optedOut) async {
       hookCalls.add(optedOut);
     };
+    // The one line a host writes to connect magic_analytics.
+    MagicStarter.manager.applyAnalyticsOptOut = Analytics.setOptOut;
 
     controller = MagicStarterAnalyticsPreferenceController.instance;
   });
@@ -251,7 +253,7 @@ void main() {
       expect(await Vault.get(_cacheKey), '1');
     });
 
-    test('a host applyAnalyticsOptOut hook replaces the facade call', () async {
+    test('the applyAnalyticsOptOut hook is the only way it applies', () async {
       final List<bool> applied = <bool>[];
       MagicStarter.manager.applyAnalyticsOptOut = (bool optedOut) async {
         applied.add(optedOut);
@@ -267,20 +269,40 @@ void main() {
       expect(hookCalls, <bool>[true]);
     });
 
-    test(
-      'without the analytics provider the save lands and nothing throws',
-      () async {
-        Analytics.unfake();
-        fakeBackend();
+    test('with no applyAnalyticsOptOut hook the save still lands', () async {
+      MagicStarter.manager.applyAnalyticsOptOut = null;
+      fakeBackend();
 
-        await controller.updateAnalyticsPreference(optedOut: true);
+      await controller.updateAnalyticsPreference(optedOut: true);
 
-        expect(Magic.bound('analytics'), isFalse);
-        expect(controller.isSuccess, isTrue);
-        expect(await Vault.get(_cacheKey), '1');
-        expect(hookCalls, [true]);
-      },
-    );
+      expect(controller.isSuccess, isTrue);
+      expect(controller.optedOut, isTrue);
+      expect(Analytics.isOptedOut, isFalse);
+      expect(await Vault.get(_cacheKey), '1');
+    });
+  });
+
+  group('applyOptOut', () {
+    test('hands the choice to the applyAnalyticsOptOut hook', () async {
+      await MagicStarterAnalyticsPreferenceController.applyOptOut(true);
+
+      expect(Analytics.isOptedOut, isTrue);
+    });
+
+    test('throws a StateError naming the hook when none is set', () async {
+      MagicStarter.manager.applyAnalyticsOptOut = null;
+
+      await expectLater(
+        MagicStarterAnalyticsPreferenceController.applyOptOut(true),
+        throwsA(
+          isA<StateError>().having(
+            (StateError error) => error.message,
+            'message',
+            contains('applyAnalyticsOptOut'),
+          ),
+        ),
+      );
+    });
   });
 
   test('another account forgets the previous account answer', () async {

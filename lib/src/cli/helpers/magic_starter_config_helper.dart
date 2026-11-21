@@ -7,6 +7,24 @@ import 'dart:io';
 /// `lib/config/magic_starter.dart` configuration file. All methods are
 /// static and do not require instantiation.
 abstract class MagicStarterConfigHelper {
+  /// What `starter:install` and `starter:configure` print when the `analytics`
+  /// feature is turned on.
+  ///
+  /// The starter imports no analytics package, and `MagicStarterServiceProvider`
+  /// refuses to boot while the feature is on and `applyAnalyticsOptOut` is
+  /// unset, so the next launch would fail without this step. One text for both
+  /// commands, so the instructions cannot drift apart.
+  static const String analyticsHookNotice =
+      'Analytics enabled. The starter imports no analytics package, and the '
+      'app refuses to boot until you connect yours: run\n'
+      '  flutter pub add magic_analytics\n'
+      '  dart run magic:dowel plugin:install magic_analytics\n'
+      'then add\n'
+      "  import 'package:magic_analytics/magic_analytics.dart';\n"
+      'to lib/app/providers/app_service_provider.dart and pass\n'
+      '  applyAnalyticsOptOut: (optedOut) => Analytics.setOptOut(optedOut)\n'
+      'to MagicStarter.bootstrap() there.';
+
   /// Every feature toggle key `MagicStarterConfig` reads.
   ///
   /// The one list. `MagicStarterInstallCommand.dynamicFeatureKeys` points at it
