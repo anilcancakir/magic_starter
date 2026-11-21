@@ -134,7 +134,7 @@ Each toggle controls whether routes are registered, views are put in the registr
 | `sessions` | `false` | The browser sessions list with revoke. |
 | `phone_otp` | `false` | The phone-based one-time code flow (send, verify). |
 | `newsletter` | `false` | The newsletter subscribe toggle on the Email & privacy settings page. |
-| `analytics` | `false` | The account-level "Share usage data" switch on the Email & privacy page, and applying the account's choice to `magic_analytics` on boot, sign-in and sign-out. Needs `AnalyticsServiceProvider` registered; without it the switch is hidden. |
+| `analytics` | `false` | The account-level "Share usage data" switch on the Email & privacy page, and applying the account's choice through your `applyAnalyticsOptOut` hook on boot, sign-in and sign-out. The starter imports no analytics package: with this on and no hook set, `boot()` throws a `StateError`. |
 | `notifications` | `false` | The in-app notification list, unread badge and preferences screen, and the push identity this package declares. |
 | `email_verification` | `false` | The email verification page and resend flow. |
 | `guest_auth` | `false` | The login screen's "Continue as guest" button, plus the listeners that record a guest sign-in and claim that guest's data when an account signs in. It adds no routes or screens. |

@@ -390,6 +390,22 @@ When `onGuestClaimed` is `null` (the default), nothing runs.
 <a name="analytics-preference-callback"></a>
 ## Analytics Preference Callback
 
+The starter imports no analytics package. With `features.analytics` on, `applyAnalyticsOptOut` is how the account's "Share usage data" choice reaches the host's own analytics, and `MagicStarterServiceProvider.boot()` throws a `StateError` while it is unset, so a missing hook fails on the first run instead of collecting data for an account that opted out. Install `magic_analytics` (`flutter pub add magic_analytics`, then `dart run magic:dowel plugin:install magic_analytics`, which registers its provider and config) or any analytics package, then set the hook from your `AppServiceProvider.boot()`, either as the `applyAnalyticsOptOut:` argument of `MagicStarter.bootstrap()` or on the manager:
+
+```dart
+MagicStarter.manager.applyAnalyticsOptOut = (bool accountOptedOut) {
+  return Analytics.setOptOut(accountOptedOut);
+};
+```
+
+The starter calls it everywhere it applies the account's choice: the cached choice on boot, the answer after a sign-in or restore, a saved switch, and the lift on sign-out (with `false`). It is awaited, and a failure is logged by the caller. A host with its own reason to stay opted out, such as a device-level consent refusal, combines the two there; otherwise the account's choice would overwrite the host's own opt-out:
+
+```dart
+MagicStarter.manager.applyAnalyticsOptOut = (bool accountOptedOut) async {
+  await Analytics.setOptOut(accountOptedOut || await deviceRefusedConsent());
+};
+```
+
 Run custom logic after the user changes the account's "Share usage data" choice:
 
 ```dart
@@ -400,19 +416,9 @@ MagicStarter.manager.onAnalyticsPreferenceChanged = (bool optedOut) async {
 };
 ```
 
-With the `analytics` feature on, `MagicStarterAnalyticsPreferenceController.updateAnalyticsPreference` calls it once the backend accepted the change and the device applied it (`Analytics.setOptOut` and the vault copy). `magic_analytics` drops `identify`, `setUserProperties` and `setDefaultParams` while opted out, so this is where a host re-applies them. It is not called when the starter applies the account's choice on boot or after a sign-in or restore, since nothing changed then. It is awaited, and a failure is logged rather than rethrown; the save still counts.
+With the `analytics` feature on, `MagicStarterAnalyticsPreferenceController.updateAnalyticsPreference` calls it once the backend accepted the change and the device applied it (the `applyAnalyticsOptOut` hook and the vault copy). `magic_analytics` drops `identify`, `setUserProperties` and `setDefaultParams` while opted out, so this is where a host re-applies them. It is not called when the starter applies the account's choice on boot or after a sign-in or restore, since nothing changed then. It is awaited, and a failure is logged rather than rethrown; the save still counts.
 
 When `onAnalyticsPreferenceChanged` is `null` (the default), nothing runs.
-
-A host with its own reason to stay opted out, such as a device-level consent refusal, sets `applyAnalyticsOptOut` and combines the two there:
-
-```dart
-MagicStarter.manager.applyAnalyticsOptOut = (bool accountOptedOut) async {
-  await Analytics.setOptOut(accountOptedOut || await deviceRefusedConsent());
-};
-```
-
-When it is set, the starter calls it instead of `Analytics.setOptOut` everywhere it applies the account's choice: the cached choice on boot, the answer after a sign-in or restore, a saved switch, and the lift on sign-out (with `false`). Without it the account's choice would overwrite the host's own opt-out. It is awaited, and a failure is logged by the caller.
 
 <a name="locale-application"></a>
 ## Locale Application

@@ -20,7 +20,7 @@ Every key below is registered by `MagicStarterManager.registerDefaultViews()`, w
 | `settings.security.password` | always | `MagicStarterPasswordView` (a password-less account sees Set password) |
 | `settings.language` | `extended_profile` | `MagicStarterLanguageView` |
 | `settings.timezone` | `timezones` | `MagicStarterTimezoneView` |
-| `settings.newsletter` | `newsletter` or `analytics` | `MagicStarterNewsletterView` (the Email & privacy page; the analytics switch shows only with `magic_analytics`' provider registered) |
+| `settings.newsletter` | `newsletter` or `analytics` | `MagicStarterNewsletterView` (the Email & privacy page; the analytics switch shows with `analytics` on, and `boot()` requires the host's `applyAnalyticsOptOut` hook) |
 | `settings.changelog` | `releases` | `MagicStarterChangelogView` |
 | `settings.security.two_factor` | `two_factor` | `MagicStarterTwoFactorView` |
 | `settings.security.sessions` | `sessions` | `MagicStarterSessionsView` |

@@ -33,7 +33,7 @@
 | Entry points | `MagicStarterServiceProvider` (wiring), `MagicStarter` (facade: `bootstrap`, `view`, theme setters), `MagicStarterConfig` (toggles and routes), `registerMagicStarter*Routes()`, `EnsureAuthenticated`, `RedirectIfAuthenticated`; the `starter:*` commands |
 | Platforms | Pure Dart, no native code of its own. pub.dev lists Android and iOS: its static import-graph check follows the plugins this package imports and drops Windows and Linux at `purchases_flutter` (through `magic_payments`, which declares Android, iOS, macOS and web), macOS at `url_launcher_windows` and the web at `path_provider`, so those tags are absent even though the screens, the Stripe checkout and the web update banner are written for the web. Billing checks out through Stripe on the web and through the store on mobile (`magic_payments`); the store review prompt and the web update banner are platform-specific (see [Features](#features)). |
 | Requires | Dart >=3.13, Flutter >=3.47, `magic` ^1.0.0, and a backend serving `magic-starter-laravel`'s `api/v1` routes for anything that signs in |
-| Dependencies | `magic`, `magic_notifications`, `magic_analytics`, `magic_payments`, `magic_picker`, `magic_socket`, `wind_kit`, `material_ui`, `dowel`, `in_app_review`, `package_info_plus`, `web`, `args`, `path` |
+| Dependencies | `magic`, `magic_notifications`, `magic_payments`, `magic_picker`, `magic_socket`, `wind_kit`, `material_ui`, `dowel`, `in_app_review`, `package_info_plus`, `web`, `args`, `path` |
 | License | MIT |
 
 ## Install
@@ -82,7 +82,7 @@ class AppServiceProvider extends ServiceProvider {
 
 | Member | Meaning |
 |--------|---------|
-| `MagicStarter.bootstrap(userFactory:, onLogout:, locales:)` | The identity contract in one call. Optional: `onLogin`, `onGuestClaimed`, and the team trio `currentTeam`, `allTeams`, `onSwitch`. |
+| `MagicStarter.bootstrap(userFactory:, onLogout:, locales:)` | The identity contract in one call. Optional: `onLogin`, `onGuestClaimed`, `applyAnalyticsOptOut` (needed while `analytics` is on), and the team trio `currentTeam`, `allTeams`, `onSwitch`. |
 | `MagicStarter.switchTeam(id)` | Switches the current team on the backend and re-identifies the store billing rail; route the `onSwitch` callback through it. |
 | `MagicStarter.beforeLogout(hook)` | Runs before the sign-out, while the token still works. |
 | `MagicStarter.signOut()` | The starter's sign-out: runs the hooks once, then your `onLogout` when set, the built-in sign-out otherwise. |
@@ -113,7 +113,7 @@ Every toggle in `lib/config/magic_starter.dart` defaults to `false`. A toggle th
 | `handoff` | `/auth/handoff?code=&next=`: a one-time code from another surface becomes a session after a "Sign in as ...?" question. |
 | `extended_profile`, `profile_photos`, `timezones` | Phone, language and timezone fields, the photo upload, the timezone search. |
 | `sessions`, `newsletter` | The sessions list with revoke, the newsletter toggle on the Email & privacy page. |
-| `analytics` | The account-level "Share usage data" switch on the Email & privacy page, applied to `magic_analytics` on every device the account signs in on. |
+| `analytics` | The account-level "Share usage data" switch on the Email & privacy page, applied through your own `applyAnalyticsOptOut` hook (for example `magic_analytics`, which you add yourself) on every device the account signs in on. |
 | `teams` | Team create, settings, invitations and switching. Needs the team callbacks. |
 | `notifications` | `magic_notifications`' list, bell and preferences in the app shell, and the push identity of a signed-in device. |
 | `billing` | The `teams.billing` view over `magic_payments`. Needs `billing.web_origin`. |
