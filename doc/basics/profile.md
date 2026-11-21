@@ -170,7 +170,7 @@ await MagicStarterAnalyticsPreferenceController.instance.getAnalyticsPreference(
 await MagicStarterAnalyticsPreferenceController.instance.updateAnalyticsPreference(optedOut: true);
 ```
 
-These call `GET /user/analytics` and `PUT /user/analytics` with `{"opted_out": bool}` (the backend's `analytics-preference` feature). Only an accepted save is applied on the device: the host's `applyAnalyticsOptOut` hook, a vault copy under `magic_starter.analytics_opted_out`, then the host's [`onAnalyticsPreferenceChanged`](../architecture/manager.md#analytics-preference-callback). `MagicStarterServiceProvider` applies the vault copy on boot, applies the account's answer after every sign-in and confirmed restore, and drops the copy (lifting an opt-out it held) on sign-out. With the feature off, nothing reads `/user/analytics`.
+These call `GET /user/analytics` and `PUT /user/analytics` with `{"opted_out": bool}` (the backend's `analytics-preference` feature). Only an accepted save is applied on the device: a vault copy under `magic_starter.analytics_opted_out`, the host's `applyAnalyticsOptOut` hook, then the host's [`onAnalyticsPreferenceChanged`](../architecture/manager.md#analytics-preference-callback). `MagicStarterServiceProvider` applies the vault copy on boot, applies the account's answer after every sign-in and confirmed restore, and drops the copy (lifting an opt-out it held) on sign-out. With the feature off, nothing reads `/user/analytics`.
 
 <a name="delete-account"></a>
 ## Delete Account

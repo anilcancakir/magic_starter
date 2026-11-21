@@ -274,12 +274,7 @@ class MagicStarterServiceProvider extends ServiceProvider {
     if (!MagicStarterConfig.hasAnalyticsFeatures()) return;
 
     try {
-      final String? cached = await Vault.get(
-        MagicStarterAnalyticsPreferenceController.deviceCacheKey,
-      );
-      if (cached != '1') return;
-
-      await MagicStarterAnalyticsPreferenceController.applyOptOut(true);
+      await MagicStarterAnalyticsPreferenceController.applyCachedOnDevice();
     } catch (error, stackTrace) {
       Log.error(
         '[MagicStarter] cached analytics opt-out could not be applied: '
@@ -289,7 +284,7 @@ class MagicStarterServiceProvider extends ServiceProvider {
   }
 
   /// Reads the signed-in account's analytics choice and applies it on this
-  /// device, without calling the host hook: nothing changed.
+  /// device, without calling `onAnalyticsPreferenceChanged`: nothing changed.
   ///
   /// A refused or failed read changes nothing, so the cached choice stays in
   /// force. Logged rather than rethrown because it runs unawaited.
@@ -304,18 +299,17 @@ class MagicStarterServiceProvider extends ServiceProvider {
       final MagicResponse response = await Http.get('/user/analytics');
       if (!response.successful) return;
 
-      // The answer belongs to the account that asked: a sign-out or another
-      // sign-in while it was in flight must not inherit it.
-      if (Auth.id() != accountId) return;
-
-      // A save that started meanwhile is newer than this answer.
-      if (MagicStarterAnalyticsPreferenceController.saveGeneration != saves) {
-        return;
-      }
-
       final Map<String, dynamic> data = response.data as Map<String, dynamic>;
+
+      // The answer belongs to the account that asked, and a save accepted
+      // since is newer than it. Asked again once this apply's turn comes, not
+      // only now: an earlier apply may still be running, and either can change
+      // while this one waits behind it.
       await MagicStarterAnalyticsPreferenceController.applyOnDevice(
         data['opted_out'] as bool,
+        isCurrent: () =>
+            Auth.id() == accountId &&
+            MagicStarterAnalyticsPreferenceController.saveGeneration == saves,
       );
     } catch (error, stackTrace) {
       Log.error(
@@ -333,14 +327,7 @@ class MagicStarterServiceProvider extends ServiceProvider {
     if (!MagicStarterConfig.hasAnalyticsFeatures()) return;
 
     try {
-      const String key =
-          MagicStarterAnalyticsPreferenceController.deviceCacheKey;
-      final bool wasOptedOut = await Vault.get(key) == '1';
-
-      await Vault.delete(key);
-      if (wasOptedOut) {
-        await MagicStarterAnalyticsPreferenceController.applyOptOut(false);
-      }
+      await MagicStarterAnalyticsPreferenceController.forgetOnDevice();
     } catch (error, stackTrace) {
       Log.error(
         '[MagicStarter] account analytics preference could not be cleared: '

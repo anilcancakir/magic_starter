@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:magic/magic.dart';
 
 import '../../facades/magic_starter.dart';
@@ -9,11 +11,17 @@ import '../../support/control_name.dart';
 /// The choice lives on the account (`GET` and `PUT /user/analytics`, answered
 /// as `{"opted_out": bool}`), so turning it off on one device turns it off on
 /// every device the account signs in on. A save is applied on this device only
-/// after the backend accepted it: the host's
-/// `MagicStarterManager.applyAnalyticsOptOut` hook, the vault copy a cold start
-/// reads ([deviceCacheKey]), then the host's
-/// `MagicStarterManager.onAnalyticsPreferenceChanged` hook. The starter never
-/// imports an analytics package: the host connects its own through the first.
+/// after the backend accepted it: the vault copy a cold start reads
+/// ([deviceCacheKey]), the host's `MagicStarterManager.applyAnalyticsOptOut`
+/// hook, then the host's `MagicStarterManager.onAnalyticsPreferenceChanged`
+/// hook. The starter never imports an analytics package: the host connects its
+/// own through the second.
+///
+/// Every change to the device's opt-out (a save, the answer after a sign-in,
+/// the cached choice on boot, the lift on sign-out) takes its turn in one
+/// queue, and a turn includes the host hook. A hook may await, so without the
+/// queue two hook calls made in order could finish in reverse order and leave
+/// the device collecting for an account that opted out.
 class MagicStarterAnalyticsPreferenceController extends MagicController
     with MagicStateMixin, ValidatesRequests
     implements SessionScoped {
@@ -36,8 +44,16 @@ class MagicStarterAnalyticsPreferenceController extends MagicController
   /// A refused save leaves it alone: the read is then still the newest.
   static int _saves = 0;
 
-  /// The number of saves started so far; see `MagicStarterServiceProvider`.
+  /// The number of saves the backend has accepted so far; see
+  /// `MagicStarterServiceProvider`.
   static int get saveGeneration => _saves;
+
+  /// The end of the device apply queue: null while it is idle.
+  ///
+  /// Null rather than a completed future so that no future is created until a
+  /// caller needs one, in that caller's zone. A future made at class load in
+  /// one test zone would never drain inside a widget test's fake-async zone.
+  static Future<void>? _tail;
 
   bool? _optedOut;
 
@@ -149,8 +165,10 @@ class MagicStarterAnalyticsPreferenceController extends MagicController
       // 2. Apply on this device only now, so a refused save leaves the device
       //    collecting exactly as the account still says. A failure here is
       //    logged; the next sign-in applies the account's choice again.
+      //    The queue may hold it behind an earlier apply; an account that
+      //    changed meanwhile does not inherit it.
       try {
-        await applyOnDevice(optedOut);
+        await applyOnDevice(optedOut, isCurrent: () => Auth.id() == account);
       } catch (e, stackTrace) {
         Log.error(
           '[MagicStarterAnalyticsPreferenceController] the saved choice could '
@@ -215,28 +233,90 @@ class MagicStarterAnalyticsPreferenceController extends MagicController
   /// keeps the [deviceCacheKey] copy either way.
   ///
   /// Shared with `MagicStarterServiceProvider`, which applies the account's
-  /// answer after a sign-in or a restore. It never calls the host hook:
-  /// applying a choice nobody just changed is not a change.
-  static Future<void> applyOnDevice(bool optedOut) async {
-    // 1. The copy first: it records the account's choice, so a host hook that
-    //    throws below must not leave the next cold start on the old one. A
-    //    vault that cannot be written is logged: the opt-out below still
-    //    applies for this run, and the next sign-in writes the copy again.
-    try {
-      if (optedOut) {
-        await Vault.put(deviceCacheKey, '1');
-      } else {
-        await Vault.delete(deviceCacheKey);
-      }
-    } catch (e, stackTrace) {
-      Log.error(
-        '[MagicStarterAnalyticsPreferenceController] the device copy could '
-        'not be written: $e\n$stackTrace',
-      );
-    }
+  /// answer after a sign-in or a restore. It never calls
+  /// `onAnalyticsPreferenceChanged`: applying a choice nobody just changed is
+  /// not a change.
+  ///
+  /// Waits for every earlier device apply, then asks [isCurrent] (when given)
+  /// before touching anything: an apply that answered for a session or a save
+  /// that has since moved on returns without changing the device. A host hook
+  /// must not call this method or `updateAnalyticsPreference`: the hook runs
+  /// inside a turn of the queue and would wait on itself.
+  static Future<void> applyOnDevice(
+    bool optedOut, {
+    bool Function()? isCurrent,
+  }) {
+    return _serially(() async {
+      // 1. The answer may have gone stale while this apply waited its turn.
+      if (isCurrent != null && !isCurrent()) return;
 
-    // 2. The opt-out itself, through the host's hook.
-    await applyOptOut(optedOut);
+      // 2. The copy first: it records the account's choice, so a host hook
+      //    that throws below must not leave the next cold start on the old
+      //    one. A vault that cannot be written is logged: the opt-out below
+      //    still applies for this run, and the next sign-in writes the copy
+      //    again.
+      try {
+        if (optedOut) {
+          await Vault.put(deviceCacheKey, '1');
+        } else {
+          await Vault.delete(deviceCacheKey);
+        }
+      } catch (e, stackTrace) {
+        Log.error(
+          '[MagicStarterAnalyticsPreferenceController] the device copy could '
+          'not be written: $e\n$stackTrace',
+        );
+      }
+
+      // 3. The opt-out itself, through the host's hook.
+      await applyOptOut(optedOut);
+    });
+  }
+
+  /// Applies the opt-out cached on this device, when there is one, in its turn
+  /// of the queue.
+  static Future<void> applyCachedOnDevice() {
+    return _serially(() async {
+      final String? cached = await Vault.get(deviceCacheKey);
+      if (cached != '1') return;
+
+      await applyOptOut(true);
+    });
+  }
+
+  /// Deletes this device's copy of the account's choice and, when it held an
+  /// opt-out, lifts it, in its turn of the queue.
+  static Future<void> forgetOnDevice() {
+    return _serially(() async {
+      final bool wasOptedOut = await Vault.get(deviceCacheKey) == '1';
+
+      await Vault.delete(deviceCacheKey);
+      if (wasOptedOut) {
+        await applyOptOut(false);
+      }
+    });
+  }
+
+  /// Runs [body] once every earlier call has finished, whether it succeeded or
+  /// threw: a failure reaches its own caller and the next turn still runs.
+  ///
+  /// A [body] that never finishes stalls every later turn, as a Vault call
+  /// that never answers does. There is no timeout: a hook that is still
+  /// working is not a hook that failed.
+  static Future<T> _serially<T>(Future<T> Function() body) async {
+    final Future<void>? previous = _tail;
+    final Completer<void> turn = Completer<void>();
+    final Future<void> end = turn.future;
+    _tail = end;
+
+    try {
+      if (previous != null) await previous;
+
+      return await body();
+    } finally {
+      turn.complete();
+      if (identical(_tail, end)) _tail = null;
+    }
   }
 
   /// Calls the host's `onAnalyticsPreferenceChanged` hook.

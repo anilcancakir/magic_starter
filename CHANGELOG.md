@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- **An older "Share usage data" apply can no longer finish after a newer one.** Every change to the device's opt-out (a saved switch, the account's answer after a sign-in or restore, the cached choice on boot, the lift on sign-out) now takes its turn in one queue, and a turn includes the host's `applyAnalyticsOptOut` hook. A hook that awaits, as one combining the account's choice with a device-level consent does, used to be called in order but could finish out of order, leaving the device collecting for an account that had opted out. A sign-in answer is now checked again when its turn comes, so one that went stale behind a slower apply (the account signed out, or a newer save was accepted) is dropped instead of applied; a saved choice is dropped the same way when the account changed while it waited. A hook that throws does not stall the applies behind it. A sign-out or a save that arrives while a slow hook is running now waits for that hook too, and a host hook must not sign out or call `MagicStarterAnalyticsPreferenceController.updateAnalyticsPreference` or its device applies, which would wait on the call it runs inside. `lib/src/http/controllers/magic_starter_analytics_preference_controller.dart`, `lib/src/providers/magic_starter_service_provider.dart`
+
+### Added
+
+- **`MagicStarterAnalyticsPreferenceController.applyCachedOnDevice()` and `forgetOnDevice()`, and an optional `isCurrent` argument on `applyOnDevice()`.** They are the queued entry points the service provider now uses for the cached choice on boot, the lift on sign-out and a sign-in answer; `isCurrent` is asked again when the apply's turn comes and a `false` drops it. `applyOptOut()` itself stays outside the queue, so a host that calls it directly gets no ordering. `lib/src/http/controllers/magic_starter_analytics_preference_controller.dart`
+
 ## [1.6.0] - 2026-11-22
 
 ### BREAKING

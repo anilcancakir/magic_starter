@@ -398,7 +398,7 @@ MagicStarter.manager.applyAnalyticsOptOut = (bool accountOptedOut) {
 };
 ```
 
-The starter calls it everywhere it applies the account's choice: the cached choice on boot, the answer after a sign-in or restore, a saved switch, and the lift on sign-out (with `false`). It is awaited, and a failure is logged by the caller. A host with its own reason to stay opted out, such as a device-level consent refusal, combines the two there; otherwise the account's choice would overwrite the host's own opt-out:
+The starter calls it everywhere it applies the account's choice: the cached choice on boot, the answer after a sign-in or restore, a saved switch, and the lift on sign-out (with `false`). It is awaited, and a failure is logged by the caller. The calls run one at a time, in the order the changes were made, so a hook that awaits (a consent lookup, say) never finishes an older change after a newer one; an answer that went stale while it waited, because the account signed out or a newer save was accepted, is dropped without calling the hook. For that reason the hook must not sign out (`MagicStarter.signOut()`, `Auth.logout()`) or call `MagicStarterAnalyticsPreferenceController.updateAnalyticsPreference` or its device applies, which would wait on the call it runs inside. A sign-out or a save that arrives while a slow hook is running waits for that hook too. A host with its own reason to stay opted out, such as a device-level consent refusal, combines the two there; otherwise the account's choice would overwrite the host's own opt-out:
 
 ```dart
 MagicStarter.manager.applyAnalyticsOptOut = (bool accountOptedOut) async {

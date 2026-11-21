@@ -316,6 +316,12 @@ class MagicStarterManager {
   /// consent refusal, combines the two here; otherwise the account's choice
   /// would overwrite the host's. Awaited; a throw propagates to the caller,
   /// which logs it.
+  ///
+  /// The starter calls it one change at a time, in the order the changes were
+  /// made, so a hook that awaits never finishes an older change after a newer
+  /// one. It runs inside its turn of that queue: it must not sign out or call
+  /// the analytics controller's device applies or `updateAnalyticsPreference`,
+  /// which would wait on the turn the hook is part of.
   Future<void> Function(bool accountOptedOut)? applyAnalyticsOptOut;
 
   /// Custom header builder. When set, replaces the default header.
