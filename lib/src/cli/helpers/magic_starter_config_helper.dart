@@ -19,9 +19,11 @@ abstract class MagicStarterConfigHelper {
       'app refuses to boot until you connect yours: run\n'
       '  flutter pub add magic_analytics\n'
       '  dart run magic:dowel plugin:install magic_analytics\n'
-      'then pass\n'
+      'then add\n'
+      "  import 'package:magic_analytics/magic_analytics.dart';\n"
+      'to lib/app/providers/app_service_provider.dart and pass\n'
       '  applyAnalyticsOptOut: (optedOut) => Analytics.setOptOut(optedOut)\n'
-      'to MagicStarter.bootstrap() in lib/app/providers/app_service_provider.dart.';
+      'to MagicStarter.bootstrap() there.';
 
   /// Every feature toggle key `MagicStarterConfig` reads.
   ///

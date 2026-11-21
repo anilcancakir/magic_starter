@@ -895,7 +895,14 @@ final magicStarterConfig = {
             ),
           ),
         );
-        expect(content, isNot(contains('\n        applyAnalyticsOptOut:')));
+        // Likewise an active argument, at any indentation; the commented
+        // example starts with `//`.
+        expect(
+          content,
+          isNot(
+            matches(RegExp(r'^\s*applyAnalyticsOptOut\s*:', multiLine: true)),
+          ),
+        );
       },
     );
 
