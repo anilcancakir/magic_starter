@@ -214,7 +214,14 @@ class MagicStarterInstallCommand extends DowelInstallCommand {
     // 6. Optional notification package setup.
     await _setupNotifications(ctx, features: features);
 
-    // 7. Format host app.
+    // 7. The analytics feature needs a host hook before the app boots. Said
+    //    here for both provider paths: the guidance comment only reaches a
+    //    provider the installer writes fresh, not one it injects into.
+    if (features['analytics'] ?? false) {
+      ctx.output.info(MagicStarterConfigHelper.analyticsHookNotice);
+    }
+
+    // 8. Format host app.
     await runDartFormat(projectRoot);
 
     ctx.output.success('Magic Starter installation completed successfully.');
@@ -764,11 +771,30 @@ class MagicStarterInstallCommand extends DowelInstallCommand {
 '''
         : '';
 
+    // Guidance for the same reason: this package imports no analytics package,
+    // so an emitted `Analytics.setOptOut` would not compile until the adopter
+    // added the dependency and the import. Boot refuses to run without the
+    // hook while the feature is on, so the missing step is never silent.
+    final String analyticsBlock = (features['analytics'] ?? false)
+        ? '''
+    // 6. Connect the account's "Share usage data" choice to your analytics.
+    //    This package imports none, and the app refuses to boot while
+    //    `analytics` is on and no hook is set. Run `flutter pub add
+    //    magic_analytics` and `dart run magic:dowel plugin:install
+    //    magic_analytics`, add
+    //    `import 'package:magic_analytics/magic_analytics.dart';` above, then
+    //    pass this to the MagicStarter.bootstrap() call:
+    //
+    //    applyAnalyticsOptOut: (optedOut) => Analytics.setOptOut(optedOut),
+'''
+        : '';
+
     final String rendered = StubLoader.replace(stub, {
       'teams_import': teamsImport,
       'team_params': teamParams,
       'social_login_block': socialLoginBlock,
       'notifications_block': notificationsBlock,
+      'analytics_block': analyticsBlock,
     });
 
     FileHelper.writeFile(targetPath, rendered);

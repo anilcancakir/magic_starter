@@ -47,6 +47,7 @@ Future<int> runInstall(
   bool force = false,
   bool nonInteractive = true,
   String? features,
+  BufferedOutput? output,
 }) {
   final options = <String, dynamic>{
     'force': force,
@@ -55,7 +56,7 @@ Future<int> runInstall(
     'no-bootstrap': false,
     'features': ?features,
   };
-  final ctx = DowelContext.bare(MapInput(options), BufferedOutput());
+  final ctx = DowelContext.bare(MapInput(options), output ?? BufferedOutput());
   return command.handle(ctx);
 }
 
@@ -866,6 +867,80 @@ final magicStarterConfig = {
 
       // The optional setters stay outside bootstrap() and must survive.
       expect(content, contains('MagicStarter.useNavigation('));
+    });
+
+    test(
+      'analytics block explains the hook without importing the plugin',
+      () async {
+        setupMagicProjectFiles(tempDir);
+
+        await runInstall(command, force: true, features: 'analytics');
+
+        final String content = File(
+          '${tempDir.path}/lib/app/providers/app_service_provider.dart',
+        ).readAsStringSync();
+
+        // The starter imports no analytics package, so the scaffold only
+        // guides: an emitted `Analytics.setOptOut` would not compile until the
+        // adopter added the dependency and the import by hand.
+        expect(content, contains('applyAnalyticsOptOut:'));
+        expect(content, contains('magic_analytics'));
+        // Only a line that starts with `import` is a real import; the
+        // guidance names the import inside a comment.
+        expect(
+          content,
+          isNot(
+            matches(
+              RegExp(r"^import 'package:magic_analytics", multiLine: true),
+            ),
+          ),
+        );
+        expect(content, isNot(contains('\n        applyAnalyticsOptOut:')));
+      },
+    );
+
+    test('analytics block is left out when analytics is off', () async {
+      setupMagicProjectFiles(tempDir);
+
+      await runInstall(command, force: true);
+
+      final String content = File(
+        '${tempDir.path}/lib/app/providers/app_service_provider.dart',
+      ).readAsStringSync();
+
+      expect(content, isNot(contains('applyAnalyticsOptOut')));
+    });
+
+    group('the analytics hook notice', () {
+      // The app refuses to boot while `analytics` is on and no hook is set, and
+      // the guidance comment only reaches a freshly written provider, so the
+      // installer has to say it on every path.
+      for (final bool force in <bool>[true, false]) {
+        test('is printed when analytics is on and the provider is '
+            '${force ? 'replaced' : 'injected into'}', () async {
+          setupMagicProjectFiles(tempDir);
+          final BufferedOutput output = BufferedOutput();
+
+          await runInstall(
+            command,
+            force: force,
+            features: 'analytics',
+            output: output,
+          );
+
+          expect(output.content, contains('applyAnalyticsOptOut'));
+          expect(output.content, contains('magic_analytics'));
+        });
+      }
+
+      test('is not printed when analytics is off', () async {
+        setupMagicProjectFiles(tempDir);
+        final BufferedOutput output = BufferedOutput();
+
+        await runInstall(command, features: 'teams', output: output);
+
+        expect(output.content, isNot(contains('applyAnalyticsOptOut')));
+      });
     });
 
     test('notifications block points at the package icon slot', () async {

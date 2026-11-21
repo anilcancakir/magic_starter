@@ -73,6 +73,7 @@ class AppServiceProvider extends ServiceProvider {
 
 {{ social_login_block }}
 {{ notifications_block }}
+{{ analytics_block }}
 
         // -- Theme Customization (uncomment to customize) -------------------------
         // MagicStarter.useTheme(

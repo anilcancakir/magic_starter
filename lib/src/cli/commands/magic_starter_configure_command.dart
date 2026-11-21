@@ -133,6 +133,13 @@ class MagicStarterConfigureCommand extends DowelCommand {
     FileHelper.writeFile(_configPath, updated);
 
     ctx.output.success('Configuration updated successfully.');
+
+    // 6. Turning analytics on without its hook fails the next launch, so say
+    //    what the app needs now rather than at the first crash.
+    if (updates['analytics'] ?? false) {
+      ctx.output.info(MagicStarterConfigHelper.analyticsHookNotice);
+    }
+
     return 0;
   }
 
