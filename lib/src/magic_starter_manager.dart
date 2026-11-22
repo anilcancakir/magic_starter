@@ -319,9 +319,12 @@ class MagicStarterManager {
   ///
   /// The starter calls it one change at a time, in the order the changes were
   /// made, so a hook that awaits never finishes an older change after a newer
-  /// one. It runs inside its turn of that queue: it must not sign out or call
-  /// the analytics controller's device applies or `updateAnalyticsPreference`,
-  /// which would wait on the turn the hook is part of.
+  /// one. It runs inside its turn of that queue: it must not call the
+  /// analytics controller's device applies or `updateAnalyticsPreference`,
+  /// which would wait on the turn the hook is part of. A sign-out is safe,
+  /// including one a request inside the hook causes through a failed token
+  /// refresh: the sign-out's lift joins the queue behind the hook and
+  /// `Auth.logout()` does not wait for it.
   Future<void> Function(bool accountOptedOut)? applyAnalyticsOptOut;
 
   /// Custom header builder. When set, replaces the default header.

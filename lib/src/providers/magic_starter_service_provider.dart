@@ -140,12 +140,19 @@ class _ApplyAccountAnalyticsPreference<E extends MagicEvent>
 /// Drops this device's copy of the account's analytics choice on every
 /// sign-out, so the next account starts from the device default.
 ///
-/// Awaited for the reason [_ForgetGuestOnLogout] gives: a sign-in that follows
-/// at once must not inherit the previous account's opt-out.
+/// Unawaited, because the lift takes its turn in the device apply queue and
+/// the dispatcher awaits every listener. A host hook that awaits an
+/// authenticated request is mid-turn when a failed token refresh makes magic
+/// await `Auth.logout()`; waiting for that turn here would make the hook, the
+/// request, the sign-out and every later apply wait on one another for good.
+/// The order a sign-in that follows at once needs (the lift, then the next
+/// account's answer) holds without waiting: the lift joins the queue before
+/// this handler returns, and a later apply joins behind it.
 class _ForgetAnalyticsPreferenceOnLogout extends MagicListener<AuthLogout> {
   @override
-  Future<void> handle(AuthLogout event) =>
-      MagicStarterServiceProvider._forgetAnalyticsPreference();
+  Future<void> handle(AuthLogout event) async {
+    unawaited(MagicStarterServiceProvider._forgetAnalyticsPreference());
+  }
 }
 
 /// Service provider for Magic Starter.

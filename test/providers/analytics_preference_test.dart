@@ -377,6 +377,40 @@ void main() {
       expect(await Vault.get(_cacheKey), '1');
     });
 
+    test(
+      'a hook whose request signs the user out does not deadlock the lift',
+      () async {
+        // An authenticated request inside the hook that loses its token makes
+        // magic's AuthInterceptor await `Auth.logout()`, and the dispatcher
+        // awaits the starter's AuthLogout listener. The lift has to queue
+        // behind the hook's turn without `Auth.logout()` waiting on it.
+        final provider = registerWithSlowHook();
+        hold = false;
+        await provider.boot();
+        await Auth.login({'token': 'account-token'}, _user());
+        backendThatSaves();
+        var signedOut = false;
+        MagicStarter.manager.applyAnalyticsOptOut = (bool optedOut) async {
+          started.add(optedOut);
+
+          if (!signedOut) {
+            signedOut = true;
+            await Auth.logout();
+          }
+
+          finished.add(optedOut);
+        };
+
+        await MagicStarterAnalyticsPreferenceController.instance
+            .updateAnalyticsPreference(optedOut: true);
+        await pumpEventQueue();
+
+        expect(started, <bool>[true, false]);
+        expect(await Vault.get(_cacheKey), isNull);
+      },
+      timeout: const Timeout(Duration(seconds: 5)),
+    );
+
     test('a sign-in answer is dropped when the account changed while it '
         'waited', () async {
       Vault.fake({_cacheKey: '1'});
