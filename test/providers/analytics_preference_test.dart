@@ -266,6 +266,237 @@ void main() {
     });
   });
 
+  // A host hook may await (it combines the account's choice with its own
+  // consent), so two hook calls made in order can finish in reverse order. The
+  // device applies therefore run one at a time: the account's newest choice is
+  // the last one a hook finishes.
+  group('device applies run one at a time', () {
+    final List<bool> started = <bool>[];
+    final List<bool> finished = <bool>[];
+    final List<Completer<void>> gates = <Completer<void>>[];
+    var hold = true;
+
+    /// A hook that waits on a gate while [hold] is set.
+    Future<void> slowHook(bool optedOut) async {
+      started.add(optedOut);
+
+      if (hold) {
+        final Completer<void> gate = Completer<void>();
+        gates.add(gate);
+        await gate.future;
+      }
+
+      finished.add(optedOut);
+    }
+
+    /// Releases the newest waiting hook first until none waits, so an apply
+    /// the starter started earlier finishes last if it was allowed to overlap.
+    Future<void> drain() async {
+      for (var round = 0; round < 20; round++) {
+        await pumpEventQueue();
+
+        final List<Completer<void>> waiting = gates
+            .where((Completer<void> gate) => !gate.isCompleted)
+            .toList();
+        if (waiting.isEmpty) return;
+
+        waiting.last.complete();
+      }
+    }
+
+    MagicStarterServiceProvider registerWithSlowHook() {
+      final provider = MagicStarterServiceProvider(MagicApp.instance);
+      provider.register();
+      MagicStarter.manager.applyAnalyticsOptOut = slowHook;
+
+      return provider;
+    }
+
+    /// Answers the read with false and accepts a save as true.
+    void backendThatSaves() {
+      Http.fake((MagicRequest request) {
+        return Http.response({'opted_out': request.method == 'PUT'});
+      });
+    }
+
+    setUp(() {
+      started.clear();
+      finished.clear();
+      gates.clear();
+      hold = true;
+    });
+
+    tearDown(() async {
+      hold = false;
+      for (final Completer<void> gate in gates) {
+        if (!gate.isCompleted) gate.complete();
+      }
+      await pumpEventQueue();
+    });
+
+    test('a slow sign-in apply does not finish after a later save', () async {
+      final provider = registerWithSlowHook();
+      hold = false;
+      await provider.boot();
+      hold = true;
+      await Auth.login({'token': 'account-token'}, _user());
+      backendThatSaves();
+
+      await Event.dispatch(AuthRestored(_user()));
+      await pumpEventQueue();
+      final Future<void> save = MagicStarterAnalyticsPreferenceController
+          .instance
+          .updateAnalyticsPreference(optedOut: true);
+      await drain();
+      await save;
+
+      expect(finished.last, isTrue);
+      expect(await Vault.get(_cacheKey), '1');
+    });
+
+    test('a read that waited behind a slow apply is dropped once a save '
+        'lands', () async {
+      Vault.fake({_cacheKey: '1'});
+      final provider = registerWithSlowHook();
+      final Future<void> booting = provider.boot();
+      await pumpEventQueue();
+      await Auth.login({'token': 'account-token'}, _user());
+      backendThatSaves();
+
+      await Event.dispatch(AuthRestored(_user()));
+      await pumpEventQueue();
+      final Future<void> save = MagicStarterAnalyticsPreferenceController
+          .instance
+          .updateAnalyticsPreference(optedOut: true);
+      await drain();
+      await booting;
+      await save;
+
+      expect(started, isNot(contains(false)));
+      expect(finished.last, isTrue);
+      expect(await Vault.get(_cacheKey), '1');
+    });
+
+    test(
+      'a hook whose request signs the user out does not deadlock the lift',
+      () async {
+        // An authenticated request inside the hook that loses its token makes
+        // magic's AuthInterceptor await `Auth.logout()`, and the dispatcher
+        // awaits the starter's AuthLogout listener. The lift has to queue
+        // behind the hook's turn without `Auth.logout()` waiting on it.
+        final provider = registerWithSlowHook();
+        hold = false;
+        await provider.boot();
+        await Auth.login({'token': 'account-token'}, _user());
+        backendThatSaves();
+        var signedOut = false;
+        MagicStarter.manager.applyAnalyticsOptOut = (bool optedOut) async {
+          started.add(optedOut);
+
+          if (!signedOut) {
+            signedOut = true;
+            await Auth.logout();
+          }
+
+          finished.add(optedOut);
+        };
+
+        await MagicStarterAnalyticsPreferenceController.instance
+            .updateAnalyticsPreference(optedOut: true);
+        await pumpEventQueue();
+
+        expect(started, <bool>[true, false]);
+        expect(await Vault.get(_cacheKey), isNull);
+      },
+      timeout: const Timeout(Duration(seconds: 5)),
+    );
+
+    test('a sign-in answer is dropped when the account changed while it '
+        'waited', () async {
+      Vault.fake({_cacheKey: '1'});
+      final provider = registerWithSlowHook();
+      final Future<void> booting = provider.boot();
+      await pumpEventQueue();
+      await Auth.login({'token': 'account-token'}, _user());
+      backendThatSaves();
+
+      await Event.dispatch(AuthRestored(_user()));
+      await pumpEventQueue();
+      Auth.fake(user: MagicStarterAuthUser.fromMap({'id': 43, 'name': 'Bob'}));
+      await drain();
+      await booting;
+
+      // Only the boot's cached apply reached the hook: the answer read for
+      // account 42 was dropped when its turn came.
+      expect(started, <bool>[true]);
+      expect(await Vault.get(_cacheKey), '1');
+    });
+
+    test('a saved choice is dropped when the account changed while it '
+        'waited', () async {
+      Vault.fake({_cacheKey: '1'});
+      final provider = registerWithSlowHook();
+      final Future<void> booting = provider.boot();
+      await pumpEventQueue();
+      await Auth.login({'token': 'account-token'}, _user());
+      backendThatSaves();
+
+      final Future<void> save = MagicStarterAnalyticsPreferenceController
+          .instance
+          .updateAnalyticsPreference(optedOut: true);
+      await pumpEventQueue();
+      Auth.fake(user: MagicStarterAuthUser.fromMap({'id': 43, 'name': 'Bob'}));
+      await drain();
+      await booting;
+      await save;
+
+      // The save was accepted for account 42, then waited behind the boot's
+      // apply; account 43 must not inherit it.
+      expect(started, <bool>[true]);
+    });
+
+    test('a sign-out lift does not finish after a later apply', () async {
+      Vault.fake({_cacheKey: '1'});
+      final provider = registerWithSlowHook();
+      hold = false;
+      await provider.boot();
+      hold = true;
+      started.clear();
+      finished.clear();
+      await Auth.login({'token': 'account-token'}, _user());
+
+      final Future<void> signOut = Auth.logout();
+      await pumpEventQueue();
+      final Future<void> next =
+          MagicStarterAnalyticsPreferenceController.applyOnDevice(true);
+      await drain();
+      await signOut;
+      await next;
+
+      expect(finished.last, isTrue);
+      expect(await Vault.get(_cacheKey), '1');
+    });
+
+    test('a throwing hook does not stall the applies behind it', () async {
+      registerWithSlowHook();
+      hold = false;
+      var calls = 0;
+      MagicStarter.manager.applyAnalyticsOptOut = (bool optedOut) async {
+        calls++;
+        if (calls == 1) throw StateError('host hook failed');
+      };
+
+      await expectLater(
+        MagicStarterAnalyticsPreferenceController.applyOnDevice(true),
+        throwsA(isA<StateError>()),
+      );
+      await MagicStarterAnalyticsPreferenceController.applyOnDevice(false);
+
+      expect(calls, 2);
+      expect(await Vault.get(_cacheKey), isNull);
+    });
+  });
+
   group('on sign-out', () {
     test('clears the cache and lifts the opt-out', () async {
       Vault.fake({_cacheKey: '1'});

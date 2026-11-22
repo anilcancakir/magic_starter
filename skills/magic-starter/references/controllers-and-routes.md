@@ -13,7 +13,7 @@ Each is a `MagicController` reached through `.instance` (`Magic.findOrPut`), exc
 | `MagicStarterProfileController` | `doUpdateProfile`, `doUpdatePassword`, `doSetPassword`, photo upload and removal, two-factor, recovery codes, sessions, `beginSocialConnect`, `doConnectSocialAccount`, `doDisconnectSocialAccount`, `doDeleteAccount` |
 | `MagicStarterTeamController` | `doCreate`, `doUpdate`, `doInvite`, members, invitations, `switchTeam`, `doAcceptInvitation`; implements `SessionScoped` |
 | `MagicStarterNewsletterController` | The newsletter subscription |
-| `MagicStarterAnalyticsPreferenceController` | The account's "Share usage data" choice; an accepted save applies the host's `applyAnalyticsOptOut` hook, the vault copy and `onAnalyticsPreferenceChanged` |
+| `MagicStarterAnalyticsPreferenceController` | The account's "Share usage data" choice; an accepted save applies the vault copy, the host's `applyAnalyticsOptOut` hook and `onAnalyticsPreferenceChanged`; every device apply (`applyOnDevice(optedOut, {isCurrent})`, `applyCachedOnDevice()`, `forgetOnDevice()`) runs one at a time in a queue that includes the hook, so a hook must not call them or `updateAnalyticsPreference` |
 | `MagicStarterSupportController` | Conversations, threads, replies, ratings, attachments, seen receipts |
 | `MagicStarterFeedbackController` | The 0 to 10 feedback card |
 | `MagicStarterReleasesController` | The release feed; `readFeed()` is the stateless read the update banner uses |
