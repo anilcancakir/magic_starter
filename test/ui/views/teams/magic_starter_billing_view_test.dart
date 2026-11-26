@@ -1367,6 +1367,20 @@ class _RecordingLaunchAdapter implements LaunchAdapter {
   Future<bool> canLaunch(Uri url) async => true;
 }
 
+/// The [label] text of the buttons that are not loading.
+///
+/// A loading `WButton` keeps its child mounted, unpainted, on newer wind_kit
+/// releases, so a bare `find.text(label)` also matches the busy button there
+/// while older releases drop it. Scoping to idle buttons reads the same on both.
+Finder _idleButtonLabel(String label) {
+  return find.descendant(
+    of: find.byWidgetPredicate(
+      (Widget widget) => widget is MSButton && !widget.isLoading,
+    ),
+    matching: find.text(label),
+  );
+}
+
 /// A store price as the store formats it, for the cases that render one.
 StoreProductOffer _offer(String priceString) {
   return StoreProductOffer(
@@ -4794,12 +4808,12 @@ void main() {
       // A pending purchase waits on the same bounded terms as a completed one:
       // the poll reads on, and the gate reopens when the window runs out.
       expect(
-        find.text(trans('magic_starter.billing.plan_button_upgrade')),
+        _idleButtonLabel(trans('magic_starter.billing.plan_button_upgrade')),
         findsNothing,
       );
       await tester.pump(const Duration(seconds: 60));
       expect(
-        find.text(trans('magic_starter.billing.plan_button_upgrade')),
+        _idleButtonLabel(trans('magic_starter.billing.plan_button_upgrade')),
         findsOneWidget,
       );
       await tester.pumpAndSettle();
@@ -4851,7 +4865,7 @@ void main() {
       await tester.pump();
 
       expect(
-        find.text(trans('magic_starter.billing.plan_button_upgrade')),
+        _idleButtonLabel(trans('magic_starter.billing.plan_button_upgrade')),
         findsNothing,
         reason: 'no second purchase while the first is being confirmed',
       );
@@ -4920,11 +4934,11 @@ void main() {
             'the other tier is still on the grid, but a second purchase '
             'cannot start while the first is being confirmed',
       );
-      expect(find.text(upgrade), findsOneWidget);
+      expect(_idleButtonLabel(upgrade), findsOneWidget);
 
       // Pressing either one starts nothing.
       await tester.tap(loading, warnIfMissed: false);
-      await tester.tap(find.text(upgrade), warnIfMissed: false);
+      await tester.tap(_idleButtonLabel(upgrade), warnIfMissed: false);
       await tester.pump();
 
       expect(
