@@ -25,10 +25,11 @@ const String _scoreFocus =
 /// The card's slots.
 ///
 /// A score is a 44 x 44 tap target. When the keyboard reaches it the border
-/// thickens to the primary colour and a ring follows; the border is what shows
-/// on a wind release that does not yet paint `focus:ring-*` on a `WDiv`. The
-/// chosen one is filled with the primary colour, so it reads as chosen at a
-/// glance rather than as a faint ring.
+/// thickens to the primary colour and an offset ring follows. Wind paints the
+/// ring as an outline around the chip, so it never moves the row; the thicker
+/// border stays alongside it as a second cue that does not rely on the ring
+/// colour. The chosen one is filled with the primary colour, so it reads as
+/// chosen at a glance rather than as a faint ring.
 ///
 /// ```
 /// root     - the column inside the card
