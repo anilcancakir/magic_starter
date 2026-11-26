@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- **The app layout's notification bell has one name, so a screen reader no longer reads "Notifications Notifications" in an app that installed magic_notifications' copy.** magic_notifications 1.2.0 names the bell from `notifications.title`, and the shell still folded its own `nav.notifications` label in beside it, so the sidebar and the phone header published two nodes with the bell's name (found by a live walk of a consuming app at 1440 wide, where the merged node read "Bildirimler Bildirimler"). The shell now leaves the name to the dropdown when the catalogue has `notifications.title`, and keeps its `nav.notifications` name, with its English fallback, when it does not, because the dropdown would otherwise announce the raw key. Dropping the shell's label outright was rejected for that raw-key case, and a label parameter on the dropdown was rejected as a second package release for the same fix. The `magic_notifications` floor rises to `^1.2.0`, the release that names the bell, and `starter:install` writes the same constraint into a host. `lib/src/ui/layouts/magic_starter_app_layout.dart`, `lib/src/cli/commands/magic_starter_install_command.dart`, `test/ui/layouts/magic_starter_app_layout_test.dart`, `pubspec.yaml`, `doc/basics/views-and-layouts.md`, `CLAUDE.md`
+
 ## [1.8.0] - 2026-11-26
 
 ### Added

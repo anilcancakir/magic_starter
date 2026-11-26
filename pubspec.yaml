@@ -37,9 +37,11 @@ dependencies:
   # package's routes resolve them through that registry. The routes also pass
   # `contentClassName` and `headerBuilder` and register `Notify.pushState` as a
   # before-logout hook. 1.0.0 renamed the CLI provider to
-  # `MagicNotificationsDowelProvider` and moved Wind to `wind_kit`. A floor must
-  # name a version pub.dev already has, or the package is unresolvable.
-  magic_notifications: ^1.0.0
+  # `MagicNotificationsDowelProvider` and moved Wind to `wind_kit`. 1.2.0 names
+  # the bell from `notifications.title`, which the app layout relies on to skip
+  # its own label. A floor must name a version pub.dev already has, or the
+  # package is unresolvable.
+  magic_notifications: ^1.2.0
   # Direct rather than transitive: `wind_kit` reaches this package through
   # `magic`, so without an entry here there is no floor to raise when this
   # package starts calling a new Wind API. `magic_starter_timezone_select.dart`

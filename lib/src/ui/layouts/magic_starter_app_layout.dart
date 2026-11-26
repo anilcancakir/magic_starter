@@ -1010,10 +1010,17 @@ class _MagicStarterAppLayoutState extends State<MagicStarterAppLayout> {
     // layout theme, and a null one keeps the widget's own default.
     final theme = MagicStarter.manager.layoutTheme;
 
-    // The dropdown takes no name of its own, and its trigger is an icon, so
-    // its button node had nothing to announce. The outer merge folds this
-    // label into that node (the unread count, when shown, follows it); the
-    // feed panel lives in the overlay, outside this subtree, and is unaffected.
+    // Since magic_notifications 1.2 the dropdown names its own bell from
+    // `notifications.title`, so a host that carries that copy gets one name;
+    // a second one from the shell made a screen reader read the bell twice.
+    if (Lang.has('notifications.title')) {
+      return _notificationDropdown(theme);
+    }
+
+    // Without that copy the bell's own name would be the raw key, so the
+    // shell's name is folded into its button node instead (the unread count,
+    // when shown, follows it); the feed panel lives in the overlay, outside
+    // this subtree, and is unaffected.
     return MergeSemantics(
       child: Semantics(
         label: magicStarterControlName('nav.notifications', 'Notifications'),
