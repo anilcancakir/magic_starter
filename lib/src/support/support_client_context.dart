@@ -30,7 +30,11 @@ class MagicStarterSupportClientContext {
     final Map<String, String?> context = <String, String?>{
       'app_version': package?.version,
       'build_number': package?.buildNumber,
-      'platform': kIsWeb ? 'web' : defaultTargetPlatform.name,
+      'platform': kIsWeb
+          ? 'web'
+          : MagicPlatform.isTvOS
+          ? 'tvOS'
+          : defaultTargetPlatform.name,
       'os_version': kIsWeb ? null : Platform.operatingSystemVersion,
       'locale': Lang.current.toLanguageTag(),
       'timezone':

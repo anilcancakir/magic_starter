@@ -39,6 +39,7 @@ void main() {
   tearDown(() {
     MagicStarterAppBuild.resetForTesting();
     debugDefaultTargetPlatformOverride = null;
+    MagicPlatform.debugTvOSOverride = null;
   });
 
   group('label', () {
@@ -116,6 +117,18 @@ void main() {
       debugDefaultTargetPlatformOverride = TargetPlatform.android;
 
       expect(MagicStarterAppBuild.isStoreInstall(_package()), isFalse);
+    });
+
+    test('is false on tvOS even though it reports as iOS', () {
+      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      MagicPlatform.debugTvOSOverride = true;
+
+      expect(
+        MagicStarterAppBuild.isStoreInstall(
+          _package(installerStore: 'com.apple'),
+        ),
+        isFalse,
+      );
     });
 
     test('is false on macOS whatever the installer says', () {

@@ -64,6 +64,8 @@ void main() {
     Vault.unfake();
     Auth.unfake();
     Http.unfake();
+    MagicPlatform.debugTvOSOverride = null;
+    debugDefaultTargetPlatformOverride = null;
     MagicApp.reset();
     Magic.flush();
   });
@@ -87,6 +89,18 @@ void main() {
       expect(await MagicStarterStoreReview.maybeRequest(), isFalse);
       expect(requests(), 0);
     });
+
+    test(
+      'does nothing on tvOS, where the review sheet is prohibited',
+      () async {
+        signIn(ageDays: 30);
+        debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+        MagicPlatform.debugTvOSOverride = true;
+
+        expect(await MagicStarterStoreReview.maybeRequest(), isFalse);
+        expect(requests(), 0);
+      },
+    );
 
     test('does nothing before the account is 7 days old', () async {
       signIn(ageDays: 6);
@@ -231,6 +245,14 @@ void main() {
 
       Config.set('magic_starter.store_review.app_store_id', '1234567890');
       expect(MagicStarterStoreReview.canOpenStoreListing, isTrue);
+    });
+
+    test('is not offered on tvOS even with the App Store id', () {
+      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      MagicPlatform.debugTvOSOverride = true;
+      Config.set('magic_starter.store_review.app_store_id', '1234567890');
+
+      expect(MagicStarterStoreReview.canOpenStoreListing, isFalse);
     });
 
     test('is not offered while the feature is off', () {

@@ -20,7 +20,7 @@ import '../http/controllers/magic_starter_feedback_controller.dart';
 ///
 /// ## When it stays quiet
 ///
-/// No prompt on the web, for a guest, for an account younger than
+/// No prompt on the web or tvOS, for a guest, for an account younger than
 /// [MagicStarterConfig.storeReviewMinAccountDays], within
 /// [MagicStarterConfig.storeReviewIntervalDays] of the last prompt on this
 /// device, or in a run where the feedback card was shown: one ask per session
@@ -54,9 +54,11 @@ class MagicStarterStoreReview {
   ///
   /// The web has no store. Android finds the listing from the package name;
   /// iOS and macOS need [MagicStarterConfig.storeReviewAppStoreId], and the
-  /// plugin throws without it. Other desktops are not offered the action.
+  /// plugin throws without it. Other desktops are not offered the action, and
+  /// neither is tvOS, which reports as iOS but has no store page to open.
   static bool get canOpenStoreListing {
     if (!MagicStarterConfig.hasStoreReviewFeatures() || _isWeb) return false;
+    if (MagicPlatform.isTvOS) return false;
 
     return switch (defaultTargetPlatform) {
       TargetPlatform.android => true,
@@ -137,6 +139,9 @@ class MagicStarterStoreReview {
   static bool _mayAsk() {
     if (!MagicStarterConfig.hasStoreReviewFeatures()) return false;
     if (_isWeb || _feedbackCardShown) return false;
+
+    // tvOS reports as iOS, and the platform prohibits the review sheet there.
+    if (MagicPlatform.isTvOS) return false;
 
     final user = Auth.user();
     if (user == null || MagicStarter.isGuest()) return false;
