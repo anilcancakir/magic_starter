@@ -120,6 +120,7 @@ export 'src/ui/components/radio/index.dart';
 export 'src/ui/components/badge/index.dart';
 export 'src/ui/components/typography/index.dart';
 export 'src/ui/components/skeleton/index.dart';
+export 'src/ui/components/spinner/index.dart';
 export 'src/ui/components/select/index.dart';
 export 'src/ui/components/combobox/index.dart';
 export 'src/ui/components/segmented_control/index.dart';

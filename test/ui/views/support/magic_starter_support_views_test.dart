@@ -273,6 +273,7 @@ void main() {
     required String at,
     Size size = const Size(1280, 2000),
     Future<List<MagicFile>> Function(List<String> extensions)? pickFiles,
+    Map<String, String> aliases = const <String, String>{},
   }) async {
     // A logical size: flutter_test's default pixel ratio is 3, which would turn
     // a 1280 surface into a 427 px phone.
@@ -303,8 +304,10 @@ void main() {
     await tester.pumpWidget(
       MaterialApp.router(
         routerConfig: MagicRouter.instance.routerConfig,
-        builder: (context, child) =>
-            WindTheme(data: WindThemeData(), child: child!),
+        builder: (context, child) => WindTheme(
+          data: WindThemeData(aliases: aliases),
+          child: child!,
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -923,18 +926,32 @@ void main() {
         return ok(conversationJson(id: 7));
       });
 
-      await mount(tester, at: '/support/7');
+      await mount(
+        tester,
+        at: '/support/7',
+        aliases: MagicStarterTokens.defaultAliases,
+      );
       await tester.enterText(find.byType(EditableText).last, 'Still there?');
       await tester.tap(find.byKey(const ValueKey<String>('support-send')));
       await tester.pump();
 
-      expect(
-        find.descendant(
-          of: find.byKey(const ValueKey<String>('support-send')),
-          matching: find.byType(CircularProgressIndicator),
-        ),
-        findsOneWidget,
+      final Finder spinner = find.descendant(
+        of: find.byKey(const ValueKey<String>('support-send')),
+        matching: find.byType(MSSpinner),
       );
+      expect(spinner, findsOneWidget);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      // The circle paints on `bg-primary`, so the spinner must paint the
+      // resolved `text-on-primary` (white), not its own `primary` shade, which
+      // would vanish into the fill. Wind drops an alias the theme lacks, so the
+      // colour is asserted, not the className.
+      final Color? painted = tester
+          .widget<Icon>(
+            find.descendant(of: spinner, matching: find.byType(Icon)),
+          )
+          .color;
+      expect(painted, const Color(0xFFFFFFFF));
+      expect(painted, isNot(WindThemeData().getColor('primary', 600)));
       // The controller drops a second POST on its own; what the view owes is
       // a control that says it is not pressable while the reply is out.
       expect(
@@ -952,7 +969,7 @@ void main() {
         }),
       );
       await tester.pumpAndSettle();
-      expect(find.byType(CircularProgressIndicator), findsNothing);
+      expect(find.byType(MSSpinner), findsNothing);
     });
 
     testWidgets('a reply whose answer will not decode frees Send again', (
@@ -976,7 +993,7 @@ void main() {
       expect(
         find.descendant(
           of: find.byKey(const ValueKey<String>('support-send')),
-          matching: find.byType(CircularProgressIndicator),
+          matching: find.byType(MSSpinner),
         ),
         findsNothing,
       );
@@ -1001,7 +1018,7 @@ void main() {
       expect(
         find.descendant(
           of: find.byKey(const ValueKey<String>('support-send')),
-          matching: find.byType(CircularProgressIndicator),
+          matching: find.byType(MSSpinner),
         ),
         findsNothing,
       );

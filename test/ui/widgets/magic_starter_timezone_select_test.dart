@@ -269,7 +269,7 @@ void main() {
         await tester.pump();
 
         final loadingBox = find.ancestor(
-          of: find.byType(CircularProgressIndicator),
+          of: find.byType(MSSpinner),
           matching: find.byWidgetPredicate(
             (w) => w is WDiv && (w.className ?? '').contains('rounded-lg'),
           ),
@@ -368,7 +368,8 @@ void main() {
         );
         await tester.pump();
 
-        final spinner = find.byType(CircularProgressIndicator);
+        final spinner = find.byType(MSSpinner);
+        expect(find.byType(CircularProgressIndicator), findsNothing);
         final box = find.ancestor(
           of: spinner,
           matching: find.byWidgetPredicate(
@@ -399,7 +400,7 @@ void main() {
       );
 
       expect(select.options, isEmpty);
-      expect(find.byType(CircularProgressIndicator), findsNothing);
+      expect(find.byType(MSSpinner), findsNothing);
       expect(tester.takeException(), isNull);
     });
 

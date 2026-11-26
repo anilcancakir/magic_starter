@@ -1,10 +1,10 @@
-import 'package:material_ui/material_ui.dart' show CircularProgressIndicator;
 import 'package:flutter/widgets.dart';
 import 'package:magic/magic.dart';
 
 import '../../contracts/magic_starter_social_auth.dart';
 import '../../facades/magic_starter.dart';
 import '../components/button/index.dart';
+import '../components/spinner/index.dart';
 
 /// One "Continue with" button per provider the social login bridge offers.
 ///
@@ -54,10 +54,7 @@ class MagicStarterSocialButtons extends StatelessWidget {
               className: 'flex flex-row items-center justify-center gap-2',
               children: [
                 if (provider == busyProvider)
-                  const SizedBox.square(
-                    dimension: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
+                  const MSSpinner(size: SpinnerSize.sm)
                 else
                   socialAuth.icon(provider),
                 WText(

@@ -1,8 +1,8 @@
-import 'package:material_ui/material_ui.dart'
-    show CircularProgressIndicator, Icons;
+import 'package:material_ui/material_ui.dart' show Icons;
 import 'package:flutter/widgets.dart';
 import 'package:magic/magic.dart';
-import 'package:magic_starter/magic_starter.dart' show ButtonSize, MSButton;
+import 'package:magic_starter/magic_starter.dart'
+    show ButtonSize, MSButton, MSSpinner, SpinnerSize;
 
 import '../../../configuration/magic_starter_config.dart';
 import '../../../facades/magic_starter.dart';
@@ -122,11 +122,7 @@ class _MagicStarterVerifyEmailViewState
     return WDiv(
       className: 'flex flex-col items-center gap-4 py-4',
       children: [
-        const SizedBox(
-          width: 32,
-          height: 32,
-          child: CircularProgressIndicator(strokeWidth: 3),
-        ),
+        const MSSpinner(size: SpinnerSize.lg),
         WText(
           trans('magic_starter.email_verification.verifying'),
           className: 'text-sm text-fg-muted text-center',
