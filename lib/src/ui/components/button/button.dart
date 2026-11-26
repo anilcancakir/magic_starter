@@ -75,9 +75,10 @@ class MSButton extends StatelessWidget {
 
   /// Whether the button fills the width of its parent, with its label centred.
   ///
-  /// Two things at two layers, and it needs both. Material widgets ignore
-  /// cross-axis stretch inside a `Column` (flutter/flutter#19399), so the
-  /// stretch is a `SizedBox(width: double.infinity)` around the rendered
+  /// Two things at two layers, and it needs both. A `Column` child is not
+  /// stretched unless the column asks for it with
+  /// `CrossAxisAlignment.stretch`, and [WButton] is not a Material widget, so
+  /// the stretch is a `SizedBox(width: double.infinity)` around the rendered
   /// [WButton] rather than a recipe class. That widens the box and leaves the
   /// label where it started, so the `justify-center` token goes on the
   /// className as well; [build] carries the reasoning.

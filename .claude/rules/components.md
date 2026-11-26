@@ -26,7 +26,7 @@ lib/src/ui/components/<name>/
 - `index.dart` never exports the preview. A preview is registered in `starterComponentPreviews()` in `lib/previews.dart`, the dev-only barrel that keeps previews out of release builds.
 - The recipe is top-level (a `WindRecipe`, or a function when a theme feeds it), so the visual contract is testable without mounting the widget; the widget takes its className from it instead of composing strings inline.
 - A component never puts a `max-w-*` or a page-level `px-*` on itself: page geometry belongs to `MSPageContainer`.
-- `MSButton`, `MSInput` and `MSTextarea` take `bool fullWidth = false`: a `SizedBox(width: double.infinity)` around the rendered widget rather than a width token, because Material widgets ignore cross-axis stretch (flutter/flutter#19399).
+- `MSButton`, `MSInput` and `MSTextarea` take `bool fullWidth = false`: a `SizedBox(width: double.infinity)` around the rendered widget rather than a width token, because a `Column` child is not stretched unless the column asks for it (`WButton` and `WInput` have no Material ancestry, so this is plain Flutter layout).
 
 ## Component contracts
 
