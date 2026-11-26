@@ -30,6 +30,18 @@ import 'combobox.recipe.dart';
 ///   onSearch: (query) => _fetchOptions(query),
 /// )
 /// ```
+///
+/// ### Custom rows and empty state:
+///
+/// ```dart
+/// MSCombobox<String>(
+///   value: _selected,
+///   options: places,
+///   onChange: (v) => setState(() => _selected = v),
+///   itemBuilder: (context, option, isSelected, isHovered) => PlaceRow(option),
+///   emptyBuilder: (context, query) => WText('No place matches "$query"'),
+/// )
+/// ```
 @immutable
 class MSCombobox<T> extends StatelessWidget {
   /// Currently selected value, or `null` when nothing is selected.
@@ -58,6 +70,14 @@ class MSCombobox<T> extends StatelessWidget {
   /// Per-slot className overrides appended after the recipe output.
   final Map<String, String>? classNames;
 
+  /// Builds each option row in the menu, for a row with an icon, a secondary
+  /// line or a count. Passed straight to [WSelect]; `null` keeps the default row.
+  final SelectItemBuilder<T>? itemBuilder;
+
+  /// Builds the state shown when no option matches the search query. Receives
+  /// the current query. Passed straight to [WSelect]; `null` keeps the default.
+  final EmptyStateBuilder? emptyBuilder;
+
   /// Creates a [MSCombobox] widget.
   const MSCombobox({
     super.key,
@@ -69,6 +89,8 @@ class MSCombobox<T> extends StatelessWidget {
     this.searchPlaceholder,
     this.disabled = false,
     this.classNames,
+    this.itemBuilder,
+    this.emptyBuilder,
   });
 
   @override
@@ -89,6 +111,8 @@ class MSCombobox<T> extends StatelessWidget {
       searchPlaceholder:
           searchPlaceholder ?? trans('common.search_placeholder'),
       onSearch: onSearch,
+      itemBuilder: itemBuilder,
+      emptyBuilder: emptyBuilder,
       disabled: disabled,
       className: slots['trigger'],
       menuClassName: slots['popup'],
