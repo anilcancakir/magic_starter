@@ -168,6 +168,84 @@ void main() {
     });
   });
 
+  group('Combobox builders', () {
+    const fruit = [
+      SelectOption(value: 'apple', label: 'Apple'),
+      SelectOption(value: 'banana', label: 'Banana'),
+    ];
+
+    Future<void> open(
+      WidgetTester tester, {
+      SelectItemBuilder<String>? itemBuilder,
+      EmptyStateBuilder? emptyBuilder,
+    }) async {
+      await tester.pumpWidget(
+        wrap(
+          MSCombobox<String>(
+            value: null,
+            options: fruit,
+            onChange: (_) {},
+            itemBuilder: itemBuilder,
+            emptyBuilder: emptyBuilder,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(WSelect<String>));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('forwards both builders to WSelect', (tester) async {
+      Widget item(BuildContext c, SelectOption<String> o, bool s, bool h) =>
+          const SizedBox();
+      Widget empty(BuildContext c, String q) => const SizedBox();
+
+      await open(tester, itemBuilder: item, emptyBuilder: empty);
+
+      final select = tester.widget<WSelect<String>>(
+        find.byType(WSelect<String>),
+      );
+      expect(select.itemBuilder, same(item));
+      expect(select.emptyBuilder, same(empty));
+    });
+
+    testWidgets('a custom itemBuilder renders for each option', (tester) async {
+      await open(
+        tester,
+        itemBuilder: (context, option, isSelected, isHovered) =>
+            Text('row:${option.label}'),
+      );
+
+      expect(find.text('row:Apple'), findsOneWidget);
+      expect(find.text('row:Banana'), findsOneWidget);
+    });
+
+    testWidgets('a custom emptyBuilder renders with the query', (tester) async {
+      await open(
+        tester,
+        emptyBuilder: (context, query) => Text('Nothing for "$query"'),
+      );
+
+      await tester.enterText(find.byType(EditableText), 'zzz');
+      await tester.pumpAndSettle();
+
+      expect(find.text('Nothing for "zzz"'), findsOneWidget);
+      expect(find.text('Apple'), findsNothing);
+    });
+
+    testWidgets('null builders keep the default rows', (tester) async {
+      await open(tester);
+
+      final select = tester.widget<WSelect<String>>(
+        find.byType(WSelect<String>),
+      );
+      expect(select.itemBuilder, isNull);
+      expect(select.emptyBuilder, isNull);
+      expect(find.text('Apple'), findsOneWidget);
+      expect(find.text('Banana'), findsOneWidget);
+    });
+  });
+
   testWidgets('MSCombobox trigger measures at least 40 logical px tall', (
     tester,
   ) async {
