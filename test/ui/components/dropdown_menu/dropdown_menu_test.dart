@@ -78,6 +78,9 @@ void main() {
       );
 
       await tester.tap(find.text('open menu'));
+      // Newer wind_kit lays the panel out in an ignored measuring frame first,
+      // so a second frame is needed before the item takes taps.
+      await tester.pump();
       await tester.pump();
       await tester.tap(find.text('Tap me'));
       await tester.pump();
