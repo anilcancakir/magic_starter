@@ -4,7 +4,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/rendering.dart'
-    show RenderRepaintBoundary, SemanticsAction;
+    show RenderRepaintBoundary, SemanticsAction, SemanticsData, SemanticsNode;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:magic/magic.dart';
 import 'package:magic_notifications/magic_notifications.dart';
@@ -2799,6 +2799,28 @@ void main() {
       await tester.pumpAndSettle();
     }
 
+    // What a screen reader hears for the bell: the merged label of every
+    // button node under the dropdown. `find.bySemanticsLabel` reads a node's
+    // own label only, so a second name merged in from a wrapper slips past it.
+    List<String> bellAnnouncements(WidgetTester tester) {
+      final List<String> labels = <String>[];
+
+      void collect(SemanticsNode node) {
+        final SemanticsData data = node.getSemanticsData();
+        if (!node.isMergedIntoParent && data.flagsCollection.isButton) {
+          labels.add(data.label);
+        }
+        node.visitChildren((SemanticsNode child) {
+          collect(child);
+          return true;
+        });
+      }
+
+      collect(tester.getSemantics(find.byType(NotificationDropdown)));
+
+      return labels;
+    }
+
     // An app that installs magic_notifications carries its `notifications.*`
     // copy, and the dropdown names its own bell from it since 1.2.0; a second
     // name from the shell made a screen reader read the bell twice.
@@ -2814,11 +2836,7 @@ void main() {
 
         await pumpShell(tester);
 
-        expect(
-          find.bySemanticsLabel(RegExp(r'Notifications\s+Notifications')),
-          findsNothing,
-          reason: 'the bell read its name twice',
-        );
+        expect(bellAnnouncements(tester), <String>['Notifications']);
         expectNamedButton(tester, 'Notifications');
       } finally {
         handle.dispose();
@@ -2987,6 +3005,9 @@ void main() {
         expectNamedButton(tester, 'Open menu');
         expectNamedButton(tester, 'Notifications');
         expectNamedButton(tester, 'Account menu');
+        // The merged label, so a raw `notifications.title` from the dropdown
+        // cannot ride along behind the shell's name.
+        expect(bellAnnouncements(tester), <String>['Notifications']);
         for (final key in const [
           'nav.open_menu',
           'nav.notifications',
@@ -3018,6 +3039,7 @@ void main() {
         expectNamedButton(tester, 'Main menu');
         expectNamedButton(tester, 'Alerts');
         expectNamedButton(tester, 'Your account');
+        expect(bellAnnouncements(tester), <String>['Alerts']);
 
         handle.dispose();
       });
