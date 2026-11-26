@@ -4,7 +4,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/rendering.dart'
-    show RenderRepaintBoundary, SemanticsAction;
+    show RenderRepaintBoundary, SemanticsAction, SemanticsData, SemanticsNode;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:magic/magic.dart';
 import 'package:magic_notifications/magic_notifications.dart';
@@ -249,6 +249,18 @@ class _NavBadgeCopyLoader implements TranslationLoader {
   Future<Map<String, dynamic>> load(Locale _) async => <String, dynamic>{
     'nav.badge_count': 'One item|:count items',
     'nav.shopping_open': 'One line to buy|:count lines to buy',
+  };
+}
+
+/// A host catalogue that carries magic_notifications' own copy beside the
+/// shell's, as an app that installed both packages does.
+class _BellCopyLoader implements TranslationLoader {
+  const _BellCopyLoader();
+
+  @override
+  Future<Map<String, dynamic>> load(Locale _) async => <String, dynamic>{
+    'nav.notifications': 'Notifications',
+    'notifications.title': 'Notifications',
   };
 }
 
@@ -2787,7 +2799,57 @@ void main() {
       await tester.pumpAndSettle();
     }
 
+    // What a screen reader hears for the bell: the merged label of every
+    // button node under the dropdown. `find.bySemanticsLabel` reads a node's
+    // own label only, so a second name merged in from a wrapper slips past it.
+    List<String> bellAnnouncements(WidgetTester tester) {
+      final List<String> labels = <String>[];
+
+      void collect(SemanticsNode node) {
+        final SemanticsData data = node.getSemanticsData();
+        if (!node.isMergedIntoParent && data.flagsCollection.isButton) {
+          labels.add(data.label);
+        }
+        node.visitChildren((SemanticsNode child) {
+          collect(child);
+          return true;
+        });
+      }
+
+      collect(tester.getSemantics(find.byType(NotificationDropdown)));
+
+      return labels;
+    }
+
+    // An app that installs magic_notifications carries its `notifications.*`
+    // copy, and the dropdown names its own bell from it since 1.2.0; a second
+    // name from the shell made a screen reader read the bell twice.
+    Future<void> expectBellNamedOnce(WidgetTester tester, double width) async {
+      final handle = tester.ensureSemantics();
+      try {
+        useViewport(tester, width, 900);
+        Translator.instance.setLoader(const _BellCopyLoader());
+        await Translator.instance.setLocale(const Locale('en'));
+        addTearDown(Translator.reset);
+        Config.set('magic_starter.features.notifications', true);
+        MagicStarter.useNavigation(mainItems: items, bottomItems: items);
+
+        await pumpShell(tester);
+
+        expect(bellAnnouncements(tester), <String>['Notifications']);
+        expectNamedButton(tester, 'Notifications');
+      } finally {
+        handle.dispose();
+      }
+    }
+
     group('at 1440 wide', () {
+      testWidgets('names the bell once when the host carries its copy', (
+        tester,
+      ) async {
+        await expectBellNamedOnce(tester, 1440);
+      });
+
       testWidgets('names every item of the labelled sidebar', (tester) async {
         final handle = tester.ensureSemantics();
         useViewport(tester, 1440, 900);
@@ -2943,6 +3005,9 @@ void main() {
         expectNamedButton(tester, 'Open menu');
         expectNamedButton(tester, 'Notifications');
         expectNamedButton(tester, 'Account menu');
+        // The merged label, so a raw `notifications.title` from the dropdown
+        // cannot ride along behind the shell's name.
+        expect(bellAnnouncements(tester), <String>['Notifications']);
         for (final key in const [
           'nav.open_menu',
           'nav.notifications',
@@ -2974,8 +3039,15 @@ void main() {
         expectNamedButton(tester, 'Main menu');
         expectNamedButton(tester, 'Alerts');
         expectNamedButton(tester, 'Your account');
+        expect(bellAnnouncements(tester), <String>['Alerts']);
 
         handle.dispose();
+      });
+
+      testWidgets('names the bell once when the host carries its copy', (
+        tester,
+      ) async {
+        await expectBellNamedOnce(tester, 414);
       });
 
       testWidgets('the menu control still opens the drawer', (tester) async {

@@ -15,7 +15,7 @@ import '../helpers/magic_starter_config_helper.dart';
 /// disagree. They describe one dependency from two files, so a disagreement
 /// leaves pub no intersection to solve, and pub answers that by walking
 /// magic_starter backwards to a release that fits rather than by failing.
-const String magicNotificationsConstraint = '^1.0.0';
+const String magicNotificationsConstraint = '^1.2.1';
 
 /// The `material_ui` constraint `starter:install` writes into the host
 /// application's own `pubspec.yaml`: the floor `magic` 1.0.0 and `wind_kit`
