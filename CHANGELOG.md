@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-11-26
+
 ### Added
 
 - **`MSSpinner`, a wind spinner that follows the host's `primary` and `dark:` setup.** It is a spinning `WIcon` (`animate-spin`) in three sizes (`SpinnerSize.sm`, `md` and `lg`: 16, 20 and 32 px) coloured `text-primary-600 dark:text-primary-500`, the shades the `bg-primary` alias uses, with a `spinnerRecipe` and a catalog preview; a `className` is appended after the recipe, so a spinner on a filled surface passes its text role (`text-on-primary`). Material's `CircularProgressIndicator` could not do any of this, because its colour comes from Material's theme. `lib/src/ui/components/spinner/`, `lib/magic_starter.dart`, `lib/previews.dart`
