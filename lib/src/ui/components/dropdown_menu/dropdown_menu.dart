@@ -106,7 +106,7 @@ class MSDropdownMenu extends StatelessWidget {
     if (item.disabled) {
       return WDiv(
         className: dropdownMenuItemDisabledRecipe(className: item.className),
-        children: [if (item.leading != null) item.leading!, WText(item.label)],
+        children: _itemChildren(item),
       );
     }
 
@@ -118,8 +118,20 @@ class MSDropdownMenu extends StatelessWidget {
       },
       child: WDiv(
         className: dropdownMenuItemRecipe(className: item.className),
-        children: [if (item.leading != null) item.leading!, WText(item.label)],
+        children: _itemChildren(item),
       ),
     );
+  }
+
+  /// The leading widget and the label of one row.
+  ///
+  /// The label is `flex-initial` (a loose `Flexible`): in a panel with a
+  /// pinned width it wraps instead of overflowing the row, and in an unpinned
+  /// panel the row still sizes to its content.
+  List<Widget> _itemChildren(MSDropdownMenuItem item) {
+    return [
+      if (item.leading != null) item.leading!,
+      WText(item.label, className: 'flex-initial'),
+    ];
   }
 }

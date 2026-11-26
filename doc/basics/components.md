@@ -177,7 +177,7 @@ The `.recipe.dart` file holds the recipe: a top-level `WindRecipe` or slot recip
 | `MSTabs` | `tabsRecipe` | Full tab bar with content panels |
 | `MSAccordion` | `MSAccordionItem`, `accordionRecipe` | Collapsible section list. The chevron is a `WIcon` styled by the recipe's `icon` slot (`text-[18px] text-fg`), so `classNames: {'icon': ...}` recolours or resizes it in both modes |
 | `MSNavbar` | | Horizontal top navigation bar |
-| `MSDropdownMenu` | `MSDropdownMenuItem` | Contextual action menu |
+| `MSDropdownMenu` | `MSDropdownMenuItem` | Contextual action menu. A panel sizes to its widest row unless its `className` pins a width (`w-64`); in a pinned panel a long label wraps onto the next line beside its `leading` instead of overflowing the row |
 
 <a name="overlay"></a>
 ### Overlay
