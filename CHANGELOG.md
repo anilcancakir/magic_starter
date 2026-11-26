@@ -8,6 +8,10 @@ All notable changes to this project will be documented in this file.
 
 - **`MSCombobox` takes `itemBuilder` and `emptyBuilder`, so a row with an icon, a secondary line or a count and a translated "no results" state no longer need a hand-rolled searchable select.** A consuming app had rebuilt one on `WFormSelect(searchable: true)` because the component forwarded neither, which bypassed the starter's recipe and theme. Both are optional, typed as `WSelect`'s own `SelectItemBuilder<T>` and `EmptyStateBuilder`, and pass straight through, so `null` renders exactly as before; the menu surface stays reachable through `classNames['popup']`. (#295) `lib/src/ui/components/combobox/combobox.dart`, `doc/basics/components.md`
 
+### Changed
+
+- **Two notes that described wind limitations wind_kit has since fixed now say what the code does today.** The feedback card's doc block claimed the focus border is what shows on a wind release that does not yet paint `focus:ring-*` on a `WDiv`; wind_kit has painted rings as outlines since 1.9.0 and this package requires ^1.12.0, so the doc now describes the offset ring and the thicker border as two cues. The `MSButton.fullWidth` doc and the components rule blamed Material widgets for ignoring cross-axis stretch, but `WButton` and `WInput` have no Material ancestry; a `Column` child is simply not stretched unless the column asks, so the `SizedBox(width: double.infinity)` wrapper stays and only the reason changed. The border fallback was kept because no test proves the ring alone shows the focus. Comment and rule text only (#298). `lib/src/ui/widgets/magic_starter_feedback_card.dart`, `lib/src/ui/components/button/button.dart`, `.claude/rules/components.md`
+
 ## [1.7.0] - 2026-11-22
 
 ### Fixed
