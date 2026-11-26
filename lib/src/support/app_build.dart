@@ -79,8 +79,11 @@ class MagicStarterAppBuild {
 
   /// Whether [info] describes an install from the platform's own store: the App
   /// Store on iOS (not TestFlight, not the simulator) or Google Play on
-  /// Android. Every other platform and installer is `false`.
+  /// Android. Every other platform and installer is `false`, tvOS included:
+  /// it reports as iOS, and its App Store install is no store update to offer.
   static bool isStoreInstall(PackageInfo info) {
+    if (MagicPlatform.isTvOS) return false;
+
     return switch (defaultTargetPlatform) {
       TargetPlatform.iOS => info.installerStore == _appStoreInstaller,
       TargetPlatform.android => info.installerStore == _playStoreInstaller,

@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- **tvOS no longer takes the iOS arms of the store gates.** flutter-tvos reports an Apple TV as iOS, so the store review prompt, the "Rate us" listing and the App Store update banner all fired there, and the support client context reported `iOS`. On `MagicPlatform.isTvOS`, `MagicStarterStoreReview.maybeRequest` and `canOpenStoreListing` stay quiet (the platform prohibits the review sheet), `MagicStarterAppBuild.isStoreInstall` answers `false`, which keeps the update banner inert, and `MagicStarterSupportClientContext.collect` reports `tvOS` as the platform. iOS and Android answers are unchanged. Needs the `magic` release that ships `MagicPlatform.isTvOS`. `lib/src/support/app_build.dart`, `lib/src/support/store_review.dart`, `lib/src/support/support_client_context.dart`, `test/support/`, `test/ui/widgets/magic_starter_app_update_banner_test.dart`
+
 ## [1.8.2] - 2026-11-26
 
 ### Fixed

@@ -131,6 +131,7 @@ void main() {
 
   tearDown(() {
     debugDefaultTargetPlatformOverride = null;
+    MagicPlatform.debugTvOSOverride = null;
     MagicStarterAppUpdateBanner.resetForTesting();
     MagicStarterAppBuild.resetForTesting();
     Http.unfake();
@@ -612,6 +613,21 @@ void main() {
         await finish(tester);
       });
     }
+
+    testWidgets('an Apple TV install never offers the App Store', (
+      tester,
+    ) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      MagicPlatform.debugTvOSOverride = true;
+      installed(installerStore: 'com.apple');
+
+      await mount(tester);
+      await tester.pump(_delay);
+
+      expect(update, findsNothing);
+      expect(releaseRequests(), 0);
+      await finish(tester);
+    });
 
     testWidgets('warns once when the App Store id is missing', (tester) async {
       debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
