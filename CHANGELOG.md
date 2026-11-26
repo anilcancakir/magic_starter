@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.8.1] - 2026-11-26
+
 ### Fixed
 
 - **The app layout's notification bell has exactly one name, `nav.notifications`, so a screen reader no longer reads it twice or with a raw key.** magic_notifications 1.2.0 names the bell from `notifications.title`, and the shell still folded its own `nav.notifications` label in beside it, so the merged node read "Notifications Notifications" in an app with both keys (a live walk of a consuming app at 1440 wide heard "Bildirimler Bildirimler") and "Notifications notifications.title" in one without the dropdown's key (a semantics probe). The shell now passes its name as the dropdown's `semanticLabel` and wraps the bell in nothing. Leaving the name to the dropdown whenever the catalogue had `notifications.title` was tried first and rejected: the raw key still rode along in the other case, and a host that renamed `nav.notifications` would have lost its name. The tests now assert the merged label a screen reader hears, because `find.bySemanticsLabel` reads a node's own label and missed the second name. The `magic_notifications` floor rises to `^1.2.1`, the release that takes `semanticLabel`, and `starter:install` writes the same constraint into a host. `lib/src/ui/layouts/magic_starter_app_layout.dart`, `lib/src/cli/commands/magic_starter_install_command.dart`, `test/ui/layouts/magic_starter_app_layout_test.dart`, `pubspec.yaml`, `doc/getting-started/installation.md`, `doc/basics/views-and-layouts.md`, `CLAUDE.md` (#305)
