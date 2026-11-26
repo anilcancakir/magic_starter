@@ -1192,5 +1192,51 @@ void main() {
       expect(() => node.addListener(() {}), returnsNormally);
       node.dispose();
     });
+
+    for (final (name, disabled, isLoading) in [
+      ('disabled', true, false),
+      ('loading', false, true),
+    ]) {
+      testWidgets('a $name button does not take focus from its node', (
+        tester,
+      ) async {
+        final node = FocusNode(debugLabel: 'play');
+        addTearDown(node.dispose);
+        await pumpAt(
+          tester,
+          desktop,
+          MSButton(
+            onPressed: () {},
+            disabled: disabled,
+            isLoading: isLoading,
+            focusNode: node,
+            child: const WText('Play'),
+          ),
+        );
+
+        node.requestFocus();
+        await tester.pump();
+        expect(node.hasFocus, isFalse);
+      });
+
+      testWidgets('a $name button ignores autofocus', (tester) async {
+        final node = FocusNode(debugLabel: 'play');
+        addTearDown(node.dispose);
+        await pumpAt(
+          tester,
+          desktop,
+          MSButton(
+            onPressed: () {},
+            disabled: disabled,
+            isLoading: isLoading,
+            focusNode: node,
+            autofocus: true,
+            child: const WText('Play'),
+          ),
+        );
+
+        expect(node.hasFocus, isFalse);
+      });
+    }
   });
 }
