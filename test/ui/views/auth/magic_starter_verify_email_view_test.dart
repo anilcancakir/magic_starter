@@ -1,10 +1,18 @@
+import 'dart:async';
+
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:magic/magic.dart';
 import 'package:magic_starter/magic_starter.dart';
 
 void main() {
-  Future<void> mount(WidgetTester tester, {required String location}) async {
+  /// [settle] false pumps one timed frame instead of settling, for a screen
+  /// that holds a spinner, which never settles.
+  Future<void> mount(
+    WidgetTester tester, {
+    required String location,
+    bool settle = true,
+  }) async {
     MagicRoute.page(
       '/auth/verify-email',
       () => const MagicStarterVerifyEmailView(),
@@ -20,6 +28,11 @@ void main() {
         ),
       ),
     );
+    if (!settle) {
+      await tester.pump(const Duration(milliseconds: 50));
+
+      return;
+    }
     await tester.pumpAndSettle();
   }
 
@@ -60,6 +73,32 @@ void main() {
       find.text(trans('magic_starter.email_verification.verify_success')),
       findsOneWidget,
     );
+  });
+
+  testWidgets('verifying shows the wind spinner, not a Material one', (
+    tester,
+  ) async {
+    final Completer<MagicResponse> pending = Completer<MagicResponse>();
+    Http.fake((request) => pending.future);
+
+    await mount(
+      tester,
+      location:
+          '/auth/verify-email?id=7&hash=${'a' * 40}&expires=99&signature=sig',
+      settle: false,
+    );
+
+    expect(find.byType(MSSpinner), findsOneWidget);
+    expect(
+      tester.widget<MSSpinner>(find.byType(MSSpinner)).size,
+      SpinnerSize.lg,
+    );
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+
+    pending.complete(Http.response(<String, dynamic>{'message': 'ok'}));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(MSSpinner), findsNothing);
   });
 
   testWidgets('a link missing its signature never reaches the API', (

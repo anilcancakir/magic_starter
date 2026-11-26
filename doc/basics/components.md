@@ -161,6 +161,7 @@ The `.recipe.dart` file holds the recipe: a top-level `WindRecipe` or slot recip
 | `MSBadge` | `BadgeTone` (neutral/primary/accent/success/warning/destructive/outline) | Inline label chip |
 | `MSTypography` | `TypographyVariant` (h1/h2/h3/body/caption) | Semantic text wrapper |
 | `MSSkeleton` | `SkeletonShape` (block/text/circle) | Placeholder loading block |
+| `MSSpinner` | `SpinnerSize` (sm/md/lg: 16, 20 and 32 px), `spinnerRecipe` | Indeterminate spinner: a spinning `WIcon` in the host's `primary` (`text-primary-600 dark:text-primary-500`), so it follows a host's palette and dark mode where Material's `CircularProgressIndicator` does not. `className` is appended after the recipe, so `text-on-primary` colours one on a `bg-primary` surface. It animates forever, so a test that mounts one pumps frames instead of calling `pumpAndSettle` |
 | `MSToast` | `ToastVariant` (info/success/warning/error) | Transient feedback banner (the message is `text-sm font-medium`; `messageClassName` is appended after it, so `text-[15px] leading-5 font-normal` sets another body type, with or without an action); presents nothing itself, so the host shows it (through its own `OverlayEntry`) and decides how long it stays. `Magic.toast(String)` cannot carry an action and its overlay ignores pointers, so an action needs the host's own overlay. `actionLabel` and `onAction` (both or neither) add a trailing text action such as Undo: a cell at least 44 px tall and wide at every width (it grows with the label at a large text size), named by `actionLabel` for assistive technology, with a ring inside the toast on keyboard focus. A long message wraps beside it and the action keeps its size; a one line toast is as tall with an action as without |
 | `MSTooltip` | | Hover/long-press hint bubble |
 | `MSEmptyState` | | Centred placeholder with optional icon, title, description and action |
@@ -174,7 +175,7 @@ The `.recipe.dart` file holds the recipe: a top-level `WindRecipe` or slot recip
 |-----------|----------------|-------|
 | `MSSegmentedControl` | `SegmentedControlSize`, `segmentedControlRecipe` | Inline tab switcher; below `lg` each segment is at least 44 px tall to tap, the painted pill unchanged. The pill's padding and type per size and the root's padding come from `MagicStarterFieldTheme` (`segmentedSmClassName`, `segmentedMdClassName`, `segmentedPaddingClassName`); the hit cell is not themed. In a horizontal scroller (the `overflow-x-auto` root override, or your own scroll view that holds nothing but the control) it scrolls the selected segment into view on mount and when `selectedIndex` changes; a page view, a vertical list or a strip with padding or other content around the control is left alone, and the page's vertical scroll never moves |
 | `MSTabs` | `tabsRecipe` | Full tab bar with content panels |
-| `MSAccordion` | `MSAccordionItem`, `accordionRecipe` | Collapsible section list |
+| `MSAccordion` | `MSAccordionItem`, `accordionRecipe` | Collapsible section list. The chevron is a `WIcon` styled by the recipe's `icon` slot (`text-[18px] text-fg`), so `classNames: {'icon': ...}` recolours or resizes it in both modes |
 | `MSNavbar` | | Horizontal top navigation bar |
 | `MSDropdownMenu` | `MSDropdownMenuItem` | Contextual action menu |
 

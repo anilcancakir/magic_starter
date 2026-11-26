@@ -1,8 +1,7 @@
 import 'dart:async' show Timer, unawaited;
 
 import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb;
-import 'package:material_ui/material_ui.dart'
-    show CircularProgressIndicator, Icons;
+import 'package:material_ui/material_ui.dart' show Icons;
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
@@ -12,6 +11,7 @@ import '../../../configuration/magic_starter_config.dart';
 import '../../../http/controllers/magic_starter_support_controller.dart';
 import '../../../models/magic_starter_support_conversation.dart';
 import '../../components/form_field/index.dart';
+import '../../components/spinner/index.dart';
 import 'magic_starter_support_attachments.dart';
 import 'magic_starter_support_message_bubble.dart';
 import 'magic_starter_support_rating.dart';
@@ -542,7 +542,11 @@ class _MagicStarterSupportComposerState
                   'w-9 h-9 rounded-full flex items-center justify-center '
                   '${sending || ready ? _sendLive : _sendIdle}',
               child: sending
-                  ? const _SendSpinner()
+                  // In flight is always the live circle, so `text-on-primary`.
+                  ? const MSSpinner(
+                      size: SpinnerSize.sm,
+                      className: 'text-on-primary',
+                    )
                   : WIcon(_iconSend, className: 'text-base'),
             ),
           ),
@@ -612,26 +616,6 @@ class _MagicStarterSupportThreadBodyState
           ratingError: _ratingError,
         ),
       ],
-    );
-  }
-}
-
-/// The send circle's in-flight state: a small spinner in the circle's own
-/// text colour, so it follows the host's `text-on-primary`.
-class _SendSpinner extends StatelessWidget {
-  const _SendSpinner();
-
-  @override
-  Widget build(BuildContext context) {
-    final Color? color = DefaultTextStyle.of(context).style.color;
-
-    return SizedBox(
-      width: 16,
-      height: 16,
-      child: CircularProgressIndicator(
-        strokeWidth: 2,
-        valueColor: color == null ? null : AlwaysStoppedAnimation<Color>(color),
-      ),
     );
   }
 }

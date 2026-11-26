@@ -42,6 +42,7 @@ import 'src/ui/components/segmented_control/segmented_control.preview.dart';
 import 'src/ui/components/select/select.preview.dart';
 import 'src/ui/components/skeleton/skeleton.preview.dart';
 import 'src/ui/components/social_divider/social_divider.preview.dart';
+import 'src/ui/components/spinner/spinner.preview.dart';
 import 'src/ui/components/switch/switch.preview.dart';
 import 'src/ui/components/tabs/tabs.preview.dart';
 import 'src/ui/components/team_selector/team_selector.preview.dart';
@@ -169,6 +170,7 @@ List<StarterComponentPreview> starterComponentPreviews() {
       slug: 'social_divider',
       builder: (_) => const SocialDividerPreview(),
     ),
+    (label: 'Spinner', slug: 'spinner', builder: (_) => const SpinnerPreview()),
     (label: 'Switch', slug: 'switch', builder: (_) => const SwitchPreview()),
     (label: 'Tabs', slug: 'tabs', builder: (_) => const TabsPreview()),
     (

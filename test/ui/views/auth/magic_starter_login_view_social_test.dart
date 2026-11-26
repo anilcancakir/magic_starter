@@ -149,10 +149,11 @@ void main() {
 
       final spinner = find.descendant(
         of: find.byType(MagicStarterSocialButtons),
-        matching: find.byType(CircularProgressIndicator),
+        matching: find.byType(MSSpinner),
       );
 
       expect(spinner, findsOneWidget);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
       expect(find.byKey(const Key('icon-google')), findsNothing);
       expect(find.byKey(const Key('icon-github')), findsOneWidget);
     });

@@ -1,10 +1,11 @@
 import 'dart:async';
 
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 import 'package:magic/magic.dart';
 
 import '../../facades/magic_starter.dart';
 import '../components/select/select.recipe.dart';
+import '../components/spinner/index.dart';
 
 /// Searchable timezone select widget for Magic Starter.
 ///
@@ -444,10 +445,6 @@ class _MagicStarterTimezoneSelectState
     }
   }
 
-  /// The side of the loading spinner, which is also the height of the arrow the
-  /// loaded trigger draws beside its text.
-  static const double _spinnerSize = 20;
-
   @override
   Widget build(BuildContext context) {
     // Resolve the select slot recipe for semantic-token defaults.
@@ -467,18 +464,15 @@ class _MagicStarterTimezoneSelectState
             className: widget.className ?? slots['trigger'],
             children: [
               // The same row the loaded trigger draws (a flexible text slot
-              // and a 20 px glyph), with the spinner for the glyph and an empty
-              // line for the text. The line takes the trigger's own type, so
-              // the box is as tall as the loaded one at any line height, text
-              // scale or `leading-*`, without this widget knowing which.
+              // and a 20 px glyph), with the 20 px spinner for the glyph and
+              // an empty line for the text. The line takes the trigger's own
+              // type, so the box is as tall as the loaded one at any line
+              // height, text scale or `leading-*`, without this widget knowing
+              // which.
               WDiv(
                 className: 'flex items-center gap-2',
                 children: [
-                  const SizedBox(
-                    width: _spinnerSize,
-                    height: _spinnerSize,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
+                  const MSSpinner(size: SpinnerSize.md),
                   WDiv(
                     className: 'flex-1',
                     child: const WText('\u200B', className: 'truncate'),

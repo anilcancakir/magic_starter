@@ -127,7 +127,10 @@ class _AccordionState extends State<MSAccordion> {
         className: slots['trigger'],
         children: [
           WDiv(className: 'flex-1', child: WText(title)),
-          Icon(isExpanded ? _kIconExpanded : _kIconCollapsed, size: 18),
+          WIcon(
+            isExpanded ? _kIconExpanded : _kIconCollapsed,
+            className: slots['icon'],
+          ),
         ],
       ),
     );

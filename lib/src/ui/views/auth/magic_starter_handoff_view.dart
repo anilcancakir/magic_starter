@@ -1,8 +1,7 @@
-import 'package:material_ui/material_ui.dart' show CircularProgressIndicator;
 import 'package:flutter/widgets.dart';
 import 'package:magic/magic.dart';
 import 'package:magic_starter/magic_starter.dart'
-    show ButtonIntent, ButtonSize, MSButton;
+    show ButtonIntent, ButtonSize, MSButton, MSSpinner, SpinnerSize;
 
 import '../../../facades/magic_starter.dart';
 import '../../../http/controllers/magic_starter_handoff_controller.dart';
@@ -65,11 +64,7 @@ class _MagicStarterHandoffViewState
       subtitle: trans('magic_starter.handoff.signing_in'),
       child: const WDiv(
         className: 'flex flex-col items-center py-4',
-        child: SizedBox(
-          width: 32,
-          height: 32,
-          child: CircularProgressIndicator(strokeWidth: 3),
-        ),
+        child: MSSpinner(size: SpinnerSize.lg),
       ),
     );
   }

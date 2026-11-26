@@ -94,7 +94,8 @@ void main() {
       final selected = <String>[];
       await mount(tester, busyProvider: 'github', selected: selected);
 
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(find.byType(MSSpinner), findsOneWidget);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
       expect(find.byKey(const Key('icon-github')), findsNothing);
       expect(find.byKey(const Key('icon-google')), findsOneWidget);
       expect(buttonOf(tester, 'github').disabled, isFalse);

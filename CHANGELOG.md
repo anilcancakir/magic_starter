@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- **`MSSpinner`, a wind spinner that follows the host's `primary` and `dark:` setup.** It is a spinning `WIcon` (`animate-spin`) in three sizes (`SpinnerSize.sm`, `md` and `lg`: 16, 20 and 32 px) coloured `text-primary-600 dark:text-primary-500`, the shades the `bg-primary` alias uses, with a `spinnerRecipe` and a catalog preview; a `className` is appended after the recipe, so a spinner on a filled surface passes its text role (`text-on-primary`). Material's `CircularProgressIndicator` could not do any of this, because its colour comes from Material's theme. `lib/src/ui/components/spinner/`, `lib/magic_starter.dart`, `lib/previews.dart`
+
+### Fixed
+
+- **The five Material spinners and the accordion chevron now take the host's colours (#297).** The handoff and email verification screens, the support reply's send circle, the busy social login button and the timezone select's loading box drew a `CircularProgressIndicator`, and `MSAccordion`'s chevron was a bare `Icon` coloured by the ambient `IconTheme`, so a host with a non-blue `primary` or dark mode saw Material's defaults on those screens. The spinners are now one `MSSpinner` each (the send circle passes `text-on-primary`, as the old spinner read the circle's text colour), at the sizes they had, so the timezone select's loading box is still as tall as the loaded trigger. The chevron is a `WIcon` styled by a new `icon` slot in `accordionRecipe` (`text-[18px] text-fg`), so `classNames: {'icon': ...}` recolours or resizes it and it carries its `dark:` pair through the alias. Only `Icons` stay Material in these files. `lib/src/ui/views/auth/magic_starter_handoff_view.dart`, `lib/src/ui/views/auth/magic_starter_verify_email_view.dart`, `lib/src/ui/views/support/magic_starter_support_thread_body.dart`, `lib/src/ui/widgets/magic_starter_social_buttons.dart`, `lib/src/ui/widgets/magic_starter_timezone_select.dart`, `lib/src/ui/components/accordion/accordion.dart`, `lib/src/ui/components/accordion/accordion.recipe.dart`
+
 ## [1.7.0] - 2026-11-22
 
 ### Fixed

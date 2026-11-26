@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -109,8 +110,13 @@ void main() {
   }
 
   /// Opens `/auth/handoff` with [query] behind a real router and lets the
-  /// handoff settle.
-  Future<void> visit(WidgetTester tester, Map<String, String> query) async {
+  /// handoff settle; [settle] false pumps one timed frame instead, for a
+  /// screen that holds a spinner, which never settles.
+  Future<void> visit(
+    WidgetTester tester,
+    Map<String, String> query, {
+    bool settle = true,
+  }) async {
     MagicRoute.page('/', () => const Text('home-page'));
     MagicRoute.page('/auth/login', () => const Text('login-page'));
     MagicRoute.page('/auth/register', () => const Text('register-page'));
@@ -140,6 +146,11 @@ void main() {
         ),
       ),
     );
+    if (!settle) {
+      await tester.pump(const Duration(milliseconds: 50));
+
+      return;
+    }
     await tester.pumpAndSettle();
   }
 
@@ -159,6 +170,34 @@ void main() {
   Finder confirmation() => find.text(
     trans('magic_starter.handoff.confirm_title', {'identity': _email}),
   );
+
+  group('while the code is being exchanged', () {
+    testWidgets('shows the wind spinner, not a Material one', (tester) async {
+      final Completer<MagicResponse> pending = Completer<MagicResponse>();
+      server = FakeNetworkDriver(
+        stubs: (MagicRequest request) => pending.future,
+      );
+      Magic.put<MagicStarterHandoffController>(
+        MagicStarterHandoffController(driver: () => server),
+      );
+
+      await visit(tester, {'code': _code}, settle: false);
+
+      expect(find.byType(MSSpinner), findsOneWidget);
+      expect(
+        tester.widget<MSSpinner>(find.byType(MSSpinner)).size,
+        SpinnerSize.lg,
+      );
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      expect(confirmation(), findsNothing);
+
+      pending.complete(Http.response(_session()));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(MSSpinner), findsNothing);
+      expect(confirmation(), findsOneWidget);
+    });
+  });
 
   group('with no session', () {
     testWidgets('asks first, in the signed-out wording', (tester) async {

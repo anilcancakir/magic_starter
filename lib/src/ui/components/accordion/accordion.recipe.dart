@@ -8,6 +8,7 @@ import 'package:magic/magic.dart';
 /// - `header`: the header row containing [trigger].
 /// - `trigger`: the tappable title row (WAnchor-backed in the component).
 /// - `panel`: the collapsible content area, shown only when expanded.
+/// - `icon`: the expand/collapse chevron at the end of the trigger row.
 ///
 /// There are no variant axes in v1; the slot classNames come entirely from
 /// semantic tokens. Callers may override individual slots via [classNames].
@@ -22,6 +23,7 @@ Map<String, String> accordionRecipe({
       'header': 'flex flex-row items-center',
       'trigger': 'flex flex-row items-center justify-between px-4 py-3 text-sm font-medium text-fg cursor-pointer hover:bg-surface-container',
       'panel': 'px-4 pb-4 text-sm text-fg-muted',
+      'icon': 'text-[18px] text-fg',
     },
   );
   return recipe(variants: variants, classNames: classNames);

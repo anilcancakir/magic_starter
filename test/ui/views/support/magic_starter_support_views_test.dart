@@ -931,9 +931,15 @@ void main() {
       expect(
         find.descendant(
           of: find.byKey(const ValueKey<String>('support-send')),
-          matching: find.byType(CircularProgressIndicator),
+          matching: find.byType(MSSpinner),
         ),
         findsOneWidget,
+      );
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      // The circle paints on `bg-primary`, so the spinner takes its text colour.
+      expect(
+        tester.widget<MSSpinner>(find.byType(MSSpinner)).className,
+        'text-on-primary',
       );
       // The controller drops a second POST on its own; what the view owes is
       // a control that says it is not pressable while the reply is out.
@@ -952,7 +958,7 @@ void main() {
         }),
       );
       await tester.pumpAndSettle();
-      expect(find.byType(CircularProgressIndicator), findsNothing);
+      expect(find.byType(MSSpinner), findsNothing);
     });
 
     testWidgets('a reply whose answer will not decode frees Send again', (
@@ -976,7 +982,7 @@ void main() {
       expect(
         find.descendant(
           of: find.byKey(const ValueKey<String>('support-send')),
-          matching: find.byType(CircularProgressIndicator),
+          matching: find.byType(MSSpinner),
         ),
         findsNothing,
       );
@@ -1001,7 +1007,7 @@ void main() {
       expect(
         find.descendant(
           of: find.byKey(const ValueKey<String>('support-send')),
-          matching: find.byType(CircularProgressIndicator),
+          matching: find.byType(MSSpinner),
         ),
         findsNothing,
       );
