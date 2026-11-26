@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- **`MSCombobox` takes `itemBuilder` and `emptyBuilder`, so a row with an icon, a secondary line or a count and a translated "no results" state no longer need a hand-rolled searchable select.** A consuming app had rebuilt one on `WFormSelect(searchable: true)` because the component forwarded neither, which bypassed the starter's recipe and theme. Both are optional, typed as `WSelect`'s own `SelectItemBuilder<T>` and `EmptyStateBuilder`, and pass straight through, so `null` renders exactly as before; the menu surface stays reachable through `classNames['popup']`. (#295) `lib/src/ui/components/combobox/combobox.dart`, `doc/basics/components.md`
+
 ## [1.7.0] - 2026-11-22
 
 ### Fixed
