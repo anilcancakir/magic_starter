@@ -106,6 +106,19 @@ class MSButton extends StatelessWidget {
   /// An explicit accessible label for icon-only buttons.
   final String? semanticLabel;
 
+  /// An external focus node, to put focus on the button or move it there from
+  /// a key handler.
+  ///
+  /// It is the button's own focus stop, so no outer `Focus` wrapper is needed.
+  /// The caller owns the node: the button never disposes it. A disabled or
+  /// loading button cannot take focus. Forwarded to [WButton.focusNode].
+  final FocusNode? focusNode;
+
+  /// Whether the button asks for focus when it first mounts, as with
+  /// [Focus.autofocus]: only when nothing in the focus scope holds focus yet,
+  /// and never while disabled or loading. Forwarded to [WButton.autofocus].
+  final bool autofocus;
+
   /// Creates a [MSButton].
   const MSButton({
     super.key,
@@ -118,6 +131,8 @@ class MSButton extends StatelessWidget {
     this.fullWidth = false,
     this.className,
     this.semanticLabel,
+    this.focusNode,
+    this.autofocus = false,
   });
 
   @override
@@ -147,6 +162,8 @@ class MSButton extends StatelessWidget {
             : className,
       ),
       semanticLabel: semanticLabel,
+      focusNode: focusNode,
+      autofocus: autofocus,
       child: child,
     );
 

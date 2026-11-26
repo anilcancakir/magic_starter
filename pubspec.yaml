@@ -46,8 +46,9 @@ dependencies:
   # passes `WSelect.onOpen` (1.6.0), the auth forms pass `autofillHints`
   # (1.8.3, with 1.8.4 restoring platform autofill on fields that pass none),
   # and the `MSSelect` focus ring needs `WSelect` to light `focus:` on keyboard
-  # focus (1.9.1). 1.12.0 is the release `magic` 1.0.0 itself depends on.
-  wind_kit: ^1.12.0
+  # focus (1.9.1). `MSButton` forwards `focusNode` and `autofocus` to
+  # `WButton`, which takes them from 1.13.0.
+  wind_kit: ^1.13.0
   # `MaterialApp`, `ThemeData` and `Colors`: `wind_kit` builds on `material_ui`,
   # so `lib/` imports it rather than `flutter/material.dart`.
   material_ui: ^1.11.0

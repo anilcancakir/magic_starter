@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/rendering.dart' show RenderParagraph;
+import 'package:flutter/services.dart' show LogicalKeyboardKey;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:magic/magic.dart';
 import 'package:magic_starter/magic_starter.dart';
@@ -1114,5 +1115,128 @@ void main() {
         isNot(WindThemeData().getColor('red', 600)),
       );
     });
+  });
+
+  group('focus', () {
+    for (final (name, size) in [('phone', phone), ('desktop', desktop)]) {
+      testWidgets('an external focus node focuses the button on a $name', (
+        tester,
+      ) async {
+        var presses = 0;
+        final node = FocusNode(debugLabel: 'play');
+        addTearDown(node.dispose);
+        await pumpAt(
+          tester,
+          size,
+          MSButton(
+            onPressed: () => presses++,
+            focusNode: node,
+            child: const WText('Play'),
+          ),
+        );
+
+        node.requestFocus();
+        await tester.pump();
+        expect(node.hasPrimaryFocus, isTrue);
+
+        // The node is the button's own focus stop, not a wrapper around it:
+        // the activation key presses the button.
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await tester.pump();
+        expect(presses, 1);
+      });
+    }
+
+    testWidgets('autofocus focuses the button on the first frame', (
+      tester,
+    ) async {
+      final node = FocusNode(debugLabel: 'play');
+      addTearDown(node.dispose);
+      await pumpAt(
+        tester,
+        desktop,
+        MSButton(
+          onPressed: () {},
+          focusNode: node,
+          autofocus: true,
+          child: const WText('Play'),
+        ),
+      );
+
+      expect(node.hasPrimaryFocus, isTrue);
+    });
+
+    testWidgets('does not focus itself without autofocus', (tester) async {
+      final node = FocusNode(debugLabel: 'play');
+      addTearDown(node.dispose);
+      await pumpAt(
+        tester,
+        desktop,
+        MSButton(onPressed: () {}, focusNode: node, child: const WText('Play')),
+      );
+
+      expect(node.hasFocus, isFalse);
+    });
+
+    testWidgets('leaves an external focus node to its owner', (tester) async {
+      final node = FocusNode(debugLabel: 'play');
+      await pumpAt(
+        tester,
+        desktop,
+        MSButton(onPressed: () {}, focusNode: node, child: const WText('Play')),
+      );
+
+      await tester.pumpWidget(const SizedBox.shrink());
+
+      // A disposed node fails its debug assertion on any listener change.
+      expect(() => node.addListener(() {}), returnsNormally);
+      node.dispose();
+    });
+
+    for (final (name, disabled, isLoading) in [
+      ('disabled', true, false),
+      ('loading', false, true),
+    ]) {
+      testWidgets('a $name button does not take focus from its node', (
+        tester,
+      ) async {
+        final node = FocusNode(debugLabel: 'play');
+        addTearDown(node.dispose);
+        await pumpAt(
+          tester,
+          desktop,
+          MSButton(
+            onPressed: () {},
+            disabled: disabled,
+            isLoading: isLoading,
+            focusNode: node,
+            child: const WText('Play'),
+          ),
+        );
+
+        node.requestFocus();
+        await tester.pump();
+        expect(node.hasFocus, isFalse);
+      });
+
+      testWidgets('a $name button ignores autofocus', (tester) async {
+        final node = FocusNode(debugLabel: 'play');
+        addTearDown(node.dispose);
+        await pumpAt(
+          tester,
+          desktop,
+          MSButton(
+            onPressed: () {},
+            disabled: disabled,
+            isLoading: isLoading,
+            focusNode: node,
+            autofocus: true,
+            child: const WText('Play'),
+          ),
+        );
+
+        expect(node.hasFocus, isFalse);
+      });
+    }
   });
 }
