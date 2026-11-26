@@ -199,4 +199,88 @@ void main() {
       },
     );
   });
+
+  group('DropdownMenu long labels', () {
+    const longLabel = 'A label far wider than the pinned menu panel';
+
+    Future<void> openMenu(
+      WidgetTester tester, {
+      required List<MSDropdownMenuItem> items,
+      String? className,
+      double textScale = 1.0,
+    }) async {
+      await tester.pumpWidget(
+        MediaQuery(
+          data: MediaQueryData(textScaler: TextScaler.linear(textScale)),
+          child: wrap(
+            MSDropdownMenu(
+              className: className,
+              items: items,
+              child: const Text('open menu'),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('open menu'));
+      await tester.pump();
+      await tester.pump();
+    }
+
+    testWidgets('an active label wraps inside a pinned panel at 1.3x', (
+      tester,
+    ) async {
+      await openMenu(
+        tester,
+        className: 'w-48',
+        textScale: 1.3,
+        items: const [
+          MSDropdownMenuItem(
+            label: longLabel,
+            leading: SizedBox(width: 16, height: 16),
+          ),
+        ],
+      );
+
+      expect(tester.takeException(), isNull);
+      final label = tester.getSize(find.text(longLabel));
+      expect(label.width, lessThanOrEqualTo(192));
+      expect(label.height, greaterThan(14 * 1.3 * 2));
+    });
+
+    testWidgets('a disabled label wraps inside a pinned panel', (tester) async {
+      await openMenu(
+        tester,
+        className: 'w-48',
+        items: const [
+          MSDropdownMenuItem(
+            label: longLabel,
+            disabled: true,
+            leading: SizedBox(width: 16, height: 16),
+          ),
+        ],
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(
+        tester.getSize(find.text(longLabel)).width,
+        lessThanOrEqualTo(192),
+      );
+    });
+
+    testWidgets('an unpinned panel still sizes to a short label', (
+      tester,
+    ) async {
+      await openMenu(tester, items: const [MSDropdownMenuItem(label: 'Edit')]);
+
+      final panel = tester.getSize(
+        find
+            .ancestor(
+              of: find.text('Edit'),
+              matching: find.byType(ConstrainedBox),
+            )
+            .first,
+      );
+      expect(panel.width, lessThan(400));
+    });
+  });
 }

@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- **A long `MSDropdownMenuItem` label wraps inside a menu whose panel pins a width, instead of overflowing its row.** The row laid the label out as a plain `WText` in a `flex-row`, so a label wider than the panel (a translated row, or any row at a large text scale: a consuming app's three-row depth menu overflowed at 1.3x in a `w-48` panel) painted the overflow stripe and was clipped. The label is now `flex-initial`, a loose `Flexible`, in both the active and the disabled row. `flex-1` was rejected because it would stretch an unpinned panel, which sizes to its widest row, to the screen width. `lib/src/ui/components/dropdown_menu/dropdown_menu.dart`, `test/ui/components/dropdown_menu/dropdown_menu_test.dart`, `doc/basics/components.md`
+
 ## [1.8.1] - 2026-11-26
 
 ### Fixed
