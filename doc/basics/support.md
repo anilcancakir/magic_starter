@@ -207,7 +207,7 @@ The defaults match the backend's `support.attachments` (`max_files`, `max_kb`, `
 <a name="client-info"></a>
 ## Client Info
 
-With `support_client_context` on, a new conversation carries the device and app details the customer did not type (`MagicStarterSupportClientContext.collect()`), sent as `client_context[...]`: `app_version`, `build_number`, `platform`, `os_version`, `locale` and `timezone`. Each value is cut to 120 characters, and a value the device cannot tell is left out.
+With `support_client_context` on, a new conversation carries the device and app details the customer did not type (`MagicStarterSupportClientContext.collect()`), sent as `client_context[...]`: `app_version`, `build_number`, `platform` (`tvOS` on an Apple TV), `os_version`, `locale` and `timezone`. Each value is cut to 120 characters, and a value the device cannot tell is left out.
 
 <a name="page-context"></a>
 ## Page Context
@@ -264,7 +264,7 @@ await MagicStarterStoreReview.maybeRequest();
   With `support_feedback` on, the call first waits for the card's eligibility read (shared with the card) and stays quiet when the card is due, even if the card has not rendered yet;
 - never from a button. The platforms decide whether a sheet appears and say nothing back, so a button wired to it would sometimes do nothing. Call it from your own milestone.
 
-It answers whether the platform was asked, not whether a sheet showed. "Rate us" in the profile menu is the button instead: it calls `MagicStarterStoreReview.openStoreListing()`, which opens the store page and has no quota. It shows on Android, and on iOS and macOS once the App Store id is set:
+It answers whether the platform was asked, not whether a sheet showed. "Rate us" in the profile menu is the button instead: it calls `MagicStarterStoreReview.openStoreListing()`, which opens the store page and has no quota. It shows on Android, and on iOS and macOS once the App Store id is set; tvOS gets neither the review prompt nor "Rate us":
 
 ```dart
 'store_review': {
